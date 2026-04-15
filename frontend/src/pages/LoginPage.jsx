@@ -73,16 +73,7 @@ function LoginPage() {
           Point-of-Sale and Inventory Monitoring System
         </p>
 
-        {usesSupabaseAuth ? (
-          <div className="login-demo">
-            <p className="login-demo-title">Supabase sign-in is now active</p>
-            <p>Use the real email and password accounts created in Supabase Auth.</p>
-            <p className="login-demo-footnote">
-              Admins can create and manage employee accounts from the Users page through
-              the secured server-side account creation flow.
-            </p>
-          </div>
-        ) : (
+        {!usesSupabaseAuth ? (
           <div className="login-demo">
             <p className="login-demo-title">Temporary demo accounts</p>
             {demoAccounts.map((account) => (
@@ -95,7 +86,7 @@ function LoginPage() {
               New dummy employee accounts created by the admin can also sign in here.
             </p>
           </div>
-        )}
+        ) : null}
 
         <div className="login-form">
           {usesSupabaseAuth ? (
