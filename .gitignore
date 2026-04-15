@@ -1,0 +1,6 @@
+.agents/
+.claude/
+.windsurf/
+.vscode/
+skills-lock.json
+frontend/.env

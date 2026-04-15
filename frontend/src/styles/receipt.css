@@ -1,0 +1,39 @@
+.receipt-preview {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.receipt-card {
+  max-width: 420px;
+  margin: 0 auto;
+  border: 1px dashed #94a3b8;
+  padding: 20px;
+  border-radius: 14px;
+  background: #fcfcfc;
+}
+
+.receipt-line {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 8px;
+}
+
+.receipt-items,
+.receipt-total-block {
+  margin-top: 16px;
+  padding-top: 12px;
+  border-top: 1px solid #e5e7eb;
+}
+
+.receipt-notes {
+  margin-top: 16px;
+  color: #475569;
+}
+
+.receipt-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+}

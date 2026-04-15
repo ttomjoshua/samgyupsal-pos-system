@@ -1,0 +1,749 @@
+begin;
+
+-- Generated from owner-provided CSV snapshots.
+-- Source files:
+--   C:\Users\tomja\OneDrive\Desktop\Stock_Inventory_Oh_G_Samgyup_Sta.Lucia - Sheet1.csv
+--   C:\Users\tomja\OneDrive\Desktop\Stock_Inventory_Oh_G_Samgyup_Dollar - Sheet1.csv
+-- Expected result after a successful run:
+--   categories: 13
+--   products: 254
+--   inventory_items: 481
+--   branch 1 inventory_items: 249
+--   branch 2 inventory_items: 232
+
+create temporary table owner_inventory_raw (
+  source_row_id bigint,
+  branch_id integer not null,
+  category text,
+  product_name text,
+  net_weight text,
+  price text,
+  stock_quantity text,
+  expiration_date text,
+  created_at text
+) on commit drop;
+
+insert into owner_inventory_raw (
+  source_row_id,
+  branch_id,
+  category,
+  product_name,
+  net_weight,
+  price,
+  stock_quantity,
+  expiration_date,
+  created_at
+)
+values
+  (1, 1, 'Samgyup meat', 'PORK BELLY PLAIN', '250g', '109', '10', '', ''),
+  (2, 1, 'Samgyup meat', 'PORK BELLY SPICY BULGOGI', '250g', '109', '7', '', ''),
+  (3, 1, 'Samgyup meat', 'PORK BELLY SPECIAL BBQ', '250g', '109', '6', '', ''),
+  (4, 1, 'Samgyup meat', 'PORK BELLY GALBI', '250g', '109', '', '', ''),
+  (5, 1, 'Samgyup meat', 'PORK BELLY TERIYAKI', '250g', '109', '6', '', ''),
+  (6, 1, 'Samgyup meat', 'PORK BULGOGI', '250g', '', '7', '', ''),
+  (7, 1, 'Samgyup meat', 'PORK JOWLS PLAIN', '250g', '99', '7', '', ''),
+  (8, 1, 'Samgyup meat', 'PORK JOWLS SPICY BULGOGI', '250g', '99', '9', '', ''),
+  (9, 1, 'Samgyup meat', 'PORK JOWLS  SPECIAL BBQ', '250g', '99', '', '', ''),
+  (10, 1, 'Samgyup meat', 'PORK JOWLS GALBI', '250g', '99', '7', '', ''),
+  (11, 1, 'Samgyup meat', 'PORK JOWLS TERIYAKI', '250g', '99', '', '', ''),
+  (12, 1, 'Samgyup meat', 'BEFF PLAIN', '250g', '149', '12', '', ''),
+  (13, 1, 'Samgyup meat', 'BEFF TERIYAKI', '250g', '149', '2', '', ''),
+  (14, 1, 'Samgyup meat', 'BEFF BULGOGI', '250g', '149', '6', '', ''),
+  (15, 1, 'Samgyup meat', 'BEEF SPECIAL BBQ ', '250g', '149', '7', '', ''),
+  (16, 1, 'Samgyup meat', 'BEFF SPICY BULGOGI', '250g', '149', '6', '', ''),
+  (17, 1, 'Samgyup meat', 'PORK BELLY PLAIN', '500g', '200', '3', '', ''),
+  (18, 1, 'Samgyup meat', 'PORK BELLY SPICY BULGOGI', '500g', '200', '11', '', ''),
+  (19, 1, 'Samgyup meat', 'PORK BELLY SPECIAL BBQ', '500g', '200', '9', '', ''),
+  (20, 1, 'Samgyup meat', 'PORK BELLY BULGOGI', '500g', '', '4', '', ''),
+  (21, 1, 'Samgyup meat', 'PORK BELLY GALBI', '500g', '200', '', '', ''),
+  (22, 1, 'Samgyup meat', 'PORK BELLY TERIYAKI', '500g', '200', '8', '', ''),
+  (23, 1, 'Samgyup meat', 'PORK JOWLS PLAIN', '500g', '170', '9', '', ''),
+  (24, 1, 'Samgyup meat', 'PORK JOWLS SPICY BULGOGI', '500g', '170', '6', '', ''),
+  (25, 1, 'Samgyup meat', 'PORK JOWLS  SPECIAL BBQ', '500g', '170', '', '', ''),
+  (26, 1, 'Samgyup meat', 'PORK JOWLS GALBI', '500g', '170', '4', '', ''),
+  (27, 1, 'Samgyup meat', 'PORK JOWLS TERIYAKI', '500g', '170', '', '', ''),
+  (28, 1, 'Samgyup meat', 'BEFF PLAIN', '500g', '280', '7', '', ''),
+  (29, 1, 'Samgyup meat', 'BEFF TERIYAKI', '500g', '280', '7', '', ''),
+  (30, 1, 'Samgyup meat', 'BEFF BULGOGI', '500g', '280', '6', '', ''),
+  (31, 1, 'Samgyup meat', 'BEEF SPECIAL BBQ ', '500g', '280', '7', '', ''),
+  (32, 1, 'Samgyup meat', 'BEFF SPICY BULGOGI', '500g', '280', '9', '', ''),
+  (33, 1, 'Samgyup bowl meat', 'PORK BULGOGI', '', '59', '10', '', ''),
+  (34, 1, 'Samgyup bowl meat', 'PORK SPICY BULGOGI', '', '59', '19', '', ''),
+  (35, 1, 'Samgyup bowl meat', 'BEEF BULGOGI', '', '79', '16', '', ''),
+  (36, 1, 'Samgyup bowl meat', 'BEFF SPICY BULGOGI', '', '79', '4', '', ''),
+  (37, 1, 'Frozen foods pack & repack & side dish', 'FISH CAKE SLICE', '', '40', '20', '', ''),
+  (38, 1, 'Frozen foods pack & repack & side dish', 'FISH CAKE CUT', '', '15', '43', '', ''),
+  (39, 1, 'Frozen foods pack & repack & side dish', 'SAUSAGE', '', '20', '145', '', ''),
+  (40, 1, 'Frozen foods pack & repack & side dish', 'RICE CAKE ( TEOKBOKKI )', '', '12', '73', '', ''),
+  (41, 1, 'Frozen foods pack & repack & side dish', 'LUNCHEON MEAT', '', '12', '50', '', ''),
+  (42, 1, 'Frozen foods pack & repack & side dish', 'CRABSTICK ', '', '15', '67', '', ''),
+  (43, 1, 'Frozen foods pack & repack & side dish', 'ENOKI', '', '15', '11', '', ''),
+  (44, 1, 'Frozen foods pack & repack & side dish', 'FISH TOFU', '', '10', '124', '', ''),
+  (45, 1, 'Frozen foods pack & repack & side dish', 'FISH CAKE ', '1KG', '200', '6', '2027-01-19', ''),
+  (46, 1, 'Frozen foods pack & repack & side dish', 'FISH TOFU', '260g', '100', '23', '2027-03-17', ''),
+  (47, 1, 'Frozen foods pack & repack & side dish', 'SHABU BALLS MAESTRO ', '260g', '115', '150', '', ''),
+  (48, 1, 'Frozen foods pack & repack & side dish', 'SHABU BALLS REGULAR', '260g', '90', '10', '2027-02-13', ''),
+  (49, 1, 'Frozen foods pack & repack & side dish', 'SAUSAGE', '170g', '120', '60', '2026-10-26', ''),
+  (50, 1, 'Frozen foods pack & repack & side dish', 'SAUSAGE', '1KL', '', '12', '', ''),
+  (51, 1, 'Frozen foods pack & repack & side dish', 'FRENCH FRIES', '1kl', '140', '16', '', ''),
+  (52, 1, 'Frozen foods pack & repack & side dish', 'RICE CAKE ( TEOKBOKKI )', '1kl', '200', '13', '', ''),
+  (53, 1, 'Frozen foods pack & repack & side dish', 'SALTED CHICKEN', '1kl', '300', '1', '2027-01-19', ''),
+  (54, 1, 'Frozen foods pack & repack & side dish', 'CRABSTICK ', '200g', '65', '29', '2027-02-24', ''),
+  (55, 1, 'Frozen foods pack & repack & side dish', 'CRABSTICK ', '1KL', '', '8', '', ''),
+  (56, 1, 'Frozen foods pack & repack & side dish', 'CHICKEN DUMPLING', '200G', '', '27', '', ''),
+  (57, 1, 'Frozen foods pack & repack & side dish', 'MARBLE POTATO TUB', '', '', '16', '', ''),
+  (58, 1, 'Frozen foods pack & repack & side dish', 'KIMCHI BIG', '', '', '22', '', ''),
+  (59, 1, 'Frozen foods pack & repack & side dish', 'KIMCHI MEDIUM', '', '', '26', '', ''),
+  (60, 1, 'Frozen foods pack & repack & side dish', 'KIMCHI CUP ', '', '', '19', '', ''),
+  (61, 1, 'Frozen foods pack & repack & side dish', 'RADISH ', '1KL', '', '16', '', ''),
+  (62, 1, 'Frozen foods pack & repack & side dish', 'RADISH TUB', '', '', '10', '', ''),
+  (63, 1, 'Korean Noodles', 'BULDAK CARBO', '', '90', '98', '', ''),
+  (64, 1, 'Korean Noodles', 'BULDAK CREAMY CARBO', '', '90', '52', '2027-02-19', ''),
+  (65, 1, 'Korean Noodles', 'BULDAK ROSE', '', '90', '170', '2027-01-15', ''),
+  (66, 1, 'Korean Noodles', 'BULDAK QUATRO CHEESE', '', '90', '102', '2027-01-19', ''),
+  (67, 1, 'Korean Noodles', 'BULDAK X2 SPICY', '', '90', '144', '2026-12-29', ''),
+  (68, 1, 'Korean Noodles', 'BULDAK ORIGINAL', '', '90', '54', '2026-11-27', ''),
+  (69, 1, 'Korean Noodles', 'BULDAK CHEESE ', '', '', '', '', ''),
+  (70, 1, 'Korean Noodles', 'STIRFRY CHEESE RAMEN SPICY', '', '60', '124', '', ''),
+  (71, 1, 'Korean Noodles', 'STIRFRY CHEESE RAMEN ', '', '60', '158', '2026-10-19', ''),
+  (72, 1, 'Korean Noodles', 'STIRFRY CHESSY RAMEN', '', '60', '', '', ''),
+  (73, 1, 'Korean Noodles', 'STIRFRY BEFF BULGOGI', '', '60', '8', '2026-12-25', ''),
+  (74, 1, 'Korean Noodles', 'KORENO CHEESE SPICY', '', '50', '6', '2026-08-27', ''),
+  (75, 1, 'Korean Noodles', 'KORENO FRIED BULGOGI', '', '50', '97', '2026-09-23', ''),
+  (76, 1, 'Korean Noodles', 'KORENO CARBONARA', '', '55', '145', '2026-10-29', ''),
+  (77, 1, 'Korean Noodles', 'TANGLE CREAMY MUCHROOM', '', '105', '56', '', ''),
+  (78, 1, 'Korean Noodles', 'TANGLE GARLIC OIL', '', '105', '93', '', ''),
+  (79, 1, 'Korean Noodles', 'JAPAGHETTI', '', '65', '109', '2026-06-21', ''),
+  (80, 1, 'Korean Noodles', 'CHEESE RAMEN SPICY', '', '55', '341', '', ''),
+  (81, 1, 'Korean Noodles', 'CHEESE RAMEN', '', '55', '172', '', ''),
+  (82, 1, 'Korean Noodles', 'CHESSY RAMEN', '', '55', '', '', ''),
+  (83, 1, 'Korean Noodles', 'SHIN RAMYUN', '', '55', '152', '2026-06-18', ''),
+  (84, 1, 'Korean Noodles', 'JIN RAMEN SPICY', '', '40', '106', '2026-10-21', ''),
+  (85, 1, 'Korean Noodles', 'JIN RAMEN MILD', '', '40', '162', '2027-01-18', ''),
+  (86, 1, 'Korean Noodles', 'NEOGURI', '', '60', '6', '2026-08-27', ''),
+  (87, 1, 'Korean Noodles', 'VEGGIE', '', '55', '22', '', ''),
+  (88, 1, 'Korean Noodles', 'MEP', '', '4 FOR 100', '38', '', ''),
+  (89, 1, 'Korean Noodles', 'CHESSY RAMEN CHEDAR', '', '', '24', '', ''),
+  (90, 1, 'Korean Noodles', 'CHESSY RAMEN  CHEDAR SPICY', '', '', '122', '', ''),
+  (91, 1, 'Cup Noodles', 'CUP TANGLE CREAMY MUCHROOMS', '', '120', '61', '2026-12-13', ''),
+  (92, 1, 'Cup Noodles', 'CUP TANGLE GARLIIC OIL', '', '120', '23', '2026-10-13', ''),
+  (93, 1, 'Cup Noodles', 'CUP BULDAK CARBO BIG', '', '100', '44', '', ''),
+  (94, 1, 'Cup Noodles', 'CUP BULDAK CREAMY CARBO BIG', '', '100', '52', '', ''),
+  (95, 1, 'Cup Noodles', 'CUP BULDAK ROSE SMALL', '', '70', '', '2027-01-14', ''),
+  (96, 1, 'Cup Noodles', 'CUP BULDAK CARBO SMALL', '', '70', '146', '2027-01-13', ''),
+  (97, 1, 'Cup Noodles', 'CUP BULDAK CHEESE  SMALL', '', '', '', '', ''),
+  (98, 1, 'Cup Noodles', 'CUP BULDAK QUATRO CHEESE SMALL', '', '70', '48', '2027-01-13', ''),
+  (99, 1, 'Cup Noodles', 'CUP BULDAK X2 SPICY SMALL', '', '70', '26', '', ''),
+  (100, 1, 'Cup Noodles', 'CUP YOPOKKI SPICY', '', '100', '17', '2026-06-29', ''),
+  (101, 1, 'Cup Noodles', 'CUP YOPOKKI CHEESE', '', '', '13', '', ''),
+  (102, 1, 'Cup Noodles', 'POUNCH YOPOKKI CHEESE&SPICY', '', '100', '', '', ''),
+  (103, 1, 'Seaweed', 'NAMKWANG', '', '55', '322', '', ''),
+  (104, 1, 'Seaweed', 'BIBIGO', '', '', '418', '', ''),
+  (105, 1, 'Seaweed', 'ONCHEONGI', '', '50', '122', '', ''),
+  (106, 1, 'Seaweed', 'NARI NAMKWANG', '', '100', '19', '', ''),
+  (107, 1, 'Seaweed', 'NARI DAEMI', '', '110', '10', '', ''),
+  (108, 1, 'Drinks', 'COKE MISMO', '290ml', '25', '17', '', ''),
+  (109, 1, 'Drinks', 'SPRITE MISMO', '290ml', '25', '15', '', ''),
+  (110, 1, 'Drinks', 'ROYAL MISMO', '290ml', '25', '48', '', ''),
+  (111, 1, 'Drinks', 'SPRITE', '1.5 LITTERS', '100', '20', '', ''),
+  (112, 1, 'Drinks', 'ROYAL ', '1.5 LITTERS', '100', '27', '', ''),
+  (113, 1, 'Drinks', 'COKE', '1.5 LITTERS', '100', '10', '', ''),
+  (114, 1, 'Drinks', 'WELCH ORANGE', '', '', '37', '', ''),
+  (115, 1, 'Drinks', 'WELCH GRAPE', '', '', '4', '', ''),
+  (116, 1, 'Drinks', 'BINGRAE MELON', '', '', '90', '', ''),
+  (117, 1, 'Drinks', 'BINGRAE BANANA', '', '', '85', '', ''),
+  (118, 1, 'Drinks', 'BINGRAE CHESNUT', '', '', '', '', ''),
+  (119, 1, 'Drinks', 'BINGRAE VANILLA', '', '', '24', '', ''),
+  (120, 1, 'Drinks', 'BINGGRAE TORO', '200ml ', '50', '21', '', ''),
+  (121, 1, 'Drinks', 'BINGGRAE STARWBERRY', '200ml ', '50', '85', '', ''),
+  (122, 1, 'Drinks', 'BINGGRAE JUICY COOL', '200ml ', '50', '48', '', ''),
+  (123, 1, 'Drinks', 'LETS BE MOCHA LATTE', '175ml', '45', '55', '', ''),
+  (124, 1, 'Drinks', 'LETS BE MILD COFFE', '175ml', '45', '51', '', ''),
+  (125, 1, 'Drinks', 'PORORO TROPICAL FRUITS FLAVOR', '235ml', '50', '98', '', ''),
+  (126, 1, 'Drinks', 'PORORO MILK FLAVOR', '235ml', '50', '70', '', ''),
+  (127, 1, 'Drinks', 'PORORO MANGO FLAVOR', '', '50', '69', '', ''),
+  (128, 1, 'Drinks', 'PORORO STRAWBERRY FLAVOR', '235ml', '50', '', '', ''),
+  (129, 1, 'Drinks', 'PORORO BLUEBERRY FLAVOR', '235ml', '50', '58', '', ''),
+  (130, 1, 'Drinks', 'PORORO APPLE FLAVOR', '235ml', '50', '51', '', ''),
+  (131, 1, 'Drinks', 'PORORO GREEN GRAPE FLAVOR', '235ml', '50', '88', '', ''),
+  (132, 1, 'Drinks', 'PORORO PEACH', '', '', '14', '', ''),
+  (133, 1, 'Drinks', 'APPLE CIDER GRAPES FLAVOR', '', '65', '', '', ''),
+  (134, 1, 'Drinks', 'APPLE CIDER GREEN PLUM FLAVOR', '', '65', '9', '', ''),
+  (135, 1, 'Drinks', 'APPLE CIDER LEMON FLAVOR', '', '65', '6', '', ''),
+  (136, 1, 'Drinks', 'APPLE CIDER PEACH FLAVOR', '', '65', '8', '', ''),
+  (137, 1, 'Drinks', 'APPLE CIDER CHERRY FLAVOR', '', '65', '5', '', ''),
+  (138, 1, 'Drinks', 'APPLE CIDER ORANGE FLAVOR', '', '65', '8', '', ''),
+  (139, 1, 'Drinks', 'APPLE CIDER APPLE FLAVOR', '', '65', '10', '', ''),
+  (140, 1, 'Drinks', 'APPLE CIDER APPLE & FIBER FLAVOR', '', '65', '4', '', ''),
+  (141, 1, 'Drinks', 'PINEAPPLE ', '', '45', '50', '', ''),
+  (142, 1, 'Drinks', 'MOGU MOGU', '', '35', '10', '', ''),
+  (143, 1, 'Drinks', 'YAKULT', '', '13', '3', '', ''),
+  (144, 1, 'Drinks', 'POCARI', '', '60', '12', '', ''),
+  (145, 1, 'Drinks', 'MINERAL', '', '17', '94', '', ''),
+  (146, 1, 'Drinks', 'ALOVERA ORIGINAL', '', '', '4', '', ''),
+  (147, 1, 'Drinks', 'ALOVERA MANGO', '', '', '3', '', ''),
+  (148, 1, 'Drinks', 'ALOVERA STRAWBERRY', '', '', '5', '', ''),
+  (149, 1, 'Drinks', 'ALOVERA BLUE BERRY', '', '', '2', '', ''),
+  (150, 1, 'Drinks', 'ALOVERA PLUM', '', '', '5', '', ''),
+  (151, 1, 'Drinks', 'ALOVERA LEMON', '', '', '3', '', ''),
+  (152, 1, 'Soju', 'ORIGINAL', '', '105', '', '', ''),
+  (153, 1, 'Soju', 'PLUM', '', '105', '25', '', ''),
+  (154, 1, 'Soju', 'PEACH', '', '105', '3', '', ''),
+  (155, 1, 'Soju', 'STRAWBERRY', '', '105', '', '', ''),
+  (156, 1, 'Soju', 'LEMON', '', '105', '', '', ''),
+  (157, 1, 'Soju', 'GRAPE FRUIT', '', '105', '14', '', ''),
+  (158, 1, 'Soju', 'CHAMISUL', '', '', '9', '', ''),
+  (159, 1, 'Coffee', 'MAXIM WHITE GOLD', '', '11', '117', '', ''),
+  (160, 1, 'Coffee', 'MAXIM ORIGINAL', '', '11', '181', '', ''),
+  (161, 1, 'Coffee', 'MOCHA GOLD MILD', '', '11', '173', '', ''),
+  (162, 1, 'Coffee', 'MOCHA ARABICA', '', '11', '254', '', ''),
+  (163, 1, 'Ice Cream', 'MELONA PESTACIO', '', '35', '', '', ''),
+  (164, 1, 'Ice Cream', 'MELONA MANGO', '', '35', '80', '', ''),
+  (165, 1, 'Ice Cream', 'MELONA COCONUT', '', '35', '121', '', ''),
+  (166, 1, 'Ice Cream', 'MELONA STRAWBERRY', '', '35', '142', '', ''),
+  (167, 1, 'Ice Cream', 'MELONA MELON', '', '35', '162', '', ''),
+  (168, 1, 'Ice Cream', 'MELONA COFFE / CAFE', '', '', '49', '', ''),
+  (169, 1, 'Ice Cream', 'MELONA UBE', '', '', '78', '', ''),
+  (170, 1, 'Ice Cream', 'SAMACO CHOCOLATE', '', '60', '2', '', ''),
+  (171, 1, 'Ice Cream', 'SAMACO GREEN TEA', '', '60', '80', '', ''),
+  (172, 1, 'Ice Cream', 'WATERMELON', '', '15', '3', '', ''),
+  (173, 1, 'Ice Cream', 'BOOMBOOM CHOCO', '', '22', '', '', ''),
+  (174, 1, 'Ice Cream', 'BOOMBOOM COOKIES & CREAM', '', '22', '', '', ''),
+  (175, 1, 'Ice Cream', 'BOOMBOOM PINIPIG CHOCOLATE', '', '', '1', '', ''),
+  (176, 1, 'Ice Cream', 'BOOMBOOM VANILA COFFE CARAMEL', '', '', '', '', ''),
+  (177, 1, 'Ice Cream', 'AVOCADO CHOCO', '', '15', '', '', ''),
+  (178, 1, 'Ice Cream', 'CHOCKY', '', '15', '2', '', ''),
+  (179, 1, 'Ice Cream', 'ORANGE BLAST', '', '15', '22', '', ''),
+  (180, 1, 'Ice Cream', 'CORNETO CHOCOLATE', '', '25', '76', '', ''),
+  (181, 1, 'Ice Cream', 'CORNETO VANILLA', '', '25', '51', '', ''),
+  (182, 1, 'Ice Cream', 'CORNETO COKIES&CREAM', '', '25', '95', '', ''),
+  (183, 1, 'Ice Cream', 'DOUBLE CHOCO SUNDAE CUP', '', '32', '', '', ''),
+  (184, 1, 'Ice Cream', 'ROCKY ROAD', '1.25L', '270', '1', '', ''),
+  (185, 1, 'Ice Cream', 'COOKIES & CREAM', '1.25L', '270', '1', '', ''),
+  (186, 1, 'Ice Cream', 'BIRTHDAY 3 IN 1', '1.25L', '150', '3', '', ''),
+  (187, 1, 'Ice Cream', 'BIRTHDAY 3 IN 1', '75ML', '110', '', '', ''),
+  (188, 1, 'Ice Cream', 'ROCKY ROAD', '750ML', '150', '', '', ''),
+  (189, 1, 'Ice Cream', 'COOKIES & CREAM', '750ML', '150', '1', '', ''),
+  (190, 1, 'Ice Cream', 'DOUBLE DUTCH ', '750ML', '150', '', '', ''),
+  (191, 1, 'Ice Cream', 'DOUBLE DUTCH ', '1.25L', '', '', '', ''),
+  (192, 1, 'Chocolate', 'TOBLERON TINY', '', '', '18', '', ''),
+  (193, 1, 'Chocolate', 'ALMOND', '46G', '65', '5', '', ''),
+  (194, 1, 'Chocolate', 'PEPERO WHITE COOKIE', '32G', '50', '', '', ''),
+  (195, 1, 'Chocolate', 'PEPERO CHOCO FILLED', '45G', '50', '14', '', ''),
+  (196, 1, 'Chocolate', 'PEPERO CRUNCHY', '39G', '55', '', '', ''),
+  (197, 1, 'Chocolate', 'PEPERO STRAWBERRY', '39G', '55', '18', '', ''),
+  (198, 1, 'Chocolate', 'MINI KRUCH COOKIES & CREAM', '60G', '79', '11', '', ''),
+  (199, 1, 'Chocolate', 'MINI KRUCH MATCHA', '60G', '79', '1', '', ''),
+  (200, 1, 'Chocolate', 'MINI KRUCH STRAWBERRY', '60G', '79', '7', '', ''),
+  (201, 1, 'Chocolate', 'MINI KRUCH PEANUT', '', '260', '', '', ''),
+  (202, 1, 'Chocolate', 'MILK CLASIC CHEESE', '', '', '159', '', ''),
+  (203, 1, 'Chocolate', 'MILK CLASIC ', '', '', '29', '', ''),
+  (204, 1, 'Condiments', 'CHILI FLAKES', '1KG', '380', '6', '', ''),
+  (205, 1, 'Condiments', 'CHILI POWDER', '1KG', '380', '1', '', ''),
+  (206, 1, 'Condiments', 'CHILI POWDER TUB', '', '', '8', '', ''),
+  (207, 1, 'Condiments', 'CHILI FLAKES TUB', '', '', '12', '', ''),
+  (208, 1, 'Condiments', 'SESAME OIL CUP', '', '', '18', '', ''),
+  (209, 1, 'Condiments', 'SESAME OIL', '3 LITERS', '780', '7', '', ''),
+  (210, 1, 'Condiments', 'BUTANE', '', '65', '100', '', ''),
+  (211, 1, 'Condiments', 'KEWPIE', '1KL', '390', '7', '', ''),
+  (212, 1, 'Condiments', 'KEWPIE', '520ML', '325', '37', '', ''),
+  (213, 1, 'Condiments', 'KEWPIE', '150G', '', '61', '', ''),
+  (214, 1, 'Condiments', 'HONEY CITRON TEA', '1KG', '480', '18', '', ''),
+  (215, 1, 'Condiments', 'HANSUNG PORK', '340G', '95', '252', '', ''),
+  (216, 1, 'Condiments', 'HANSUNG CHICKEN', '340G', '95', '15', '', ''),
+  (217, 1, 'Condiments', 'WASABI', '43G', '80', '9', '', ''),
+  (218, 1, 'Condiments', 'ALASKA CLASIC', '', '35', '', '', ''),
+  (219, 1, 'Condiments', 'ALASKA EVAP', '', '28', '20', '', ''),
+  (220, 1, 'Condiments', 'ALL PURPOSE CREAM', '', '50', '36', '', ''),
+  (221, 1, 'Condiments', 'CHESSE DIP  BIG', '', '', '9', '', ''),
+  (222, 1, 'Condiments', 'CHEESE DIP SMALL', '', '15', '45', '', ''),
+  (223, 1, 'Condiments', 'GOCHIJANG BIG', '', '50', '29', '', ''),
+  (224, 1, 'Condiments', 'GOCHIJANG SMALL', '', '25', '39', '', ''),
+  (225, 1, 'Condiments', 'SAMJANG BIG', '', '50', '22', '', ''),
+  (226, 1, 'Condiments', 'SAMJANG SMALL', '', '25', '43', '', ''),
+  (227, 1, 'Condiments', 'SLICE CHEESE', '', '13', '58', '', ''),
+  (228, 1, 'Condiments', 'ANCHOR CHEESE SLICE 6 SLICE', '30 PACK', '', '180', '', ''),
+  (229, 1, 'Condiments', 'ANCHOR CHEESE SLICE 12 SLICE', '1 PACK', '', '12', '', ''),
+  (230, 1, 'Condiments', 'EDEN CHEESE 10 SLICE', '', '', '', '', ''),
+  (231, 1, 'Condiments', 'EDEN CHEESE 5 SLICE', '', '', '', '', ''),
+  (232, 1, 'Condiments', 'ANCHOR BUTTER', '200G', '', '18', '', ''),
+  (233, 1, 'Condiments', 'ENOKI', '', '50', '3', '', ''),
+  (234, 1, 'Condiments', 'MIX MUSHROOM', '', '120', '', '', ''),
+  (235, 1, 'Condiments', 'FIRM TOFU', '', '65', '', '', ''),
+  (236, 1, 'Condiments', 'SOFT TOFU', '', '65', '', '', ''),
+  (237, 1, 'Condiments', 'LETTUCE', '', '', '9', '', ''),
+  (238, 1, 'Condiments', 'SESAME SEEDS', '', '27', '11', '', ''),
+  (239, 1, 'Condiments', 'GLASS NOODLES', '', '', '19', '', ''),
+  (240, 1, 'Condiments', 'RAW EGG', '', '13', '24', '', ''),
+  (241, 1, 'Condiments', 'BOILED EGG', '', '17', '8', '', ''),
+  (242, 1, 'Condiments', 'GOCHUGANG', '', '', '1 BOX', '', ''),
+  (243, 1, 'Condiments', 'GRILLER', '', '', '3', '', ''),
+  (244, 1, 'Soup base', 'PORK BONE', '', '', '', '', ''),
+  (245, 1, 'Soup base', 'CHICKEN', '', '', '22', '', ''),
+  (246, 1, 'Soup base', 'SEAFOOD', '', '', '7', '', ''),
+  (247, 1, 'Soup base', 'SATAY', '', '', '4', '', ''),
+  (248, 1, 'Soup base', 'BLACK PEPPER AND PORK', '', '', '6', '', ''),
+  (249, 1, 'Soup base', 'SICHUAN HOT', '', '', '10', '', null),
+  (250, 2, 'Samgyup meat', 'PORK BELLY PLAIN', '250g', '109', '9', '', ''),
+  (251, 2, 'Samgyup meat', 'PORK BELLY SPICY BULGOGI', '250g', '109', '4', '', ''),
+  (252, 2, 'Samgyup meat', 'PORK BELLY SPECIAL BBQ', '250g', '109', '9', '', ''),
+  (253, 2, 'Samgyup meat', 'PORK BELLY GALBI', '250g', '109', '', '', ''),
+  (254, 2, 'Samgyup meat', 'PORK BELLY TERIYAKI', '250g', '109', '9', '', ''),
+  (255, 2, 'Samgyup meat', 'PORK BULGOGI', '250g', '', '8', '', ''),
+  (256, 2, 'Samgyup meat', 'PORK JOWLS PLAIN', '250g', '99', '2', '', ''),
+  (257, 2, 'Samgyup meat', 'PORK JOWLS SPICY BULGOGI', '250g', '99', '3', '', ''),
+  (258, 2, 'Samgyup meat', 'PORK JOWLS  SPECIAL BBQ', '250g', '99', '', '', ''),
+  (259, 2, 'Samgyup meat', 'PORK JOWLS GALBI', '250g', '99', '4', '', ''),
+  (260, 2, 'Samgyup meat', 'PORK JOWLS TERIYAKI', '250g', '99', '', '', ''),
+  (261, 2, 'Samgyup meat', 'BEFF PLAIN', '250g', '149', '3', '', ''),
+  (262, 2, 'Samgyup meat', 'BEFF TERIYAKI', '250g', '149', '6', '', ''),
+  (263, 2, 'Samgyup meat', 'BEFF BULGOGI', '250g', '149', '6', '', ''),
+  (264, 2, 'Samgyup meat', 'BEEF SPECIAL BBQ ', '250g', '149', '5', '', ''),
+  (265, 2, 'Samgyup meat', 'BEFF SPICY BULGOGI', '250g', '149', '5', '', ''),
+  (266, 2, 'Samgyup meat', 'PORK BELLY PLAIN', '500g', '200', '7', '', ''),
+  (267, 2, 'Samgyup meat', 'PORK BELLY SPICY BULGOGI', '500g', '200', '7', '', ''),
+  (268, 2, 'Samgyup meat', 'PORK BELLY SPECIAL BBQ', '500g', '200', '2', '', ''),
+  (269, 2, 'Samgyup meat', 'PORK BELLY GALBI', '500g', '200', '5', '', ''),
+  (270, 2, 'Samgyup meat', 'PORK BELLY TERIYAKI', '500g', '200', '10', '', ''),
+  (271, 2, 'Samgyup meat', 'PORK JOWLS PLAIN', '500g', '170', '5', '', ''),
+  (272, 2, 'Samgyup meat', 'PORK JOWLS SPICY BULGOGI', '500g', '170', '9', '', ''),
+  (273, 2, 'Samgyup meat', 'PORK JOWLS  SPECIAL BBQ', '500g', '170', '', '', ''),
+  (274, 2, 'Samgyup meat', 'PORK JOWLS GALBI', '500g', '170', '12', '', ''),
+  (275, 2, 'Samgyup meat', 'PORK JOWLS TERIYAKI', '500g', '170', '', '', ''),
+  (276, 2, 'Samgyup meat', 'BEFF PLAIN', '500g', '280', '9', '', ''),
+  (277, 2, 'Samgyup meat', 'BEFF TERIYAKI', '500g', '280', '10', '', ''),
+  (278, 2, 'Samgyup meat', 'BEFF BULGOGI', '500g', '280', '10', '', ''),
+  (279, 2, 'Samgyup meat', 'BEEF SPECIAL BBQ ', '500g', '280', '7', '', ''),
+  (280, 2, 'Samgyup meat', 'BEFF SPICY BULGOGI', '500g', '280', '5', '', ''),
+  (281, 2, 'Samgyup bowl meat', 'PORK BULGOGI', '', '59', '8', '', ''),
+  (282, 2, 'Samgyup bowl meat', 'PORK SPICY BULGOGI', '', '59', '26', '', ''),
+  (283, 2, 'Samgyup bowl meat', 'BEEF BULGOGI', '', '79', '20', '', ''),
+  (284, 2, 'Samgyup bowl meat', 'BEFF SPICY BULGOGI', '', '79', '36', '', ''),
+  (285, 2, 'Frozen foods pack & repack & side dish', 'FISH CAKE SLICE', '', '40', '28', '', ''),
+  (286, 2, 'Frozen foods pack & repack & side dish', 'FISH CAKE CUT', '', '15', '28', '', ''),
+  (287, 2, 'Frozen foods pack & repack & side dish', 'SAUSAGE', '', '20', '100', '', ''),
+  (288, 2, 'Frozen foods pack & repack & side dish', 'RICE CAKE ( TEOKBOKKI )', '', '12', '8', '', ''),
+  (289, 2, 'Frozen foods pack & repack & side dish', 'LUNCHEON MEAT', '', '12', '51', '', ''),
+  (290, 2, 'Frozen foods pack & repack & side dish', 'CRABSTICK ', '', '15', '46', '', ''),
+  (291, 2, 'Frozen foods pack & repack & side dish', 'ENOKI', '', '15', '8', '', ''),
+  (292, 2, 'Frozen foods pack & repack & side dish', 'FISH TOFU', '', '10', '21', '', ''),
+  (293, 2, 'Frozen foods pack & repack & side dish', 'FISH CAKE ', '1KG', '200', '4', '', ''),
+  (294, 2, 'Frozen foods pack & repack & side dish', 'FISH TOFU', '260g', '100', '54', '', ''),
+  (295, 2, 'Frozen foods pack & repack & side dish', 'SHABU BALLS MAESTRO ', '260g', '115', '68', '', ''),
+  (296, 2, 'Frozen foods pack & repack & side dish', 'SHABU BALLS REGULAR', '260g', '90', '4', '', ''),
+  (297, 2, 'Frozen foods pack & repack & side dish', 'SAUSAGE', '170g', '120', '67', '', ''),
+  (298, 2, 'Frozen foods pack & repack & side dish', 'FRENCH FRIES', '1kl', '140', '8', '', ''),
+  (299, 2, 'Frozen foods pack & repack & side dish', 'RICE CAKE ( TEOKBOKKI )', '1kl', '200', '1', '', ''),
+  (300, 2, 'Frozen foods pack & repack & side dish', 'SALTED CHICKEN', '1kl', '300', '3', '', ''),
+  (301, 2, 'Frozen foods pack & repack & side dish', 'CRABSTICK ', '200g', '65', '74', '', ''),
+  (302, 2, 'Frozen foods pack & repack & side dish', 'CHICKEN DUMPLING', '200G', '', '27', '', ''),
+  (303, 2, 'Frozen foods pack & repack & side dish', 'MARBLE POTATO TUB', '', '', '13', '', ''),
+  (304, 2, 'Frozen foods pack & repack & side dish', 'KIMCHI BIG', '', '', '20', '', ''),
+  (305, 2, 'Frozen foods pack & repack & side dish', 'KIMCHI MEDIUM', '', '', '28', '', ''),
+  (306, 2, 'Frozen foods pack & repack & side dish', 'KIMCHI CUP ', '', '', '25', '', ''),
+  (307, 2, 'Frozen foods pack & repack & side dish', 'RADISH TUB', '', '', '21', '', ''),
+  (308, 2, 'Korean Noodles', 'BULDAK CARBO', '', '90', '80', '', ''),
+  (309, 2, 'Korean Noodles', 'BULDAK CREAMY CARBO', '', '90', '59', '2027-02-19', ''),
+  (310, 2, 'Korean Noodles', 'BULDAK ROSE', '', '90', '150', '2027-01-15', ''),
+  (311, 2, 'Korean Noodles', 'BULDAK QUATRO CHEESE', '', '90', '58', '2027-01-19', ''),
+  (312, 2, 'Korean Noodles', 'BULDAK X2 SPICY', '', '90', '113', '2026-12-29', ''),
+  (313, 2, 'Korean Noodles', 'BULDAK ORIGINAL', '', '90', '38', '2026-11-27', ''),
+  (314, 2, 'Korean Noodles', 'STIRFRY CHEESE RAMEN SPICY', '', '60', '141', '', ''),
+  (315, 2, 'Korean Noodles', 'STIRFRY CHEESE RAMEN ', '', '60', '31', '2026-10-19', ''),
+  (316, 2, 'Korean Noodles', 'STIRFRY CHESSY RAMEN', '', '60', '', '', ''),
+  (317, 2, 'Korean Noodles', 'STIRFRY BEFF BULGOGI', '', '60', '43', '2026-12-25', ''),
+  (318, 2, 'Korean Noodles', 'KORENO CHEESE SPICY', '', '50', '4', '2026-08-27', ''),
+  (319, 2, 'Korean Noodles', 'KORENO FRIED BULGOGI', '', '50', '14', '2026-09-23', ''),
+  (320, 2, 'Korean Noodles', 'KORENO CARBONARA', '', '55', '135', '2026-10-29', ''),
+  (321, 2, 'Korean Noodles', 'TANGLE CREAMY MUCHROOM', '', '105', '51', '', ''),
+  (322, 2, 'Korean Noodles', 'TANGLE GARLIC OIL', '', '105', '27', '', ''),
+  (323, 2, 'Korean Noodles', 'JAPAGHETTI', '', '65', '97', '2026-06-21', ''),
+  (324, 2, 'Korean Noodles', 'CHEESE RAMEN SPICY', '', '55', '301', '', ''),
+  (325, 2, 'Korean Noodles', 'CHEESE RAMEN', '', '55', '85', '', ''),
+  (326, 2, 'Korean Noodles', 'CHESSY RAMEN', '', '55', '27', '', ''),
+  (327, 2, 'Korean Noodles', 'SHIN RAMYUN', '', '55', '133', '2026-06-18', ''),
+  (328, 2, 'Korean Noodles', 'JIN RAMEN SPICY', '', '40', '156', '2026-10-21', ''),
+  (329, 2, 'Korean Noodles', 'JIN RAMEN MILD', '', '40', '130', '2027-01-18', ''),
+  (330, 2, 'Korean Noodles', 'NEOGURI', '', '60', '22', '2026-08-27', ''),
+  (331, 2, 'Korean Noodles', 'VEGGIE', '', '55', '21', '', ''),
+  (332, 2, 'Korean Noodles', 'MEP', '', '4 FOR 100', '74', '', ''),
+  (333, 2, 'Korean Noodles', 'CHESSY RAMEN CHEDAR', '', '', '30', '', ''),
+  (334, 2, 'Korean Noodles', 'CHESSY RAMEN  CHEDAR SPICY', '', '', '13', '', ''),
+  (335, 2, 'Cup Noodles', 'CUP TANGLE CREAMY MUCHROOMS', '', '120', '25', '', ''),
+  (336, 2, 'Cup Noodles', 'CUP TANGLE GARLIIC OIL', '', '120', '24', '', ''),
+  (337, 2, 'Cup Noodles', 'CUP BULDAK CARBO BIG', '', '100', '10', '', ''),
+  (338, 2, 'Cup Noodles', 'CUP BULDAK CREAMY CARBO BIG', '', '100', '43', '', ''),
+  (339, 2, 'Cup Noodles', 'CUP BULDAK ROSE SMALL', '', '70', '', '', ''),
+  (340, 2, 'Cup Noodles', 'CUP BULDAK CARBO SMALL', '', '70', '82', '', ''),
+  (341, 2, 'Cup Noodles', 'CUP BULDAK CHEESE  SMALL', '', '', '11', '', ''),
+  (342, 2, 'Cup Noodles', 'CUP BULDAK QUATRO CHEESE SMALL', '', '70', '', '', ''),
+  (343, 2, 'Cup Noodles', 'CUP BULDAK X2 SPICY SMALL', '', '70', '23', '', ''),
+  (344, 2, 'Cup Noodles', 'CUP YOPOKKI SPICY', '', '100', '38', '', ''),
+  (345, 2, 'Cup Noodles', 'CUP YOPOKKI CHEESE', '', '', '3', '', ''),
+  (346, 2, 'Cup Noodles', 'POUNCH YOPOKKI CHEESE&SPICY', '', '100', '5', '', ''),
+  (347, 2, 'Seaweed', 'NAMKWANG', '', '55', '340', '', ''),
+  (348, 2, 'Seaweed', 'BIBIGO', '', '', '245', '', ''),
+  (349, 2, 'Seaweed', 'ONCHEONGI', '', '50', '74', '', ''),
+  (350, 2, 'Seaweed', 'NARI NAMKWANG', '', '100', '28', '', ''),
+  (351, 2, 'Seaweed', 'NARI DAEMI', '', '110', '38', '', ''),
+  (352, 2, 'Drinks', 'COKE MISMO', '290ml', '25', '30', '', ''),
+  (353, 2, 'Drinks', 'SPRITE MISMO', '290ml', '25', '22', '', ''),
+  (354, 2, 'Drinks', 'ROYAL MISMO', '290ml', '25', '29', '', ''),
+  (355, 2, 'Drinks', 'SPRITE', '1.5 LITTERS', '100', '24', '', ''),
+  (356, 2, 'Drinks', 'ROYAL ', '1.5 LITTERS', '100', '24', '', ''),
+  (357, 2, 'Drinks', 'COKE', '1.5 LITTERS', '100', '18', '', ''),
+  (358, 2, 'Drinks', 'WELCH ORANGE', '', '', '79', '', ''),
+  (359, 2, 'Drinks', 'WELCH GRAPE', '', '', '6', '', ''),
+  (360, 2, 'Drinks', 'BINGRAE MELON', '', '', '18', '', ''),
+  (361, 2, 'Drinks', 'BINGRAE BANANA', '', '', '13', '', ''),
+  (362, 2, 'Drinks', 'BINGRAE CHESNUT', '', '', '7', '', ''),
+  (363, 2, 'Drinks', 'BINGRAE VANILLA', '', '', '24', '', ''),
+  (364, 2, 'Drinks', 'BINGGRAE TORO', '200ml ', '50', '18', '', ''),
+  (365, 2, 'Drinks', 'BINGGRAE STARWBERRY', '200ml ', '50', '', '', ''),
+  (366, 2, 'Drinks', 'BINGGRAE JUICY COOL', '200ml ', '50', '32', '', ''),
+  (367, 2, 'Drinks', 'LETS BE MOCHA LATTE', '175ml', '45', '24', '', ''),
+  (368, 2, 'Drinks', 'LETS BE MILD COFFE', '175ml', '45', '82', '', ''),
+  (369, 2, 'Drinks', 'PORORO TROPICAL FRUITS FLAVOR', '235ml', '50', '28', '', ''),
+  (370, 2, 'Drinks', 'PORORO MILK FLAVOR', '235ml', '50', '2', '', ''),
+  (371, 2, 'Drinks', 'PORORO MANGO FLAVOR', '', '50', '13', '', ''),
+  (372, 2, 'Drinks', 'PORORO STRAWBERRY FLAVOR', '235ml', '50', '7', '', ''),
+  (373, 2, 'Drinks', 'PORORO BLUEBERRY FLAVOR', '235ml', '50', '', '', ''),
+  (374, 2, 'Drinks', 'PORORO APPLE FLAVOR', '235ml', '50', '11', '', ''),
+  (375, 2, 'Drinks', 'PORORO GREEN GRAPE FLAVOR', '235ml', '50', '15', '', ''),
+  (376, 2, 'Drinks', 'APPLE CIDER GRAPES FLAVOR', '', '65', '1', '', ''),
+  (377, 2, 'Drinks', 'APPLE CIDER GREEN PLUM FLAVOR', '', '65', '11', '', ''),
+  (378, 2, 'Drinks', 'APPLE CIDER LEMON FLAVOR', '', '65', '11', '', ''),
+  (379, 2, 'Drinks', 'APPLE CIDER PEACH FLAVOR', '', '65', '8', '', ''),
+  (380, 2, 'Drinks', 'APPLE CIDER CHERRY FLAVOR', '', '65', '10', '', ''),
+  (381, 2, 'Drinks', 'APPLE CIDER ORANGE FLAVOR', '', '65', '10', '', ''),
+  (382, 2, 'Drinks', 'APPLE CIDER APPLE FLAVOR', '', '65', '12', '', ''),
+  (383, 2, 'Drinks', 'APPLE CIDER APPLE & FIBER FLAVOR', '', '65', '3', '', ''),
+  (384, 2, 'Drinks', 'PINEAPPLE ', '', '45', '46', '', ''),
+  (385, 2, 'Drinks', 'MOGU MOGU', '', '35', '5', '', ''),
+  (386, 2, 'Drinks', 'YAKULT', '', '13', '15', '', ''),
+  (387, 2, 'Drinks', 'POCARI', '', '60', '8', '', ''),
+  (388, 2, 'Drinks', 'MINERAL', '', '17', '79', '', ''),
+  (389, 2, 'Soju', 'ORIGINAL', '', '105', '', '', ''),
+  (390, 2, 'Soju', 'PLUM', '', '105', '35', '', ''),
+  (391, 2, 'Soju', 'PEACH', '', '105', '14', '', ''),
+  (392, 2, 'Soju', 'STARWBERRY', '', '105', '', '', ''),
+  (393, 2, 'Soju', 'LEMON', '', '105', '9', '', ''),
+  (394, 2, 'Soju', 'GRAPE FRUIT', '', '105', '10', '', ''),
+  (395, 2, 'Coffee', 'MAXIM WHITE GOLD', '', '11', '158', '', ''),
+  (396, 2, 'Coffee', 'MAXIM ORIGINAL', '', '11', '76', '', ''),
+  (397, 2, 'Coffee', 'MOCHA GOLD MILD', '', '11', '189', '', ''),
+  (398, 2, 'Coffee', 'MOCHA ARABICA', '', '11', '180', '', ''),
+  (399, 2, 'Ice Cream', 'MELONA PESTACIO', '', '35', '48', '', ''),
+  (400, 2, 'Ice Cream', 'MELONA MANGO', '', '35', '6', '', ''),
+  (401, 2, 'Ice Cream', 'MELONA COCONUT', '', '35', '31', '', ''),
+  (402, 2, 'Ice Cream', 'MELONA STRAWBERRY', '', '35', '75', '', ''),
+  (403, 2, 'Ice Cream', 'MELONA MELON', '', '35', '74', '', ''),
+  (404, 2, 'Ice Cream', 'MELONA COFFE / CAFE', '', '', '113', '', ''),
+  (405, 2, 'Ice Cream', 'MELONA UBE', '', '', '8', '', ''),
+  (406, 2, 'Ice Cream', 'SAMACO CHOCOLATE', '', '60', '1', '', ''),
+  (407, 2, 'Ice Cream', 'SAMACO GREEN TEA', '', '60', '45', '', ''),
+  (408, 2, 'Ice Cream', 'WATERMELON', '', '15', '', '', ''),
+  (409, 2, 'Ice Cream', 'BOOMBOOM CHOCO', '', '22', '', '', ''),
+  (410, 2, 'Ice Cream', 'BOOMBOOM COOKIES & CREAM', '', '22', '8', '', ''),
+  (411, 2, 'Ice Cream', 'BOOMBOOM PINIPIG CHOCOLATE', '', '', '6', '', ''),
+  (412, 2, 'Ice Cream', 'BOOMBOOM VANILA COFFE CARAMEL', '', '', '3', '', ''),
+  (413, 2, 'Ice Cream', 'AVOCADO CHOCO', '', '15', '26', '', ''),
+  (414, 2, 'Ice Cream', 'CHOCKY', '', '15', '', '', ''),
+  (415, 2, 'Ice Cream', 'ORANGE BLAST', '', '15', '', '', ''),
+  (416, 2, 'Ice Cream', 'CORNETO CHOCOLATE', '', '25', '26', '', ''),
+  (417, 2, 'Ice Cream', 'CORNETO VANILLA', '', '25', '12', '', ''),
+  (418, 2, 'Ice Cream', 'CORNETO COKIES&CREAM', '', '25', '30', '', ''),
+  (419, 2, 'Ice Cream', 'DOUBLE CHOCO SUNDAE CUP', '', '32', '2', '', ''),
+  (420, 2, 'Ice Cream', 'ROCKY ROAD', '1.25L', '270', '', '', ''),
+  (421, 2, 'Ice Cream', 'COOKIES & CREAM', '1.25L', '270', '', '', ''),
+  (422, 2, 'Ice Cream', 'BIRTHDAY 3 IN 1', '1.25L', '150', '', '', ''),
+  (423, 2, 'Ice Cream', 'BIRTHDAY 3 IN 1', '75ML', '110', '', '', ''),
+  (424, 2, 'Ice Cream', 'ROCKY ROAD', '750ML', '150', '', '', ''),
+  (425, 2, 'Ice Cream', 'COOKIES & CREAM', '750ML', '150', '', '', ''),
+  (426, 2, 'Ice Cream', 'DOUBLE DUTCH ', '750ML', '150', '', '', ''),
+  (427, 2, 'Ice Cream', 'DOUBLE DUTCH ', '1.25L', '', '1', '', ''),
+  (428, 2, 'Chocolate', 'TOBLERON TINY', '', '', '43', '', ''),
+  (429, 2, 'Chocolate', 'ALMOND', '46G', '65', '24', '', ''),
+  (430, 2, 'Chocolate', 'PEPERO WHITE COOKIE', '32G', '50', '22', '', ''),
+  (431, 2, 'Chocolate', 'PEPERO CHOCO FILLED', '45G', '50', '3', '', ''),
+  (432, 2, 'Chocolate', 'PEPERO CRUNCHY', '39G', '55', '6', '', ''),
+  (433, 2, 'Chocolate', 'PEPERO STRAWBERRY', '39G', '55', '9', '', ''),
+  (434, 2, 'Chocolate', 'MINI KRUCH COOKIES & CREAM', '60G', '79', '13', '', ''),
+  (435, 2, 'Chocolate', 'MINI KRUCH MATCHA', '60G', '79', '3', '', ''),
+  (436, 2, 'Chocolate', 'MINI KRUCH STRAWBERRY', '60G', '79', '8', '', ''),
+  (437, 2, 'Chocolate', 'MINI KRUCH PEANUT', '', '260', '', '', ''),
+  (438, 2, 'Chocolate', 'MILK CLASIC CHEESE', '', '', '122', '', ''),
+  (439, 2, 'Chocolate', 'MILK CLASIC ', '', '', '86', '', ''),
+  (440, 2, 'Condiments', 'CHILI FLAKES', '1KG', '380', '1', '', ''),
+  (441, 2, 'Condiments', 'CHILI POWDER', '1KG', '380', '', '', ''),
+  (442, 2, 'Condiments', 'CHILI POWDER TUB', '', '', '12', '', ''),
+  (443, 2, 'Condiments', 'CHILI FLAKES TUB', '', '', '12', '', ''),
+  (444, 2, 'Condiments', 'SESAME OIL CUP', '', '', '36', '', ''),
+  (445, 2, 'Condiments', 'SESAME OIL', '3 LITERS', '780', '2', '', ''),
+  (446, 2, 'Condiments', 'BUTANE', '', '65', '122', '', ''),
+  (447, 2, 'Condiments', 'KEWPIE', '1KL', '390', '9', '', ''),
+  (448, 2, 'Condiments', 'KEWPIE', '520ML', '325', '15', '', ''),
+  (449, 2, 'Condiments', 'KEWPIE', '150G', '', '41', '', ''),
+  (450, 2, 'Condiments', 'HONEY CITRON TEA', '1KG', '480', '14', '', ''),
+  (451, 2, 'Condiments', 'HANSUNG PORK', '340G', '95', '228', '', ''),
+  (452, 2, 'Condiments', 'HANSUNG CHICKEN', '340G', '95', '13', '', ''),
+  (453, 2, 'Condiments', 'WASABI', '43G', '80', '9', '', ''),
+  (454, 2, 'Condiments', 'ALASKA CLASIC', '', '35', '', '', ''),
+  (455, 2, 'Condiments', 'ALASKA EVAP', '', '28', '35', '', ''),
+  (456, 2, 'Condiments', 'ALL PURPOSE CREAM', '', '50', '41', '', ''),
+  (457, 2, 'Condiments', 'CHEESE DIP SMALL', '', '15', '8', '', ''),
+  (458, 2, 'Condiments', 'GOCHIJANG BIG', '', '50', '15', '', ''),
+  (459, 2, 'Condiments', 'GOCHIJANG SMALL', '', '25', '57', '', ''),
+  (460, 2, 'Condiments', 'SAMJANG BIG', '', '50', '29', '', ''),
+  (461, 2, 'Condiments', 'SAMJANG SMALL', '', '25', '55', '', ''),
+  (462, 2, 'Condiments', 'SLICE CHEESE', '', '13', '30', '', ''),
+  (463, 2, 'Condiments', 'ANCHOR CHEESE SLICE 6 SLICE', '19 PACK', '', '114 PCS', '', ''),
+  (464, 2, 'Condiments', 'ANCHOR CHEESE SLICE 12 SLICE', '51 PACK', '', '612 PCS', '', ''),
+  (465, 2, 'Condiments', 'EDEN CHEESE 10 SLICE', '19 PACK', '', '190 PCS', '', ''),
+  (466, 2, 'Condiments', 'EDEN CHEESE 5 SLICE', '3 PACK', '', '20 PCS', '', ''),
+  (467, 2, 'Condiments', 'ANCHOR BUTTER', '200G', '', '40', '', ''),
+  (468, 2, 'Condiments', 'ENOKI', '', '50', '16', '', ''),
+  (469, 2, 'Condiments', 'MIX MUSHROOM', '', '120', '', '', ''),
+  (470, 2, 'Condiments', 'FIRM TOFU', '', '65', '', '', ''),
+  (471, 2, 'Condiments', 'SOFT TOFU', '', '65', '', '', ''),
+  (472, 2, 'Condiments', 'LETTUCE', '', '', '21', '', ''),
+  (473, 2, 'Condiments', 'SESAME SEEDS', '', '27', '19', '', ''),
+  (474, 2, 'Condiments', 'GLASS NOODLES', '', '', '21', '', ''),
+  (475, 2, 'Condiments', 'RAW EGG', '', '13', '14', '', ''),
+  (476, 2, 'Condiments', 'BOILED EGG', '', '17', '8', '', ''),
+  (477, 2, 'Soup base', 'PORK BONE', '', '', '24', '', ''),
+  (478, 2, 'Soup base', 'CHICKEN', '', '', '14', '', ''),
+  (479, 2, 'Soup base', 'SEAFOOD', '', '', '9', '', ''),
+  (480, 2, 'Soup base', 'SATAY', '', '', '4', '', ''),
+  (481, 2, 'Soup base', 'SICHUAN HOT', '', '', '1', '', null);
+
+insert into public.branches (
+  id,
+  code,
+  name,
+  manager_name,
+  contact_number,
+  address,
+  opening_date,
+  status
+)
+values
+  (1, 'MAIN', 'Sta. Lucia', null, null, null, null, 'active'),
+  (2, 'DOLLAR', 'Dollar', null, null, null, null, 'active')
+on conflict (id) do update
+set
+  code = excluded.code,
+  name = excluded.name,
+  manager_name = excluded.manager_name,
+  contact_number = excluded.contact_number,
+  address = excluded.address,
+  opening_date = excluded.opening_date,
+  status = excluded.status,
+  updated_at = now();
+
+delete from public.inventory_items;
+delete from public.products;
+delete from public.categories;
+
+insert into public.categories (
+  name,
+  slug,
+  created_at,
+  updated_at
+)
+select distinct
+  normalized_rows.category_clean,
+  regexp_replace(
+    lower(
+      regexp_replace(normalized_rows.category_clean, '[^a-zA-Z0-9]+', '-', 'g')
+    ),
+    '(^-+|-+$)',
+    '',
+    'g'
+  ) as category_slug,
+  now(),
+  now()
+from (
+  select
+    case
+      when btrim(coalesce(category, '')) = '' then 'Uncategorized'
+      else regexp_replace(btrim(category), '\s+', ' ', 'g')
+    end as category_clean
+  from owner_inventory_raw
+) normalized_rows
+order by normalized_rows.category_clean asc;
+
+insert into public.products (
+  category_id,
+  product_name,
+  unit_label,
+  default_price,
+  legacy_price_text,
+  is_active,
+  created_at,
+  updated_at
+)
+with normalized_rows as (
+  select
+    case
+      when btrim(coalesce(category, '')) = '' then 'Uncategorized'
+      else regexp_replace(btrim(category), '\s+', ' ', 'g')
+    end as category_clean,
+    regexp_replace(
+      btrim(coalesce(product_name, 'Unnamed Product')),
+      '\s+',
+      ' ',
+      'g'
+    ) as product_name_clean,
+    coalesce(regexp_replace(btrim(coalesce(net_weight, '')), '\s+', ' ', 'g'), '') as unit_label_clean,
+    btrim(coalesce(price, '')) as price_text,
+    case
+      when btrim(coalesce(price, '')) ~ '^\d+(\.\d+)?$'
+        then btrim(price)::numeric(12, 2)
+      else null
+    end as price_numeric,
+    case
+      when btrim(coalesce(created_at, '')) ~ '^\d{4}-\d{2}-\d{2}'
+        then btrim(created_at)::timestamptz
+      else now()
+    end as created_at_value
+  from owner_inventory_raw
+),
+catalog_seed as (
+  select
+    category_clean,
+    product_name_clean,
+    unit_label_clean,
+    max(price_numeric) as default_price,
+    max(nullif(price_text, '')) as legacy_price_text,
+    min(created_at_value) as created_at_value
+  from normalized_rows
+  group by 1, 2, 3
+)
+select
+  c.id,
+  catalog_seed.product_name_clean,
+  catalog_seed.unit_label_clean,
+  catalog_seed.default_price,
+  catalog_seed.legacy_price_text,
+  true,
+  catalog_seed.created_at_value,
+  now()
+from catalog_seed
+join public.categories c
+  on c.name = catalog_seed.category_clean
+order by c.name asc, catalog_seed.product_name_clean asc, catalog_seed.unit_label_clean asc;
+
+insert into public.inventory_items (
+  branch_id,
+  product_id,
+  selling_price,
+  stock_quantity,
+  reorder_level,
+  expiration_date,
+  legacy_stock_text,
+  is_active,
+  created_at,
+  updated_at
+)
+with normalized_rows as (
+  select
+    branch_id,
+    case
+      when btrim(coalesce(category, '')) = '' then 'Uncategorized'
+      else regexp_replace(btrim(category), '\s+', ' ', 'g')
+    end as category_clean,
+    regexp_replace(
+      btrim(coalesce(product_name, 'Unnamed Product')),
+      '\s+',
+      ' ',
+      'g'
+    ) as product_name_clean,
+    coalesce(regexp_replace(btrim(coalesce(net_weight, '')), '\s+', ' ', 'g'), '') as unit_label_clean,
+    btrim(coalesce(price, '')) as price_text,
+    case
+      when btrim(coalesce(price, '')) ~ '^\d+(\.\d+)?$'
+        then btrim(price)::numeric(12, 2)
+      else null
+    end as price_numeric,
+    btrim(coalesce(stock_quantity, '')) as stock_text,
+    case
+      when regexp_replace(btrim(coalesce(stock_quantity, '')), '[^0-9-]', '', 'g') ~ '^-?\d+$'
+        then greatest(
+          regexp_replace(btrim(stock_quantity), '[^0-9-]', '', 'g')::integer,
+          0
+        )
+      else 0
+    end as stock_quantity_numeric,
+    case
+      when btrim(coalesce(expiration_date, '')) ~ '^\d{4}-\d{2}-\d{2}$'
+        then btrim(expiration_date)::date
+      else null
+    end as expiration_date_value,
+    case
+      when btrim(coalesce(created_at, '')) ~ '^\d{4}-\d{2}-\d{2}'
+        then btrim(created_at)::timestamptz
+      else now()
+    end as created_at_value
+  from owner_inventory_raw
+),
+inventory_seed as (
+  select
+    branch_id,
+    category_clean,
+    product_name_clean,
+    unit_label_clean,
+    max(price_numeric) as selling_price,
+    sum(stock_quantity_numeric) as stock_quantity,
+    max(expiration_date_value) as expiration_date_value,
+    max(nullif(stock_text, '')) as legacy_stock_text,
+    min(created_at_value) as created_at_value
+  from normalized_rows
+  group by 1, 2, 3, 4
+)
+select
+  inventory_seed.branch_id,
+  p.id,
+  coalesce(inventory_seed.selling_price, p.default_price, 0),
+  inventory_seed.stock_quantity,
+  10,
+  inventory_seed.expiration_date_value,
+  inventory_seed.legacy_stock_text,
+  true,
+  inventory_seed.created_at_value,
+  now()
+from inventory_seed
+join public.categories c
+  on c.name = inventory_seed.category_clean
+join public.products p
+  on p.category_id = c.id
+ and p.product_name = inventory_seed.product_name_clean
+ and p.unit_label = inventory_seed.unit_label_clean
+order by inventory_seed.branch_id asc, c.name asc, p.product_name asc, p.unit_label asc;
+
+select setval(
+  pg_get_serial_sequence('public.categories', 'id'),
+  greatest((select coalesce(max(id), 1) from public.categories), 1),
+  true
+);
+
+select setval(
+  pg_get_serial_sequence('public.products', 'id'),
+  greatest((select coalesce(max(id), 1) from public.products), 1),
+  true
+);
+
+select setval(
+  pg_get_serial_sequence('public.inventory_items', 'id'),
+  greatest((select coalesce(max(id), 1) from public.inventory_items), 1),
+  true
+);
+
+commit;
+
+select
+  (select count(*) from public.categories) as categories_count,
+  (select count(*) from public.products) as products_count,
+  (select count(*) from public.inventory_items) as inventory_items_count,
+  (select count(*) from public.inventory_items where branch_id = 1) as sta_lucia_inventory_items_count,
+  (select count(*) from public.inventory_items where branch_id = 2) as dollar_inventory_items_count;

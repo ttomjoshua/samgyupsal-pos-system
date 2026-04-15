@@ -1,0 +1,141 @@
+/* ── Reset ── */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: 'Inter', 'Segoe UI', sans-serif;
+  line-height: 1.5;
+  color: #1f1722;
+  background:
+    radial-gradient(circle at top left, rgba(255, 196, 128, 0.35), transparent 32%),
+    linear-gradient(180deg, #fff8f1 0%, #f6efe8 100%);
+  min-height: 100vh;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ── Tokens ── */
+:root {
+  --surface: rgba(255, 255, 255, 0.88);
+  --surface-strong: #ffffff;
+  --border: rgba(92, 53, 23, 0.12);
+  --text-soft: #6d5a4d;
+  --accent: #a63f14;
+  --accent-dark: #7c2f0d;
+  --shadow: 0 18px 40px rgba(92, 53, 23, 0.12);
+}
+
+/* ── Login Wrapper ── */
+.login-wrapper {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  padding: 1.5rem;
+}
+
+/* ── Login Card ── */
+.login-card {
+  width: min(100%, 480px);
+  padding: 2.5rem 2rem;
+  background: var(--surface);
+  backdrop-filter: blur(12px);
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow);
+  border-radius: 28px;
+}
+
+.login-card h1 {
+  margin: 0 0 0.25rem;
+  font-size: 2.4rem;
+  font-weight: 800;
+  line-height: 1.1;
+  color: #1f1722;
+}
+
+.eyebrow {
+  margin: 0 0 0.4rem;
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+
+.login-subtitle {
+  margin: 0 0 1.5rem;
+  color: var(--text-soft);
+  font-size: 1rem;
+}
+
+/* ── Demo Accounts Box ── */
+.login-demo {
+  margin: 0 0 1.75rem;
+  padding: 1rem 1.15rem;
+  border: 1px solid rgba(166, 63, 20, 0.14);
+  border-radius: 16px;
+  background: rgba(255, 248, 241, 0.72);
+}
+
+.login-demo-title {
+  margin: 0 0 0.45rem;
+  font-weight: 700;
+  font-size: 0.92rem;
+  color: var(--accent-dark);
+}
+
+.login-demo p {
+  margin: 0.2rem 0;
+  color: #5f422d;
+  font-size: 0.92rem;
+}
+
+.login-demo code {
+  padding: 0.15rem 0.4rem;
+  border-radius: 6px;
+  background: rgba(166, 63, 20, 0.08);
+  font-family: 'SF Mono', 'Cascadia Code', monospace;
+  font-size: 0.85rem;
+  color: var(--accent-dark);
+}
+
+.login-demo-branch {
+  color: var(--text-soft);
+  font-size: 0.88rem;
+}
+
+.login-demo-footnote {
+  margin-top: 0.75rem !important;
+  font-size: 0.88rem;
+  color: var(--text-soft) !important;
+}
+
+/* ── Form ── */
+.login-form {
+  display: grid;
+  gap: 1rem;
+}
+
+.login-form input {
+  width: 100%;
+  padding: 0.95rem 1rem;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: #ffffff;
+  font-family: inherit;
+  font-size: 0.95rem;
+  color: #1f1722;
+}
+
+.login-form input::placeholder { color: #b0a298; }
+
+.primary-button {
+  border: none;
+  border-radius: 14px;
+  padding: 1rem 1.2rem;
+  background: linear-gradient(135deg, var(--accent) 0%, #d76b33 100%);
+  color: #fff;
+  font-weight: 700;
+  font-size: 1rem;
+  cursor: pointer;
+  font-family: inherit;
+}

@@ -1,0 +1,128 @@
+<div class="app-shell">
+  <aside class="sidebar">
+    <h2 class="sidebar-title">G SAMGYUPSAL &amp; KOREAN FOOD</h2>
+    <p class="sidebar-copy">Full admin access across every branch and management screen.</p>
+    <nav class="sidebar-nav">
+      <a href="#" class="sidebar-link">Dashboard</a>
+      <a href="#" class="sidebar-link">POS</a>
+      <a href="#" class="sidebar-link active">Inventory</a>
+      <a href="#" class="sidebar-link">Products</a>
+      <a href="#" class="sidebar-link">Reports</a>
+      <a href="#" class="sidebar-link">Users</a>
+    </nav>
+  </aside>
+
+  <div class="main-area">
+    <header class="app-header">
+      <div>
+        <p class="eyebrow">Workspace</p>
+        <h2>Inventory</h2>
+        <p class="supporting-text">Stock records, restocking, and inventory alerts.</p>
+      </div>
+      <div class="header-actions">
+        <div class="user-label">
+          <span class="user-label-title">Logged in as</span>
+          <strong>Admin User (Administrator)</strong>
+          <span class="user-scope-copy">Branch: All Branches</span>
+        </div>
+        <button class="logout-button" type="button">Logout</button>
+      </div>
+    </header>
+
+    <div class="page-content">
+      <section class="inventory-page">
+        <div class="inventory-header">
+          <div>
+            <p class="eyebrow">Admin Inventory Screen</p>
+            <h1>Inventory</h1>
+            <p class="supporting-text">Track product quantities, expiry dates, stock status, and quick admin actions.</p>
+          </div>
+          <button class="inventory-primary-action" type="button">Add Product</button>
+        </div>
+
+        <div class="inventory-toolbar">
+          <div class="inventory-filter-group">
+            <button class="inventory-filter active" type="button">All Items</button>
+            <button class="inventory-filter" type="button">Low Stock</button>
+            <button class="inventory-filter" type="button">Near Expiry</button>
+            <label class="inventory-category-control">
+              <span>Category</span>
+              <select>
+                <option>All Categories</option>
+                <option>Samgyupsal Sets</option>
+                <option>Korean BBQ</option>
+                <option>Side Dishes</option>
+                <option>Beverages</option>
+                <option>Condiments</option>
+              </select>
+            </label>
+          </div>
+          <p class="inventory-result-copy">Showing <strong>10</strong> products</p>
+        </div>
+
+        <div class="inventory-table-shell">
+          <table class="inventory-table">
+            <thead>
+              <tr>
+                <th>Product Name</th><th>Category</th><th>Stock Qty</th><th>Unit</th>
+                <th>Expiry Date</th><th>Reorder Level</th><th>Status</th><th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><strong>Samgyupsal Pork Belly</strong></td><td>Samgyupsal Sets</td><td>45</td><td>kg</td><td>May 20, 2026</td><td>10</td>
+                <td><span class="status-badge status-badge--success">Normal</span></td>
+                <td><div class="inventory-actions"><button class="table-action-button" type="button">Stock In</button><button class="table-action-button" type="button">Edit</button><button class="table-action-button" type="button">Adjust</button></div></td>
+              </tr>
+              <tr>
+                <td><strong>Beef Bulgogi (Marinated)</strong></td><td>Korean BBQ</td><td>28</td><td>kg</td><td>May 10, 2026</td><td>10</td>
+                <td><span class="status-badge status-badge--success">Normal</span></td>
+                <td><div class="inventory-actions"><button class="table-action-button" type="button">Stock In</button><button class="table-action-button" type="button">Edit</button><button class="table-action-button" type="button">Adjust</button></div></td>
+              </tr>
+              <tr>
+                <td><strong>Kimchi (Homemade)</strong></td><td>Side Dishes</td><td>5</td><td>jar</td><td>Apr 22, 2026</td><td>10</td>
+                <td><span class="status-badge status-badge--warning">Low Stock</span></td>
+                <td><div class="inventory-actions"><button class="table-action-button" type="button">Stock In</button><button class="table-action-button" type="button">Edit</button><button class="table-action-button" type="button">Adjust</button></div></td>
+              </tr>
+              <tr>
+                <td><strong>Soju (Original 360ml)</strong></td><td>Beverages</td><td>60</td><td>bottle</td><td>Dec 31, 2027</td><td>15</td>
+                <td><span class="status-badge status-badge--success">Normal</span></td>
+                <td><div class="inventory-actions"><button class="table-action-button" type="button">Stock In</button><button class="table-action-button" type="button">Edit</button><button class="table-action-button" type="button">Adjust</button></div></td>
+              </tr>
+              <tr>
+                <td><strong>Gochujang Paste</strong></td><td>Condiments</td><td>8</td><td>tub</td><td>Apr 18, 2026</td><td>10</td>
+                <td><span class="status-badge status-badge--attention">Near Expiry</span></td>
+                <td><div class="inventory-actions"><button class="table-action-button" type="button">Stock In</button><button class="table-action-button" type="button">Edit</button><button class="table-action-button" type="button">Adjust</button></div></td>
+              </tr>
+              <tr>
+                <td><strong>Japchae Noodles (Dried)</strong></td><td>Side Dishes</td><td>35</td><td>pack</td><td>Aug 15, 2026</td><td>10</td>
+                <td><span class="status-badge status-badge--success">Normal</span></td>
+                <td><div class="inventory-actions"><button class="table-action-button" type="button">Stock In</button><button class="table-action-button" type="button">Edit</button><button class="table-action-button" type="button">Adjust</button></div></td>
+              </tr>
+              <tr>
+                <td><strong>Sesame Oil (Premium)</strong></td><td>Condiments</td><td>3</td><td>bottle</td><td>Jul 30, 2026</td><td>5</td>
+                <td><span class="status-badge status-badge--warning">Low Stock</span></td>
+                <td><div class="inventory-actions"><button class="table-action-button" type="button">Stock In</button><button class="table-action-button" type="button">Edit</button><button class="table-action-button" type="button">Adjust</button></div></td>
+              </tr>
+              <tr>
+                <td><strong>Korean Iced Tea Mix</strong></td><td>Beverages</td><td>80</td><td>sachet</td><td>Nov 12, 2026</td><td>20</td>
+                <td><span class="status-badge status-badge--success">Normal</span></td>
+                <td><div class="inventory-actions"><button class="table-action-button" type="button">Stock In</button><button class="table-action-button" type="button">Edit</button><button class="table-action-button" type="button">Adjust</button></div></td>
+              </tr>
+              <tr>
+                <td><strong>Tteokbokki Rice Cakes</strong></td><td>Side Dishes</td><td>22</td><td>pack</td><td>Jun 5, 2026</td><td>10</td>
+                <td><span class="status-badge status-badge--success">Normal</span></td>
+                <td><div class="inventory-actions"><button class="table-action-button" type="button">Stock In</button><button class="table-action-button" type="button">Edit</button><button class="table-action-button" type="button">Adjust</button></div></td>
+              </tr>
+              <tr>
+                <td><strong>Spicy Pork Belly (Marinated)</strong></td><td>Korean BBQ</td><td>4</td><td>kg</td><td>Apr 19, 2026</td><td>8</td>
+                <td><span class="status-badge status-badge--warning">Low Stock</span></td>
+                <td><div class="inventory-actions"><button class="table-action-button" type="button">Stock In</button><button class="table-action-button" type="button">Edit</button><button class="table-action-button" type="button">Adjust</button></div></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+    </div>
+  </div>
+</div>

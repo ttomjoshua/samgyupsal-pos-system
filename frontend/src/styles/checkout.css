@@ -1,0 +1,19 @@
+.checkout-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.checkout-errors {
+  display: grid;
+  gap: 0.5rem;
+}
+
+.checkout-error {
+  margin: 0;
+  border-radius: 12px;
+  padding: 0.8rem 0.95rem;
+  background: rgba(127, 29, 29, 0.08);
+  color: #8c2020;
+  font-weight: 600;
+}

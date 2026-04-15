@@ -1,0 +1,235 @@
+.inventory-page {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.inventory-feedback {
+  margin: 0;
+  border: 1px solid rgba(79, 128, 79, 0.18);
+  border-radius: 16px;
+  padding: 0.95rem 1rem;
+  background: rgba(239, 247, 239, 0.96);
+  color: #2f6a2f;
+  font-weight: 600;
+}
+
+.inventory-page h1 {
+  margin: 0;
+  line-height: 1.1;
+  font-size: clamp(2rem, 4vw, 2.8rem);
+}
+
+.inventory-header {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  align-items: flex-start;
+}
+
+.inventory-primary-action {
+  border: none;
+  border-radius: 14px;
+  padding: 0.95rem 1.2rem;
+  background: linear-gradient(135deg, var(--accent) 0%, #d76b33 100%);
+  color: #ffffff;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.inventory-secondary-action {
+  border: 1px solid rgba(166, 63, 20, 0.14);
+  border-radius: 14px;
+  padding: 0.95rem 1.2rem;
+  background: rgba(255, 255, 255, 0.92);
+  color: #5f422d;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.inventory-toolbar {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  align-items: center;
+}
+
+.inventory-filter-group {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  align-items: center;
+}
+
+.inventory-filter {
+  border: 1px solid rgba(166, 63, 20, 0.14);
+  border-radius: 999px;
+  padding: 0.7rem 1rem;
+  background: rgba(255, 248, 241, 0.8);
+  color: #5f422d;
+  cursor: pointer;
+}
+
+.inventory-filter.active,
+.inventory-filter:hover {
+  background: linear-gradient(135deg, var(--accent) 0%, #d76b33 100%);
+  color: #ffffff;
+}
+
+.inventory-category-control {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  border: 1px solid rgba(166, 63, 20, 0.14);
+  border-radius: 999px;
+  padding: 0.45rem 0.9rem;
+  background: rgba(255, 248, 241, 0.8);
+  color: #5f422d;
+}
+
+.inventory-category-control span {
+  font-size: 0.9rem;
+  font-weight: 700;
+}
+
+.inventory-category-control select {
+  border: none;
+  background: transparent;
+  color: #5f422d;
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+  outline: none;
+}
+
+.inventory-result-copy {
+  margin: 0;
+  color: var(--text-soft);
+}
+
+.inventory-table-shell {
+  overflow-x: auto;
+  border: 1px solid var(--border);
+  border-radius: 24px;
+  background: rgba(255, 255, 255, 0.92);
+  box-shadow: var(--shadow);
+}
+
+.inventory-table {
+  width: 100%;
+  min-width: 960px;
+  border-collapse: collapse;
+}
+
+.inventory-table th,
+.inventory-table td {
+  padding: 1rem;
+  text-align: left;
+  border-bottom: 1px solid rgba(92, 53, 23, 0.08);
+  vertical-align: top;
+}
+
+.inventory-table thead th {
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-soft);
+  background: rgba(255, 248, 241, 0.78);
+}
+
+.inventory-table tbody tr:hover {
+  background: rgba(255, 248, 241, 0.44);
+}
+
+.inventory-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.table-action-button {
+  border: 1px solid rgba(166, 63, 20, 0.14);
+  border-radius: 12px;
+  padding: 0.6rem 0.8rem;
+  background: #ffffff;
+  color: #5f422d;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.table-action-button:hover {
+  background: rgba(255, 248, 241, 0.9);
+}
+
+.inventory-form {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1rem;
+}
+
+.inventory-action-form {
+  grid-template-columns: 1fr;
+}
+
+.inventory-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+}
+
+.inventory-field span {
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: #5f422d;
+}
+
+.inventory-field input,
+.inventory-field select {
+  border: 1px solid rgba(166, 63, 20, 0.14);
+  border-radius: 14px;
+  padding: 0.85rem 0.95rem;
+  background: rgba(255, 255, 255, 0.96);
+  color: var(--text);
+}
+
+.inventory-form-error {
+  margin: 0;
+  grid-column: 1 / -1;
+  border-radius: 14px;
+  padding: 0.85rem 0.95rem;
+  background: rgba(140, 32, 32, 0.08);
+  color: #8c2020;
+  font-weight: 600;
+}
+
+.inventory-form-actions {
+  grid-column: 1 / -1;
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.75rem;
+}
+
+@media (max-width: 900px) {
+  .inventory-header,
+  .inventory-toolbar {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .inventory-primary-action {
+    width: 100%;
+  }
+
+  .inventory-form {
+    grid-template-columns: 1fr;
+  }
+
+  .inventory-secondary-action,
+  .inventory-form-actions {
+    width: 100%;
+  }
+
+  .inventory-form-actions {
+    flex-direction: column;
+  }
+}
