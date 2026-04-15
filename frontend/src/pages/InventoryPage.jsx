@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import Loader from '../components/common/Loader'
 import EmptyState from '../components/common/EmptyState'
 import InventoryTable from '../components/inventory/InventoryTable'
@@ -8,7 +8,7 @@ import { getBranches } from '../services/branchService'
 import {
   createInventoryItem,
   getInventoryItems,
-  hasInventoryNameConflict,
+  hasInventoryCatalogConflict,
   isLowStock,
   isNearExpiry,
   updateInventoryItem,
@@ -108,7 +108,7 @@ function InventoryPage() {
     }
   }, [])
 
-  const loadInventory = async (branchId = activeBranchId) => {
+  const loadInventory = useCallback(async (branchId) => {
     try {
       const data = await getInventoryItems({ branchId })
       setInventoryItems(data.items || data)
@@ -123,7 +123,7 @@ function InventoryPage() {
     } finally {
       setIsLoading(false)
     }
-  }
+  }, [])
 
   useEffect(() => {
     if (!activeBranchId) {
@@ -131,8 +131,8 @@ function InventoryPage() {
     }
 
     setIsLoading(true)
-    loadInventory(activeBranchId)
-  }, [activeBranchId])
+    void loadInventory(activeBranchId)
+  }, [activeBranchId, loadInventory])
 
   const categorySuggestions = useMemo(
     () => [...new Set(inventoryItems.map((item) => item.category_name).filter(Boolean))],
@@ -207,14 +207,17 @@ function InventoryPage() {
     }
 
     if (
-      hasInventoryNameConflict(
-        validation.sanitizedData.product_name,
+      hasInventoryCatalogConflict(
+        {
+          ...validation.sanitizedData,
+          branch_id: activeBranchId,
+        },
         inventoryItems,
         productDialogMode === 'edit' ? selectedItem?.id : null,
       )
     ) {
       setFormError(
-        'A product with that name already exists in this branch. Use Stock In or Edit the existing record instead.',
+        'A product with the same category, name, and unit already exists in this branch. Use Stock In or Edit the existing record instead.',
       )
       return
     }

@@ -2,17 +2,17 @@
 
 Run these files in order inside the Supabase SQL Editor.
 
-## 1. Rebuild the core schema and migrate legacy products
+## 1. Rebuild the base schema and preserve legacy data
 
 Run:
 
 - [`sql/01_core_tables.sql`](./sql/01_core_tables.sql)
 
-This script now does the careful full-stack reset path:
+This script still does the careful base reset path:
 
 - preserves the old mixed `products` table by renaming it to `products_legacy`
 - preserves the old `sale_items` table by renaming it to `sale_items_legacy`
-- creates normalized tables for:
+- creates the base tables for:
   - `branches`
   - `categories`
   - `products`
@@ -22,15 +22,38 @@ This script now does the careful full-stack reset path:
 - creates two read views for the frontend:
   - `product_catalog_view`
   - `inventory_catalog_view`
-- migrates legacy product rows into the new catalog and inventory tables
+- migrates legacy product rows into the intermediate schema
 
 Important:
 
-- This is a one-time structural migration.
+- This is the base bootstrap step.
 - It is designed to be safe for the current state where your old `products` table already exists.
 - Do not manually delete `products_legacy` until the team is fully happy with the migrated data.
 
-## 2. Development/demo RLS policies and grants
+## 2. Flatten `products` into the branch-stock table used by the app
+
+Run:
+
+- [`sql/08_flatten_products_schema.sql`](./sql/08_flatten_products_schema.sql)
+
+This script makes `public.products` the source of truth for branch inventory with this final shape:
+
+- `id`
+- `branch`
+- `category`
+- `product_name`
+- `net_weight`
+- `price`
+- `stock_quantity`
+- `expiration_date`
+
+It also:
+
+- preserves existing `product_id` values by restructuring `products` in place
+- backfills the new flat columns from the current normalized tables when needed
+- recreates `product_catalog_view` and `inventory_catalog_view` as compatibility read models for the frontend
+
+## 3. Development/demo RLS policies and grants
 
 Run:
 
@@ -49,7 +72,7 @@ Important:
 - Tighten these policies before production.
 - Do not treat them as final security.
 
-## 3. Replace the demo catalog with the owner inventory snapshot
+## 4. Replace the demo catalog with the owner inventory snapshot
 
 When you want the database to reflect the owner-provided CSV inventory for:
 
@@ -75,18 +98,18 @@ This replacement script:
 
 - updates branch `1` to `Sta. Lucia` as the main branch
 - updates branch `2` to `Dollar`
-- replaces `categories`, `products`, and `inventory_items` using the owner CSV snapshot
-- preserves messy source values like `4 FOR 100`, `114 PCS`, and `1 BOX` in the legacy text columns while keeping operational columns numeric where possible
+- clears old `inventory_items` and `categories` rows so stale normalized data does not hang around
+- replaces `products` using the owner CSV snapshot
+- stores `stock_quantity` directly in `products`
+- stores `branch` as descriptive text instead of `branch_id`
 
 Expected verification result after the script runs:
 
-- `categories_count = 13`
-- `products_count = 254`
-- `inventory_items_count = 481`
-- `sta_lucia_inventory_items_count = 249`
-- `dollar_inventory_items_count = 232`
+- `products_count = 481`
+- `sta_lucia_products_count = 249`
+- `dollar_products_count = 232`
 
-## 4. Optional profile table scaffold
+## 5. Optional profile table scaffold
 
 Run only when the backend/auth team is ready:
 
@@ -94,7 +117,7 @@ Run only when the backend/auth team is ready:
 
 This prepares a `profiles` table linked to `auth.users`.
 
-## 5. Real auth profile trigger and RLS rollout
+## 6. Real auth profile trigger and RLS rollout
 
 Run when you are ready to switch the frontend login to Supabase Auth:
 
@@ -116,7 +139,7 @@ Important:
 - After running it, create the real auth users in the Supabase Dashboard or through a trusted backend path.
 - Do not expose the `service_role` key in the frontend.
 
-## 6. Seed role and branch assignments for the first auth users
+## 7. Seed role and branch assignments for the first auth users
 
 Run only after you manually create the first Auth users in Supabase Dashboard:
 
@@ -139,15 +162,13 @@ This script is just a template so you can assign:
 The frontend is now aligned to this structure:
 
 - `branches`
-- `categories`
 - `products`
-- `inventory_items`
 - `sales`
 - `sale_items`
 - `product_catalog_view`
 - `inventory_catalog_view`
 
-That means we are no longer treating `products` as a raw all-in-one branch stock table.
+`products` is now the raw branch stock table again, and the two views act as compatibility read models for the current frontend.
 
 ## Legacy data caution
 
@@ -156,38 +177,32 @@ Some legacy rows still carry messy text values such as:
 - `price = '4 FOR 100'`
 - `stock_quantity = '114 PCS'`
 
-The migration keeps those raw values in backup columns where useful:
+The flattened schema keeps operational values in these columns:
 
-- `products.legacy_price_text`
-- `inventory_items.legacy_stock_text`
-
-The clean operational columns are now numeric where the data could be parsed safely:
-
-- `products.default_price`
-- `inventory_items.selling_price`
-- `inventory_items.stock_quantity`
+- `products.branch`
+- `products.price`
+- `products.stock_quantity`
+- `products.expiration_date`
 
 ## Recommended quick checks after running the scripts
 
 1. Confirm that `products_legacy` still exists.
-2. Confirm that `products` and `inventory_items` now contain rows.
+2. Confirm that `products` now contains rows.
 3. If you ran the auth rollout, confirm that `profiles` contains rows for your auth users.
 4. Check these review queries in SQL Editor:
 
 ```sql
 select count(*) from public.products_legacy;
 select count(*) from public.products;
-select count(*) from public.inventory_items;
 
 select *
 from public.products
-where default_price is null
-  and legacy_price_text is not null
+where price is null
 limit 20;
 
 select *
-from public.inventory_items
-where legacy_stock_text ~ '[A-Za-z]'
+from public.products
+where stock_quantity < 0
 limit 20;
 ```
 

@@ -1,6 +1,6 @@
 # Supabase Frontend Integration
 
-This frontend is now aligned to a cleaner Supabase schema instead of the original all-in-one legacy `products` table.
+This frontend now treats `public.products` as the branch-scoped inventory source of truth, with compatibility views layered on top for read-heavy screens.
 
 ## What is already wired
 
@@ -50,33 +50,16 @@ Use `false` for `VITE_SUPABASE_SYNC_INVENTORY_ON_SALE` only if the backend team 
 
 ## Current schema contract expected by the frontend
 
-### `categories`
-
-- `id`
-- `name`
-- `slug`
-
 ### `products`
 
 - `id`
-- `category_id`
+- `branch`
+- `category`
 - `product_name`
-- `unit_label`
-- `default_price`
-- `legacy_price_text`
-- `is_active`
-
-### `inventory_items`
-
-- `id`
-- `branch_id`
-- `product_id`
-- `selling_price`
+- `net_weight`
+- `price`
 - `stock_quantity`
-- `reorder_level`
 - `expiration_date`
-- `legacy_stock_text`
-- `is_active`
 
 ### `sales`
 
@@ -121,6 +104,9 @@ Use `false` for `VITE_SUPABASE_SYNC_INVENTORY_ON_SALE` only if the backend team 
 Read model used by the admin Products page:
 
 - `product_id`
+- `branch`
+- `branch_code`
+- `branch_name`
 - `category_id`
 - `category_name`
 - `product_name`
@@ -137,6 +123,7 @@ Read model used by POS and Inventory:
 - `branch_code`
 - `branch_name`
 - `product_id`
+- `product_branch`
 - `category_id`
 - `category_name`
 - `product_name`
@@ -149,6 +136,11 @@ Read model used by POS and Inventory:
 - `expiration_date`
 - `legacy_stock_text`
 - `is_active`
+
+Important:
+
+- `product_catalog_view` and `inventory_catalog_view` are compatibility read models built from `public.products`
+- `categories` and `inventory_items` may still exist in older projects, but the frontend write path now saves directly to `public.products`
 
 ## Safe rollout order
 

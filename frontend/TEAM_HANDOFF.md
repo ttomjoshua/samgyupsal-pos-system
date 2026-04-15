@@ -7,7 +7,7 @@ This file captures the current frontend integration status, known demo-safe devi
 | Item | Status | Notes |
 | --- | --- | --- |
 | Folder separation | Pass | `Frontend/` contains the React app and `Backend/` remains separate. |
-| Reusable modal | Partial | Inventory dialogs and receipt preview use the shared `Modal` component. `CheckoutModal.jsx` exists, but the live POS flow intentionally keeps inline checkout in the summary panel. |
+| Reusable modal | Pass | Inventory dialogs and receipt preview use the shared `Modal` component. The live POS flow intentionally keeps checkout inline in the summary panel. |
 | Validation | Pass | Shared validation is centralized in `src/utils/validation.js`. |
 | Receipt preview | Partial | Cashier can review the latest receipt after a successful checkout. Pre-confirmation receipt preview is not active in the live POS flow. |
 | Inventory form | Pass | Admin can add, edit, stock in, and adjust stock from the inventory page. |
@@ -17,7 +17,7 @@ This file captures the current frontend integration status, known demo-safe devi
 
 ## Important Warnings Before Demo
 
-- The live cashier checkout flow is inline inside the summary panel, not the reusable checkout modal.
+- The live cashier checkout flow is intentionally inline inside the summary panel.
 - Receipt preview happens after successful checkout, not before final confirmation.
 - Demo sales and demo inventory now persist in browser localStorage. Repeated rehearsals will keep changing totals and stock until the local demo data is reset.
 - Inventory auto-deduction only affects inventory records that can be matched to sold POS items.

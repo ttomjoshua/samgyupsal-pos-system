@@ -5,11 +5,9 @@ begin;
 --   C:\Users\tomja\OneDrive\Desktop\Stock_Inventory_Oh_G_Samgyup_Sta.Lucia - Sheet1.csv
 --   C:\Users\tomja\OneDrive\Desktop\Stock_Inventory_Oh_G_Samgyup_Dollar - Sheet1.csv
 -- Expected result after a successful run:
---   categories: 13
---   products: 254
---   inventory_items: 481
---   branch 1 inventory_items: 249
---   branch 2 inventory_items: 232
+--   products: 481
+--   branch 1 products: 249
+--   branch 2 products: 232
 
 create temporary table owner_inventory_raw (
   source_row_id bigint,
@@ -541,114 +539,49 @@ set
   status = excluded.status,
   updated_at = now();
 
-delete from public.inventory_items;
-delete from public.products;
-delete from public.categories;
+alter table public.products
+  add column if not exists branch text,
+  add column if not exists category text,
+  add column if not exists net_weight text,
+  add column if not exists price numeric(12, 2),
+  add column if not exists stock_quantity integer not null default 0,
+  add column if not exists expiration_date date;
 
-insert into public.categories (
-  name,
-  slug,
-  created_at,
-  updated_at
-)
-select distinct
-  normalized_rows.category_clean,
-  regexp_replace(
-    lower(
-      regexp_replace(normalized_rows.category_clean, '[^a-zA-Z0-9]+', '-', 'g')
-    ),
-    '(^-+|-+$)',
-    '',
-    'g'
-  ) as category_slug,
-  now(),
-  now()
-from (
-  select
-    case
-      when btrim(coalesce(category, '')) = '' then 'Uncategorized'
-      else regexp_replace(btrim(category), '\s+', ' ', 'g')
-    end as category_clean
-  from owner_inventory_raw
-) normalized_rows
-order by normalized_rows.category_clean asc;
+update public.products
+set branch = 'Sta. Lucia'
+where coalesce(btrim(branch), '') = '';
+
+update public.products
+set category = 'Uncategorized'
+where coalesce(btrim(category), '') = '';
+
+update public.products
+set net_weight = ''
+where net_weight is null;
+
+update public.products
+set stock_quantity = 0
+where stock_quantity is null;
+
+delete from public.inventory_items;
+delete from public.categories;
+delete from public.products;
 
 insert into public.products (
-  category_id,
+  branch,
+  category,
   product_name,
-  unit_label,
-  default_price,
-  legacy_price_text,
-  is_active,
-  created_at,
-  updated_at
-)
-with normalized_rows as (
-  select
-    case
-      when btrim(coalesce(category, '')) = '' then 'Uncategorized'
-      else regexp_replace(btrim(category), '\s+', ' ', 'g')
-    end as category_clean,
-    regexp_replace(
-      btrim(coalesce(product_name, 'Unnamed Product')),
-      '\s+',
-      ' ',
-      'g'
-    ) as product_name_clean,
-    coalesce(regexp_replace(btrim(coalesce(net_weight, '')), '\s+', ' ', 'g'), '') as unit_label_clean,
-    btrim(coalesce(price, '')) as price_text,
-    case
-      when btrim(coalesce(price, '')) ~ '^\d+(\.\d+)?$'
-        then btrim(price)::numeric(12, 2)
-      else null
-    end as price_numeric,
-    case
-      when btrim(coalesce(created_at, '')) ~ '^\d{4}-\d{2}-\d{2}'
-        then btrim(created_at)::timestamptz
-      else now()
-    end as created_at_value
-  from owner_inventory_raw
-),
-catalog_seed as (
-  select
-    category_clean,
-    product_name_clean,
-    unit_label_clean,
-    max(price_numeric) as default_price,
-    max(nullif(price_text, '')) as legacy_price_text,
-    min(created_at_value) as created_at_value
-  from normalized_rows
-  group by 1, 2, 3
-)
-select
-  c.id,
-  catalog_seed.product_name_clean,
-  catalog_seed.unit_label_clean,
-  catalog_seed.default_price,
-  catalog_seed.legacy_price_text,
-  true,
-  catalog_seed.created_at_value,
-  now()
-from catalog_seed
-join public.categories c
-  on c.name = catalog_seed.category_clean
-order by c.name asc, catalog_seed.product_name_clean asc, catalog_seed.unit_label_clean asc;
-
-insert into public.inventory_items (
-  branch_id,
-  product_id,
-  selling_price,
+  net_weight,
+  price,
   stock_quantity,
-  reorder_level,
-  expiration_date,
-  legacy_stock_text,
-  is_active,
-  created_at,
-  updated_at
+  expiration_date
 )
 with normalized_rows as (
   select
-    branch_id,
+    case
+      when branch_id = 2 then 'Dollar'
+      else 'Sta. Lucia'
+    end as branch_name,
     case
       when btrim(coalesce(category, '')) = '' then 'Uncategorized'
       else regexp_replace(btrim(category), '\s+', ' ', 'g')
@@ -659,14 +592,12 @@ with normalized_rows as (
       ' ',
       'g'
     ) as product_name_clean,
-    coalesce(regexp_replace(btrim(coalesce(net_weight, '')), '\s+', ' ', 'g'), '') as unit_label_clean,
-    btrim(coalesce(price, '')) as price_text,
+    coalesce(regexp_replace(btrim(coalesce(net_weight, '')), '\s+', ' ', 'g'), '') as net_weight_clean,
     case
       when btrim(coalesce(price, '')) ~ '^\d+(\.\d+)?$'
         then btrim(price)::numeric(12, 2)
       else null
     end as price_numeric,
-    btrim(coalesce(stock_quantity, '')) as stock_text,
     case
       when regexp_replace(btrim(coalesce(stock_quantity, '')), '[^0-9-]', '', 'g') ~ '^-?\d+$'
         then greatest(
@@ -679,53 +610,31 @@ with normalized_rows as (
       when btrim(coalesce(expiration_date, '')) ~ '^\d{4}-\d{2}-\d{2}$'
         then btrim(expiration_date)::date
       else null
-    end as expiration_date_value,
-    case
-      when btrim(coalesce(created_at, '')) ~ '^\d{4}-\d{2}-\d{2}'
-        then btrim(created_at)::timestamptz
-      else now()
-    end as created_at_value
+    end as expiration_date_value
   from owner_inventory_raw
 ),
-inventory_seed as (
+collapsed_products as (
   select
-    branch_id,
+    branch_name,
     category_clean,
     product_name_clean,
-    unit_label_clean,
-    max(price_numeric) as selling_price,
-    sum(stock_quantity_numeric) as stock_quantity,
-    max(expiration_date_value) as expiration_date_value,
-    max(nullif(stock_text, '')) as legacy_stock_text,
-    min(created_at_value) as created_at_value
+    net_weight_clean,
+    max(price_numeric) as price_value,
+    sum(stock_quantity_numeric) as stock_quantity_total,
+    min(expiration_date_value) as expiration_date_value
   from normalized_rows
   group by 1, 2, 3, 4
 )
 select
-  inventory_seed.branch_id,
-  p.id,
-  coalesce(inventory_seed.selling_price, p.default_price, 0),
-  inventory_seed.stock_quantity,
-  10,
-  inventory_seed.expiration_date_value,
-  inventory_seed.legacy_stock_text,
-  true,
-  inventory_seed.created_at_value,
-  now()
-from inventory_seed
-join public.categories c
-  on c.name = inventory_seed.category_clean
-join public.products p
-  on p.category_id = c.id
- and p.product_name = inventory_seed.product_name_clean
- and p.unit_label = inventory_seed.unit_label_clean
-order by inventory_seed.branch_id asc, c.name asc, p.product_name asc, p.unit_label asc;
-
-select setval(
-  pg_get_serial_sequence('public.categories', 'id'),
-  greatest((select coalesce(max(id), 1) from public.categories), 1),
-  true
-);
+  branch_name,
+  category_clean,
+  product_name_clean,
+  net_weight_clean,
+  price_value,
+  stock_quantity_total,
+  expiration_date_value
+from collapsed_products
+order by branch_name asc, category_clean asc, product_name_clean asc, net_weight_clean asc;
 
 select setval(
   pg_get_serial_sequence('public.products', 'id'),
@@ -733,17 +642,9 @@ select setval(
   true
 );
 
-select setval(
-  pg_get_serial_sequence('public.inventory_items', 'id'),
-  greatest((select coalesce(max(id), 1) from public.inventory_items), 1),
-  true
-);
-
 commit;
 
 select
-  (select count(*) from public.categories) as categories_count,
   (select count(*) from public.products) as products_count,
-  (select count(*) from public.inventory_items) as inventory_items_count,
-  (select count(*) from public.inventory_items where branch_id = 1) as sta_lucia_inventory_items_count,
-  (select count(*) from public.inventory_items where branch_id = 2) as dollar_inventory_items_count;
+  (select count(*) from public.products where branch = 'Sta. Lucia') as sta_lucia_products_count,
+  (select count(*) from public.products where branch = 'Dollar') as dollar_products_count;

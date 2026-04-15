@@ -34,9 +34,15 @@ function normalizeCatalogProduct(product, index) {
     product.category ||
     product.category_name ||
     'Uncategorized'
+  const branchName = product.branch_name || product.branch || 'Unassigned Branch'
+  const branchId =
+    product.branch_id ??
+    (branchName === 'Dollar' ? 2 : branchName === 'Sta. Lucia' ? 1 : null)
 
   return {
     id: productId ? String(productId) : null,
+    branchId,
+    branchName,
     name:
       product.name ||
       product.product_name ||
@@ -64,12 +70,16 @@ function normalizeInventoryProduct(product, index) {
     product.categories?.name ||
     product.category ||
     'Uncategorized'
+  const branchName = product.branch_name || product.branch || 'Unassigned Branch'
+  const branchId =
+    product.branch_id ??
+    (branchName === 'Dollar' ? 2 : branchName === 'Sta. Lucia' ? 1 : null)
 
   return {
     id: productId ? String(productId) : null,
     inventoryItemId: product.inventory_item_id ?? product.inventoryItemId ?? null,
-    branchId: product.branch_id ?? null,
-    branchName: product.branch_name || 'Unassigned Branch',
+    branchId,
+    branchName,
     name:
       product.name ||
       product.product_name ||

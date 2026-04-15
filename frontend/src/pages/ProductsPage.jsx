@@ -3,6 +3,7 @@ import EmptyState from '../components/common/EmptyState'
 import Loader from '../components/common/Loader'
 import NoticeBanner from '../components/common/NoticeBanner'
 import { getProductCatalog } from '../services/productService'
+import { isSupabaseConfigured } from '../services/supabaseClient'
 import {
   getStoredCategories,
   mergeProductAndStoredCategories,
@@ -30,15 +31,19 @@ function ProductsPage() {
       try {
         const productList = await getProductCatalog()
         setProducts(productList)
-        setSourceLabel('Loaded from the backend product catalog.')
+        setSourceLabel(
+          isSupabaseConfigured
+            ? 'Loaded from the active Supabase catalog.'
+            : 'Loaded from the fallback product catalog.',
+        )
         setLoadError('')
       } catch (error) {
         console.error('Failed to load products:', error)
         setProducts([])
-        setSourceLabel('Unable to load products from the API service.')
+        setSourceLabel('Unable to load products from the active catalog source.')
         setLoadError(
           error.response?.data?.message ||
-            'The product list could not be loaded from the API service.',
+            'The product list could not be loaded from the active catalog source.',
         )
       } finally {
         setIsLoading(false)
@@ -209,7 +214,7 @@ function ProductsPage() {
           <p className="card-label">Products</p>
           <h2>Catalog Preview</h2>
           <p className="supporting-text">
-            Products are now expected to come from the backend product service.
+            Products are loaded from Supabase when configured, otherwise from the fallback catalog path.
           </p>
 
           {isLoading ? (
@@ -217,17 +222,17 @@ function ProductsPage() {
           ) : loadError ? (
             <EmptyState
               title="Products are currently unavailable"
-              description="The page is still responsive, but the product catalog could not be loaded from the API service."
+              description="The page is still responsive, but the product catalog could not be loaded from the current data source."
             />
           ) : products.length === 0 ? (
             <EmptyState
               title="No products available"
-              description="Connect the backend product endpoint or keep adding temporary mock items."
+              description="Seed the Supabase catalog or reconnect the fallback product source."
             />
           ) : (
             products.map((item) => (
               <p key={item.id}>
-                {item.name} - {item.category} - {peso(item.price)}
+                {item.name} - {item.category} - {item.branchName || 'Unassigned Branch'} - {peso(item.price)}
               </p>
             ))
           )}

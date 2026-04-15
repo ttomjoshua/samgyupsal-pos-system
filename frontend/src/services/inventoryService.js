@@ -49,13 +49,6 @@ function sanitizeInventoryText(value) {
     .replace(/\s+/g, ' ')
 }
 
-function buildCategorySlug(value) {
-  return sanitizeInventoryText(value)
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-+|-+$/g, '')
-}
-
 function resolveSupabaseBranchId(values = {}, fallbackItem = {}) {
   const candidateBranchId =
     values.branch_id ?? values.branchId ?? fallbackItem.branch_id ?? fallbackItem.branchId
@@ -64,39 +57,66 @@ function resolveSupabaseBranchId(values = {}, fallbackItem = {}) {
     return Number(candidateBranchId)
   }
 
+  const candidateBranchName =
+    values.branch ??
+    values.branch_name ??
+    values.branchName ??
+    fallbackItem.branch ??
+    fallbackItem.branch_name ??
+    fallbackItem.branchName
+
+  if (String(candidateBranchName || '').trim() === 'Dollar') {
+    return 2
+  }
+
+  if (String(candidateBranchName || '').trim() === 'Sta. Lucia') {
+    return 1
+  }
+
   return Number(supabaseRuntime.defaultBranchId || 1)
 }
 
-function buildSupabaseProductPayload(values, categoryId) {
-  return {
-    category_id: Number(categoryId),
-    product_name: sanitizeInventoryText(values.product_name ?? values.product),
-    unit_label: sanitizeInventoryText(values.unit),
-    default_price: Number(values.price || 0),
-    legacy_price_text:
-      values.price != null && String(values.price).trim() !== ''
-        ? String(values.price).trim()
-        : null,
-    is_active: true,
+function resolveSupabaseProductBranch(values = {}, fallbackItem = {}) {
+  const candidateBranchName =
+    values.branch ??
+    values.branch_name ??
+    values.branchName ??
+    fallbackItem.branch ??
+    fallbackItem.branch_name ??
+    fallbackItem.branchName
+
+  if (candidateBranchName != null && String(candidateBranchName).trim() !== '') {
+    return sanitizeInventoryText(candidateBranchName)
   }
+
+  return resolveSupabaseBranchId(values, fallbackItem) === 2
+    ? 'Dollar'
+    : 'Sta. Lucia'
 }
 
-function buildSupabaseInventoryPayload(values, productId, fallbackItem = {}) {
+function buildSupabaseProductPayload(values, fallbackItem = {}) {
   return {
-    branch_id: resolveSupabaseBranchId(values, fallbackItem),
-    product_id: Number(productId),
-    selling_price: Number(values.price || 0),
-    stock_quantity: Number(values.stock_quantity ?? values.stock ?? 0),
-    reorder_level: Number(values.reorder_level ?? fallbackItem.reorder_level ?? LOW_STOCK_THRESHOLD),
+    branch: resolveSupabaseProductBranch(values, fallbackItem),
+    category: sanitizeInventoryText(
+      values.category_name ?? values.category ?? fallbackItem.category_name ?? fallbackItem.category,
+    ) || 'Uncategorized',
+    product_name: sanitizeInventoryText(
+      values.product_name ?? values.product ?? fallbackItem.product_name ?? fallbackItem.product,
+    ),
+    net_weight: sanitizeInventoryText(
+      values.unit ?? values.net_weight ?? fallbackItem.unit ?? fallbackItem.net_weight,
+    ),
+    price: Number(values.price ?? fallbackItem.price ?? 0),
+    stock_quantity: Number(
+      values.stock_quantity ?? values.stock ?? fallbackItem.stock_quantity ?? 0,
+    ),
     expiration_date:
       sanitizeInventoryText(
-        values.expiry_date ?? values.expiration_date ?? fallbackItem.expiry_date,
+        values.expiry_date ??
+          values.expiration_date ??
+          fallbackItem.expiry_date ??
+          fallbackItem.expiration_date,
       ) || null,
-    legacy_stock_text:
-      values.stock_quantity != null && String(values.stock_quantity).trim() !== ''
-        ? String(values.stock_quantity).trim()
-        : fallbackItem.legacy_stock_text ?? null,
-    is_active: true,
   }
 }
 
@@ -142,113 +162,45 @@ async function fetchSupabaseInventoryItemById(itemId) {
   return data || null
 }
 
-async function ensureSupabaseCategory(categoryName) {
-  const supabase = getSupabaseClient()
-  const normalizedCategoryName = sanitizeInventoryText(categoryName)
-  const categorySlug = buildCategorySlug(normalizedCategoryName)
-
-  if (!normalizedCategoryName || !categorySlug) {
-    throw new Error('A category name is required before saving this product.')
-  }
-
-  const { data: existingCategory, error: existingCategoryError } = await supabase
-    .from(supabaseTables.categories)
-    .select('*')
-    .eq('slug', categorySlug)
-    .maybeSingle()
-
-  if (existingCategoryError) {
-    throw createSupabaseServiceError(
-      existingCategoryError,
-      'Unable to check the category list in Supabase.',
-    )
-  }
-
-  if (existingCategory) {
-    return existingCategory
-  }
-
-  const { data: createdCategory, error: createCategoryError } = await supabase
-    .from(supabaseTables.categories)
-    .insert({
-      name: normalizedCategoryName,
-      slug: categorySlug,
-    })
-    .select()
-    .single()
-
-  if (createCategoryError) {
-    throw createSupabaseServiceError(
-      createCategoryError,
-      'Unable to create this category in Supabase.',
-    )
-  }
-
-  return createdCategory
-}
-
-async function findSupabaseProduct(productName, unitLabel, categoryId) {
+async function fetchSupabaseProductById(productId) {
   const supabase = getSupabaseClient()
   const { data, error } = await supabase
     .from(supabaseTables.products)
     .select('*')
-    .eq('category_id', Number(categoryId))
-    .eq('product_name', sanitizeInventoryText(productName))
-    .eq('unit_label', sanitizeInventoryText(unitLabel))
+    .eq('id', Number(productId))
     .maybeSingle()
 
   if (error) {
     throw createSupabaseServiceError(
       error,
-      'Unable to match the product catalog record in Supabase.',
+      'Unable to load the selected product from Supabase.',
     )
   }
 
   return data || null
 }
 
-async function ensureSupabaseProduct(values, categoryId) {
+async function findSupabaseProductConflict(values, fallbackItem = {}, excludeProductId = null) {
   const supabase = getSupabaseClient()
-  const payload = buildSupabaseProductPayload(values, categoryId)
-  const existingProduct = await findSupabaseProduct(
-    payload.product_name,
-    payload.unit_label,
-    payload.category_id,
-  )
-
-  if (existingProduct) {
-    return existingProduct
-  }
-
-  const { data, error } = await supabase
+  const payload = buildSupabaseProductPayload(values, fallbackItem)
+  let query = supabase
     .from(supabaseTables.products)
-    .insert(payload)
-    .select()
-    .single()
+    .select('*')
+    .eq('branch', payload.branch)
+    .eq('category', payload.category)
+    .eq('product_name', payload.product_name)
+    .eq('net_weight', payload.net_weight)
 
-  if (error) {
-    throw createSupabaseServiceError(
-      error,
-      'Unable to create the product catalog record in Supabase.',
-    )
+  if (excludeProductId != null) {
+    query = query.neq('id', Number(excludeProductId))
   }
 
-  return data
-}
-
-async function findSupabaseInventoryItem(branchId, productId) {
-  const supabase = getSupabaseClient()
-  const { data, error } = await supabase
-    .from(supabaseTables.inventoryItems)
-    .select('*')
-    .eq('branch_id', Number(branchId))
-    .eq('product_id', Number(productId))
-    .maybeSingle()
+  const { data, error } = await query.maybeSingle()
 
   if (error) {
     throw createSupabaseServiceError(
       error,
-      'Unable to check the branch inventory record in Supabase.',
+      'Unable to match the product record in Supabase.',
     )
   }
 
@@ -332,28 +284,26 @@ export function createInventoryItemRecord(values, existingItems = []) {
 
 export async function createInventoryItem(values, existingItems = []) {
   if (isSupabaseConfigured) {
-    const category = await ensureSupabaseCategory(values.category_name ?? values.category)
-    const product = await ensureSupabaseProduct(values, category.id)
-    const branchId = resolveSupabaseBranchId(values)
-    const existingInventoryItem = await findSupabaseInventoryItem(branchId, product.id)
+    const conflictingProduct = await findSupabaseProductConflict(values)
 
-    if (existingInventoryItem) {
+    if (conflictingProduct) {
       throw new Error(
         'This product already exists for the selected branch. Use Stock In or Edit instead.',
       )
     }
 
     const supabase = getSupabaseClient()
+    const payload = buildSupabaseProductPayload(values)
     const { data, error } = await supabase
-      .from(supabaseTables.inventoryItems)
-      .insert(buildSupabaseInventoryPayload(values, product.id))
+      .from(supabaseTables.products)
+      .insert(payload)
       .select()
       .single()
 
     if (error) {
       throw createSupabaseServiceError(
         error,
-        'Unable to create the inventory item in Supabase.',
+        'Unable to create the product in Supabase.',
       )
     }
 
@@ -374,17 +324,15 @@ export async function updateInventoryItem(itemId, values) {
       throw new Error('The selected inventory item could not be found.')
     }
 
-    const category = await ensureSupabaseCategory(values.category_name ?? values.category)
-    const targetProduct = await ensureSupabaseProduct(values, category.id)
-    const targetBranchId = resolveSupabaseBranchId(values, currentItem)
-    const conflictingInventoryItem = await findSupabaseInventoryItem(
-      targetBranchId,
-      targetProduct.id,
+    const conflictingProduct = await findSupabaseProductConflict(
+      values,
+      currentItem,
+      itemId,
     )
 
     if (
-      conflictingInventoryItem &&
-      Number(conflictingInventoryItem.id) !== Number(itemId)
+      conflictingProduct &&
+      Number(conflictingProduct.id) !== Number(itemId)
     ) {
       throw new Error(
         'That product already exists in the selected branch. Use Stock In or Edit the existing record instead.',
@@ -392,9 +340,10 @@ export async function updateInventoryItem(itemId, values) {
     }
 
     const supabase = getSupabaseClient()
+    const payload = buildSupabaseProductPayload(values, currentItem)
     const { error } = await supabase
-      .from(supabaseTables.inventoryItems)
-      .update(buildSupabaseInventoryPayload(values, targetProduct.id, currentItem))
+      .from(supabaseTables.products)
+      .update(payload)
       .eq('id', itemId)
 
     if (error) {
@@ -442,26 +391,19 @@ export async function updateInventoryStock(itemId, quantityDelta) {
 
   if (isSupabaseConfigured) {
     const supabase = getSupabaseClient()
-    const { data: currentItem, error: currentItemError } = await supabase
-      .from(supabaseTables.inventoryItems)
-      .select('*')
-      .eq('id', itemId)
-      .single()
+    const currentProduct = await fetchSupabaseProductById(itemId)
 
-    if (currentItemError) {
-      throw createSupabaseServiceError(
-        currentItemError,
-        'Unable to load the selected inventory item from Supabase.',
-      )
+    if (!currentProduct) {
+      throw new Error('The selected inventory item could not be found.')
     }
 
     const nextStockQuantity = Math.max(
       0,
-      Number(currentItem.stock_quantity || 0) + numericDelta,
+      Number(currentProduct.stock_quantity || 0) + numericDelta,
     )
 
     const { error } = await supabase
-      .from(supabaseTables.inventoryItems)
+      .from(supabaseTables.products)
       .update({ stock_quantity: nextStockQuantity })
       .eq('id', itemId)
 
@@ -508,20 +450,37 @@ export function normalizeInventoryProductName(value) {
   return sanitizeInventoryText(value).toLowerCase()
 }
 
-export function hasInventoryNameConflict(
-  productName,
+function normalizeInventoryMatchValue(value) {
+  return sanitizeInventoryText(value).toLowerCase()
+}
+
+export function hasInventoryCatalogConflict(
+  values = {},
   existingItems = [],
   currentItemId = null,
 ) {
-  const normalizedProductName = normalizeInventoryProductName(productName)
+  const normalizedProductName = normalizeInventoryMatchValue(
+    values.product_name ?? values.product,
+  )
+  const normalizedCategoryName = normalizeInventoryMatchValue(
+    values.category_name ?? values.category,
+  )
+  const normalizedUnit = normalizeInventoryMatchValue(
+    values.unit ?? values.net_weight,
+  )
+  const normalizedBranchId = values.branch_id ?? values.branchId ?? null
 
-  if (!normalizedProductName) {
+  if (!normalizedProductName || !normalizedCategoryName || !normalizedUnit) {
     return false
   }
 
   return existingItems.some((item) => (
     Number(item.id) !== Number(currentItemId) &&
-    normalizeInventoryProductName(item.product_name) === normalizedProductName
+    normalizeInventoryMatchValue(item.product_name) === normalizedProductName &&
+    normalizeInventoryMatchValue(item.category_name) === normalizedCategoryName &&
+    normalizeInventoryMatchValue(item.unit) === normalizedUnit &&
+    (normalizedBranchId == null ||
+      Number(item.branch_id ?? normalizedBranchId) === Number(normalizedBranchId))
   ))
 }
 
@@ -579,33 +538,28 @@ export async function applySaleToInventory(soldItems = [], options = {}) {
           return
         }
 
-        const { data: currentItem, error: currentItemError } = await supabase
-          .from(supabaseTables.inventoryItems)
-          .select('*')
-          .eq('branch_id', branchId)
-          .eq('product_id', productId)
-          .maybeSingle()
+        const currentProduct = await fetchSupabaseProductById(productId)
 
-        if (currentItemError) {
-          throw createSupabaseServiceError(
-            currentItemError,
-            'Unable to find the branch inventory record for this sale.',
-          )
+        if (!currentProduct) {
+          return
         }
 
-        if (!currentItem) {
+        const productBranchId =
+          resolveSupabaseBranchId({ branch: currentProduct.branch }, currentProduct)
+
+        if (Number(productBranchId) !== Number(branchId)) {
           return
         }
 
         const nextStockQuantity = Math.max(
           0,
-          Number(currentItem.stock_quantity || 0) - Number(soldItem.quantity || 0),
+          Number(currentProduct.stock_quantity || 0) - Number(soldItem.quantity || 0),
         )
 
         const { error: updateError } = await supabase
-          .from(supabaseTables.inventoryItems)
+          .from(supabaseTables.products)
           .update({ stock_quantity: nextStockQuantity })
-          .eq('id', currentItem.id)
+          .eq('id', productId)
 
         if (updateError) {
           throw createSupabaseServiceError(

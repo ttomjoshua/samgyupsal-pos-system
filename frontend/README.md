@@ -1,16 +1,51 @@
-# React + Vite
+# Frontend Application
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+This folder contains the live React frontend for the Samgyupsal POS and Inventory Monitoring System.
 
-Currently, two official plugins are available:
+## Stack
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+- React 19
+- React Router
+- Vite
+- Supabase JS client
+- Axios fallback client for older demo endpoints
 
-## React Compiler
+## Main Runtime Areas
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+- `src/pages/` - route-level screens
+- `src/components/` - reusable UI and feature components
+- `src/services/` - Supabase access, fallback REST calls, and business logic
+- `src/context/` - auth/session state
+- `src/utils/` - validation, formatting, permissions, and local storage helpers
+- `supabase/sql/` - SQL files used to initialize and migrate the Supabase schema
 
-## Expanding the ESLint configuration
+## Environment Variables
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+See [`.env.example`](./.env.example).
+
+Key values:
+
+- `VITE_SUPABASE_URL`
+- `VITE_SUPABASE_ANON_KEY`
+- `VITE_SUPABASE_AUTH_ENABLED`
+- `VITE_SUPABASE_DEFAULT_BRANCH_ID`
+- `VITE_SUPABASE_SYNC_INVENTORY_ON_SALE`
+
+## Scripts
+
+```powershell
+npm run dev
+npm run lint
+npm run build
+npm run preview
+```
+
+## Data Modes
+
+The app prefers Supabase when it is configured. If Supabase is unavailable, some screens can still fall back to:
+
+- the legacy Axios contract
+- browser `localStorage`
+- seeded mock data
+
+That fallback behavior exists to keep demos resilient, but Supabase is the intended primary data source.

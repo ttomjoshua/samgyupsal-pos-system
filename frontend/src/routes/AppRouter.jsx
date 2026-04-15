@@ -1,17 +1,27 @@
+import { lazy, Suspense } from 'react'
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
 import Loader from '../components/common/Loader'
-import MainLayout from '../layout/MainLayout'
-import DashboardPage from '../pages/DashboardPage'
-import InventoryPage from '../pages/InventoryPage'
-import LoginPage from '../pages/LoginPage'
-import NotFoundPage from '../pages/NotFoundPage'
-import PosPage from '../pages/PosPage'
-import ProductsPage from '../pages/ProductsPage'
-import ReportsPage from '../pages/ReportsPage'
-import UsersPage from '../pages/UsersPage'
 import useAuth from '../hooks/useAuth'
 import ProtectedRoute from './ProtectedRoute'
 import { getDefaultAppPath, ROLE_ADMIN } from '../utils/permissions'
+
+const MainLayout = lazy(() => import('../layout/MainLayout'))
+const DashboardPage = lazy(() => import('../pages/DashboardPage'))
+const InventoryPage = lazy(() => import('../pages/InventoryPage'))
+const LoginPage = lazy(() => import('../pages/LoginPage'))
+const NotFoundPage = lazy(() => import('../pages/NotFoundPage'))
+const PosPage = lazy(() => import('../pages/PosPage'))
+const ProductsPage = lazy(() => import('../pages/ProductsPage'))
+const ReportsPage = lazy(() => import('../pages/ReportsPage'))
+const UsersPage = lazy(() => import('../pages/UsersPage'))
+
+function renderLazyPage(element, message) {
+  return (
+    <Suspense fallback={<Loader message={message} />}>
+      {element}
+    </Suspense>
+  )
+}
 
 function AppRouter() {
   const { isAuthenticated, isAuthReady, user } = useAuth()
@@ -28,7 +38,7 @@ function AppRouter() {
             ) : isAuthenticated ? (
               <Navigate to={defaultAppPath} replace />
             ) : (
-              <LoginPage />
+              renderLazyPage(<LoginPage />, 'Loading sign-in...')
             )
           }
         />
@@ -37,7 +47,7 @@ function AppRouter() {
           path="/app"
           element={
             <ProtectedRoute>
-              <MainLayout />
+              {renderLazyPage(<MainLayout />, 'Loading workspace...')}
             </ProtectedRoute>
           }
         >
@@ -46,16 +56,19 @@ function AppRouter() {
             path="dashboard"
             element={
               <ProtectedRoute allowedRoles={[ROLE_ADMIN]}>
-                <DashboardPage />
+                {renderLazyPage(<DashboardPage />, 'Loading dashboard...')}
               </ProtectedRoute>
             }
           />
-          <Route path="pos" element={<PosPage />} />
+          <Route
+            path="pos"
+            element={renderLazyPage(<PosPage />, 'Loading point of sale...')}
+          />
           <Route
             path="inventory"
             element={
               <ProtectedRoute allowedRoles={[ROLE_ADMIN]}>
-                <InventoryPage />
+                {renderLazyPage(<InventoryPage />, 'Loading inventory...')}
               </ProtectedRoute>
             }
           />
@@ -63,7 +76,7 @@ function AppRouter() {
             path="reports"
             element={
               <ProtectedRoute allowedRoles={[ROLE_ADMIN]}>
-                <ReportsPage />
+                {renderLazyPage(<ReportsPage />, 'Loading reports...')}
               </ProtectedRoute>
             }
           />
@@ -71,7 +84,7 @@ function AppRouter() {
             path="products"
             element={
               <ProtectedRoute allowedRoles={[ROLE_ADMIN]}>
-                <ProductsPage />
+                {renderLazyPage(<ProductsPage />, 'Loading products...')}
               </ProtectedRoute>
             }
           />
@@ -79,13 +92,16 @@ function AppRouter() {
             path="users"
             element={
               <ProtectedRoute allowedRoles={[ROLE_ADMIN]}>
-                <UsersPage />
+                {renderLazyPage(<UsersPage />, 'Loading users...')}
               </ProtectedRoute>
             }
           />
         </Route>
 
-        <Route path="*" element={<NotFoundPage />} />
+        <Route
+          path="*"
+          element={renderLazyPage(<NotFoundPage />, 'Loading page...')}
+        />
       </Routes>
     </BrowserRouter>
   )
