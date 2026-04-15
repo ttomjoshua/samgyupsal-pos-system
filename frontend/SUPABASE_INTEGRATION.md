@@ -14,12 +14,12 @@ This frontend now treats `public.products` as the branch-scoped inventory source
 - branch directory management now reads and writes through Supabase first
 - login/auth session flow is ready for Supabase Auth rollout
 - employee directory management in the Users page now reads real Supabase `profiles`
+- secure employee account creation is wired through a Supabase Edge Function
 
 Important:
 
-- secure Supabase auth-user creation still requires a trusted backend, Edge Function, or manual Dashboard setup
 - do not put the Supabase `service_role` key in this frontend
-- creating new Auth users is still not handled from the browser
+- the browser only invokes the trusted Edge Function; it never receives the `service_role` key
 
 ## Required frontend env vars
 
@@ -37,6 +37,7 @@ Copy [`.env.example`](./.env.example) into `.env` and fill in:
 - `VITE_SUPABASE_SALE_ITEMS_TABLE`
 - `VITE_SUPABASE_BRANCHES_TABLE`
 - `VITE_SUPABASE_PROFILES_TABLE`
+- `VITE_SUPABASE_ADMIN_CREATE_USER_FUNCTION`
 - `VITE_SUPABASE_PRODUCTS_VIEW`
 - `VITE_SUPABASE_INVENTORY_VIEW`
 - `VITE_SUPABASE_AUTH_ENABLED`
@@ -152,9 +153,9 @@ Important:
    - `Inventory`
    - `Reports`
 4. Run the auth SQL rollout files from [`supabase/README.md`](./supabase/README.md) when ready
-5. Manually create the first Supabase Auth users
-6. Seed their `profiles` rows with roles and branch assignments
-7. Only after that, stop depending on local employee-login placeholders
+5. Deploy the `admin-create-user` Edge Function
+6. Manually create and seed only the first admin user
+7. After that, create employee accounts from the Users page
 
 ## Important current assumption
 
@@ -169,4 +170,4 @@ When `VITE_SUPABASE_AUTH_ENABLED=true` and Supabase is configured:
 - the route guards rely on the authenticated `profiles` row
 - users without a valid `profiles` row will not be allowed through the app
 
-The Users page now reads and updates real Supabase `profiles` for employee role, branch assignment, username, and status. Until the secure admin-create-user path is implemented, new Auth users still need to be created in Supabase Dashboard or a protected backend path first.
+The Users page now reads and updates real Supabase `profiles`, and new employee Auth users can be created through the secured `admin-create-user` Edge Function after it is deployed. The one remaining manual bootstrap step is creating the first admin account.

@@ -9,6 +9,7 @@ Use this when switching the frontend from local demo login to real Supabase Auth
 - route guards now wait for Supabase session restore before redirecting
 - the app now expects a matching `public.profiles` row for every real auth user
 - the Users page now reads and updates employee/admin directory data from `public.profiles`
+- the repo now includes a secure `admin-create-user` Edge Function for admin-created employee accounts
 
 ## Human steps still required
 
@@ -25,18 +26,30 @@ This creates:
 - the `profiles` RLS policies
 - a backfill for existing auth users
 
-### 2. Create the first real Auth users
+### 2. Deploy the admin-create-user Edge Function
+
+Deploy:
+
+- `functions/admin-create-user/index.ts`
+
+This function:
+
+- verifies the caller JWT on the server
+- confirms the caller is an active admin from `public.profiles`
+- creates the Auth user with the server-side admin API
+- upserts the matching `public.profiles` row
+
+### 3. Create the first real admin Auth user
 
 In Supabase Dashboard:
 
 - go to `Authentication`
 - open `Users`
 - create the first admin account
-- create at least one cashier/employee account
 
-Use real email addresses that you can recognize in the seed step.
+Use a real email address that you can recognize in the seed step.
 
-### 3. Assign roles and branch scope
+### 4. Assign the first admin role and branch scope
 
 Open:
 
@@ -49,11 +62,11 @@ Before running it:
 
 Then run the file in SQL Editor.
 
-### 4. Restart the frontend dev server
+### 5. Restart the frontend dev server
 
 If `npm run dev` is already running, stop it and start it again so Vite picks up the latest env/auth changes.
 
-### 5. Verify the auth data
+### 6. Verify the auth data
 
 Run this in SQL Editor:
 
@@ -78,19 +91,22 @@ You should see:
 - branch ids for employee accounts
 - `active` status
 
-### 6. Verify the frontend login
+### 7. Verify the frontend login and employee creation
 
 In the app:
 
 - log in with the admin email/password
 - confirm admin routes are visible
+- open the Users page
+- create one employee account from the secured form
+- confirm that the new employee appears in the directory
 - log out
 - log in with the employee email/password
 - confirm only the POS route is visible
 
 ## Important caution
 
-The Users page can now manage real `profiles`, but it still does not create real Supabase Auth users from the browser.
+The browser still must not create Auth users directly.
 
 That means:
 
@@ -98,4 +114,5 @@ That means:
 - operational data is real
 - login is real
 - employee directory editing is real
-- new Auth-user creation is still awaiting a secure backend, Edge Function, or manual Dashboard flow
+- employee account creation is real only through the trusted Edge Function
+- the first admin account still needs a manual bootstrap step

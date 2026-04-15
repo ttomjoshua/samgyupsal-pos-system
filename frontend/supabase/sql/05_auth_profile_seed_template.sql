@@ -1,9 +1,9 @@
 -- Real account profile seed.
 --
 -- Target Auth users:
--- 1. tomjatn@gmail.com
--- 2. otamsomats@gmail.com
--- 3. tomjoshua9@gmail.com
+-- 1. admin@example.com
+-- 2. cashier.stalucia@example.com
+-- 3. cashier.dollar@example.com
 --
 -- Run this only after:
 -- 1. creating or confirming the Auth users in Supabase Dashboard if email confirmation is enabled
@@ -13,8 +13,8 @@ begin;
 
 update public.profiles
 set
-  username = 'tomjatn',
-  full_name = 'Tomjatn Admin',
+  username = 'admin.user',
+  full_name = 'Admin User',
   role_key = 'admin',
   branch_id = null,
   status = 'active',
@@ -22,13 +22,13 @@ set
 where id = (
   select id
   from auth.users
-  where email = 'tomjatn@gmail.com'
+  where email = 'admin@example.com'
 );
 
 update public.profiles
 set
-  username = 'otamsomats',
-  full_name = 'Otamsomats Employee',
+  username = 'cashier.stalucia',
+  full_name = 'Sta. Lucia Cashier',
   role_key = 'employee',
   branch_id = 1,
   status = 'active',
@@ -36,13 +36,13 @@ set
 where id = (
   select id
   from auth.users
-  where email = 'otamsomats@gmail.com'
+  where email = 'cashier.stalucia@example.com'
 );
 
 update public.profiles
 set
-  username = 'tomjoshua9',
-  full_name = 'Tomjoshua9 Employee',
+  username = 'cashier.dollar',
+  full_name = 'Dollar Cashier',
   role_key = 'employee',
   branch_id = 2,
   status = 'active',
@@ -50,7 +50,7 @@ set
 where id = (
   select id
   from auth.users
-  where email = 'tomjoshua9@gmail.com'
+  where email = 'cashier.dollar@example.com'
 );
 
 commit;

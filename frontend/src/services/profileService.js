@@ -1,8 +1,10 @@
 import { getRoleLabel, normalizeRoleKey } from '../utils/permissions'
 import {
   createSupabaseServiceError,
+  createSupabaseConfigError,
   getSupabaseClient,
   isSupabaseAuthEnabled,
+  supabaseEdgeFunctions,
   supabaseTables,
 } from './supabaseClient'
 
@@ -90,6 +92,12 @@ function normalizeDirectoryUsername(value) {
   return normalizeProfileText(value).toLowerCase()
 }
 
+function normalizeDirectoryEmail(value) {
+  return String(value || '')
+    .trim()
+    .toLowerCase()
+}
+
 function normalizeDirectoryStatus(value) {
   return String(value || '').trim().toLowerCase() === 'inactive'
     ? 'inactive'
@@ -103,6 +111,16 @@ function parseDirectoryBranchId(value) {
 
   const branchId = Number(value)
   return Number.isFinite(branchId) && branchId > 0 ? branchId : null
+}
+
+function createProfileValidationError(message) {
+  const error = new Error(message)
+  error.response = {
+    data: {
+      message,
+    },
+  }
+  return error
 }
 
 function validateDirectoryProfilePayload(profileId, payload = {}) {
@@ -135,6 +153,70 @@ function validateDirectoryProfilePayload(profileId, payload = {}) {
     branch_id: branchId,
     status,
   }
+}
+
+function validateNewEmployeePayload(payload = {}) {
+  const fullName = normalizeProfileText(payload.name || payload.full_name)
+  const username = normalizeDirectoryUsername(payload.username)
+  const email = normalizeDirectoryEmail(payload.email)
+  const password = String(payload.password || '')
+  const status = normalizeDirectoryStatus(payload.status)
+  const branchId = parseDirectoryBranchId(payload.branchId)
+
+  if (!fullName) {
+    throw createProfileValidationError('Full name is required before saving this employee.')
+  }
+
+  if (!username) {
+    throw createProfileValidationError('Username is required before saving this employee.')
+  }
+
+  if (!email) {
+    throw createProfileValidationError('Email is required before creating this employee.')
+  }
+
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    throw createProfileValidationError('Enter a valid email address for this employee.')
+  }
+
+  if (password.trim().length < 8) {
+    throw createProfileValidationError(
+      'Temporary password must be at least 8 characters long.',
+    )
+  }
+
+  if (!branchId) {
+    throw createProfileValidationError('Employee accounts must be assigned to a branch.')
+  }
+
+  return {
+    email,
+    password: password.trim(),
+    username,
+    full_name: fullName,
+    role_key: 'employee',
+    branch_id: branchId,
+    status,
+  }
+}
+
+async function extractFunctionErrorMessage(error, fallbackMessage) {
+  let message = String(error?.message || fallbackMessage || '').trim()
+
+  if (error?.context instanceof Response) {
+    try {
+      const payload = await error.context.json()
+      message = String(payload?.error || payload?.message || message).trim()
+    } catch {
+      // Ignore JSON parsing failures and keep the original error message.
+    }
+  }
+
+  if (message.toLowerCase() === 'failed to fetch') {
+    return 'The secure admin-create-user function is unreachable. Deploy the Edge Function and try again.'
+  }
+
+  return message || fallbackMessage
 }
 
 export async function getProfileForAuthUser(authUser) {
@@ -195,6 +277,41 @@ export async function getProfilesDirectory() {
       error,
       'Unable to load the employee directory from Supabase.',
     )
+  }
+}
+
+export async function createManagedEmployeeAccount(payload = {}) {
+  if (!isSupabaseAuthEnabled) {
+    throw createProfileValidationError(
+      'Supabase auth must be enabled before creating managed employee accounts.',
+    )
+  }
+
+  const createPayload = validateNewEmployeePayload(payload)
+  const functionName = String(supabaseEdgeFunctions.adminCreateUser || '').trim()
+
+  if (!functionName) {
+    throw createSupabaseConfigError('Supabase admin-create-user function')
+  }
+
+  try {
+    const supabase = getSupabaseClient()
+    const { data, error } = await supabase.functions.invoke(functionName, {
+      body: createPayload,
+    })
+
+    if (error) {
+      throw error
+    }
+
+    return normalizeDirectoryProfile(data?.profile || data)
+  } catch (error) {
+    const message = await extractFunctionErrorMessage(
+      error,
+      'Unable to create this employee in Supabase.',
+    )
+
+    throw createProfileValidationError(message)
   }
 }
 

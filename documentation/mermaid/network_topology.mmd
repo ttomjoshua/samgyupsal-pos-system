@@ -1,0 +1,31 @@
+flowchart TD
+    subgraph Internet
+        CF[Vercel CDN / Edge Network]
+    end
+
+    subgraph Client["Client Devices (Branch POS Terminals)"]
+        B1[Sta. Lucia Branch - POS Terminal]
+        B2[Dollar Branch - POS Terminal]
+        Admin[Admin Device - Browser]
+    end
+
+    subgraph Vercel["Vercel Cloud Hosting"]
+        SPA[React SPA - Static Build]
+    end
+
+    subgraph Supabase["Supabase Cloud Platform"]
+        Auth[Supabase Auth - JWT]
+        API[PostgREST API Layer]
+        PG[(PostgreSQL Database)]
+        RLS[Row Level Security]
+    end
+
+    B1 -- HTTPS --> CF
+    B2 -- HTTPS --> CF
+    Admin -- HTTPS --> CF
+    CF -- Serve Static Assets --> SPA
+    SPA -- Auth Requests --> Auth
+    SPA -- Data Requests --> API
+    Auth -- Session Validation --> PG
+    API -- SQL Queries --> RLS
+    RLS -- Enforced Access --> PG

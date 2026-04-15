@@ -1,39 +1,32 @@
 # Supabase Auth Account Handoff
 
-These are the target real accounts the frontend is now prepared to use:
+Use this as a template for the first real admin bootstrap.
 
-## Admin
-- Email: `tomjatn@gmail.com`
-- Password: `password123`
-- Profile username: `tomjatn`
-
-## Employees
-- Email: `otamsomats@gmail.com`
-- Password: `password123`
-- Profile username: `otamsomats`
-
-- Email: `tomjoshua9@gmail.com`
-- Password: `password123`
-- Profile username: `tomjoshua9`
-
-## Current limitation
-
-Automatic signup from the browser hit Supabase email rate limiting during setup.
-
-That means the safe next step is:
+## First admin bootstrap
 
 1. Open `Supabase Dashboard > Authentication > Users`
-2. Create these three users manually if they do not exist yet
-3. Confirm them there as well if your project requires email confirmation
-4. Run [`sql/05_auth_profile_seed_template.sql`](./sql/05_auth_profile_seed_template.sql)
+2. Create the first admin account manually
+3. Confirm the account there as well if your project requires email confirmation
+4. Run [`sql/05_auth_profile_seed_template.sql`](./sql/05_auth_profile_seed_template.sql) and set that user to `admin`
+5. Log in as that admin in the frontend
+6. Create employee accounts from the Users page through the secured `admin-create-user` Edge Function
+
+## Recommended fields to keep in your private handoff sheet
+
+- employee full name
+- employee email
+- profile username
+- assigned branch
+- temporary first password
+- status
+
+Do not commit real passwords or real account lists into this repo.
 
 ## Old demo accounts
 
-These old demo accounts should be deleted manually from `Authentication > Users`:
+If you still have demo Auth users from earlier rehearsals, delete them manually from:
 
-- `admin.demo.capstonepos@gmail.com`
-- `cashier.main.demo.capstonepos@gmail.com`
-- `cashier.north.demo.capstonepos@gmail.com`
+- `Supabase Dashboard > Authentication > Users`
 
 ## Optional safety step
 

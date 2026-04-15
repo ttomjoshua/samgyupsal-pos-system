@@ -78,8 +78,8 @@ function LoginPage() {
             <p className="login-demo-title">Supabase sign-in is now active</p>
             <p>Use the real email and password accounts created in Supabase Auth.</p>
             <p className="login-demo-footnote">
-              The employee directory in the Users page is still a frontend-only placeholder
-              until the secure admin-create-user flow is finished.
+              Admins can create and manage employee accounts from the Users page through
+              the secured server-side account creation flow.
             </p>
           </div>
         ) : (

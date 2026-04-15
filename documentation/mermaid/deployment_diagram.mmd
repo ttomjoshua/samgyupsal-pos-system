@@ -1,0 +1,44 @@
+flowchart TD
+    subgraph ClientTier["Client Tier"]
+        Browser["Web Browser\n(Chrome / Edge)"]
+    end
+
+    subgraph FrontendTier["Frontend Tier — Vercel"]
+        CDN["Vercel Edge CDN\n(Global Distribution)"]
+        Static["Static Build Artifacts\n(HTML, JS, CSS)"]
+    end
+
+    subgraph AppLayer["Application Layer — React SPA"]
+        Router["AppRouter\n(React Router)"]
+        AuthCtx["AuthContext\n(State Management)"]
+        Pages["Pages\n(POS, Inventory, Reports, Users)"]
+        Services["Service Layer\n(Auth, Sales, Product, Inventory, Report)"]
+    end
+
+    subgraph BackendTier["Backend Tier — Supabase Cloud"]
+        SupaAuth["Supabase Auth\n(JWT Authentication)"]
+        PostgREST["PostgREST API\n(Auto-generated REST)"]
+        RLS["Row Level Security\n(Policy Enforcement)"]
+        Postgres[("PostgreSQL\n(Database)")]
+    end
+
+    subgraph DataStores["Data Stores"]
+        Tables["Tables:\nbranches, profiles, products\nsales, sale_items"]
+        Views["Views:\nproduct_catalog_view\ninventory_catalog_view"]
+        LocalStore["LocalStorage\n(Offline Fallback)"]
+    end
+
+    Browser --> CDN
+    CDN --> Static
+    Static --> Router
+    Router --> AuthCtx
+    AuthCtx --> Pages
+    Pages --> Services
+    Services -- Auth --> SupaAuth
+    Services -- CRUD --> PostgREST
+    SupaAuth --> Postgres
+    PostgREST --> RLS
+    RLS --> Postgres
+    Postgres --- Tables
+    Postgres --- Views
+    Services -. Fallback .-> LocalStore

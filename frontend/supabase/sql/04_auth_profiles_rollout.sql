@@ -37,11 +37,18 @@ create index if not exists idx_profiles_branch_id
 create index if not exists idx_profiles_role_key
   on public.profiles (role_key);
 
-create or replace function public.handle_new_auth_user()
+create schema if not exists private;
+
+revoke all on schema private from public;
+grant usage on schema private to authenticated;
+
+drop trigger if exists on_auth_user_created on auth.users;
+
+create or replace function private.handle_new_auth_user()
 returns trigger
 language plpgsql
 security definer
-set search_path = public
+set search_path = public, private
 as $$
 begin
   insert into public.profiles (
@@ -95,11 +102,9 @@ begin
 end;
 $$;
 
-drop trigger if exists on_auth_user_created on auth.users;
-
 create trigger on_auth_user_created
   after insert on auth.users
-  for each row execute function public.handle_new_auth_user();
+  for each row execute function private.handle_new_auth_user();
 
 insert into public.profiles (
   id,
@@ -146,11 +151,11 @@ left join public.profiles as profile
   on profile.id = auth_user.id
 where profile.id is null;
 
-create or replace function public.current_user_is_admin()
+create or replace function private.current_user_is_admin()
 returns boolean
 language sql
 security definer
-set search_path = public
+set search_path = public, private
 stable
 as $$
   select exists (
@@ -162,8 +167,36 @@ as $$
   );
 $$;
 
-revoke all on function public.current_user_is_admin() from public;
-grant execute on function public.current_user_is_admin() to authenticated;
+revoke all on function private.current_user_is_admin() from public;
+grant execute on function private.current_user_is_admin() to authenticated;
+
+do $$
+begin
+  if exists (
+    select 1
+    from pg_proc as proc
+    inner join pg_namespace as namespace
+      on namespace.oid = proc.pronamespace
+    where proc.proname = 'current_user_is_admin'
+      and namespace.nspname = 'public'
+  ) then
+    revoke all on function public.current_user_is_admin() from public;
+    revoke all on function public.current_user_is_admin() from authenticated;
+    drop function public.current_user_is_admin();
+  end if;
+
+  if exists (
+    select 1
+    from pg_proc as proc
+    inner join pg_namespace as namespace
+      on namespace.oid = proc.pronamespace
+    where proc.proname = 'handle_new_auth_user'
+      and namespace.nspname = 'public'
+  ) then
+    drop function public.handle_new_auth_user();
+  end if;
+end
+$$;
 
 do $$
 begin
@@ -200,14 +233,14 @@ create policy "profiles_select_admin"
   on public.profiles
   for select
   to authenticated
-  using (public.current_user_is_admin());
+  using (private.current_user_is_admin());
 
 drop policy if exists "profiles_update_admin" on public.profiles;
 create policy "profiles_update_admin"
   on public.profiles
   for update
   to authenticated
-  using (public.current_user_is_admin())
-  with check (public.current_user_is_admin());
+  using (private.current_user_is_admin())
+  with check (private.current_user_is_admin());
 
 commit;

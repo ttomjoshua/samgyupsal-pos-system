@@ -28,6 +28,11 @@ export const supabaseViews = {
     import.meta.env.VITE_SUPABASE_INVENTORY_VIEW || 'inventory_catalog_view',
 }
 
+export const supabaseEdgeFunctions = {
+  adminCreateUser:
+    import.meta.env.VITE_SUPABASE_ADMIN_CREATE_USER_FUNCTION || 'admin-create-user',
+}
+
 export const supabaseRuntime = {
   inventoryManagedOnSale:
     String(import.meta.env.VITE_SUPABASE_SYNC_INVENTORY_ON_SALE || 'false')

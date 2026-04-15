@@ -132,16 +132,17 @@ This script:
 - enables RLS on `profiles`
 - allows each authenticated user to read their own profile
 - allows admins to read and update all profiles
+- moves the security-definer auth helpers into the private schema instead of leaving them in `public`
 
 Important:
 
 - This is the handoff point where frontend login can safely start using Supabase Auth.
-- After running it, create the real auth users in the Supabase Dashboard or through a trusted backend path.
+- After running it, create only the first admin auth user manually in the Supabase Dashboard.
 - Do not expose the `service_role` key in the frontend.
 
-## 7. Seed role and branch assignments for the first auth users
+## 7. Seed role and branch assignments for the first admin user
 
-Run only after you manually create the first Auth users in Supabase Dashboard:
+Run only after you manually create the first admin Auth user in Supabase Dashboard:
 
 - [`sql/05_auth_profile_seed_template.sql`](./sql/05_auth_profile_seed_template.sql)
 
@@ -156,6 +157,26 @@ This script is just a template so you can assign:
 - employee role
 - branch scope
 - active status
+
+## 8. Deploy the secure admin-create-user Edge Function
+
+The repo now includes:
+
+- [`functions/admin-create-user/index.ts`](./functions/admin-create-user/index.ts)
+
+This is the trusted server-side path that lets an authenticated admin create employee Auth users without exposing the `service_role` key in the browser.
+
+What it does:
+
+- validates the caller JWT on the server
+- confirms the caller is an active admin from `public.profiles`
+- creates the Auth user with `auth.admin.createUser`
+- upserts the matching `public.profiles` row with username, branch, role, and status
+
+After deploying it:
+
+- admins can create employee login accounts directly from the Users page
+- the login page no longer depends on a frontend-only employee placeholder flow
 
 ## New backend shape
 

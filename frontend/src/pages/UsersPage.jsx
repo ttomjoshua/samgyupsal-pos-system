@@ -5,6 +5,7 @@ import NoticeBanner from '../components/common/NoticeBanner'
 import StatusBadge from '../components/common/StatusBadge'
 import { createBranch, getBranches } from '../services/branchService'
 import {
+  createManagedEmployeeAccount,
   getProfilesDirectory,
   updateProfileDirectoryEntry,
 } from '../services/profileService'
@@ -21,6 +22,7 @@ import '../styles/users.css'
 
 const INITIAL_EMPLOYEE_FORM = {
   name: '',
+  email: '',
   username: '',
   password: '',
   branchId: '',
@@ -155,6 +157,7 @@ function UsersPage() {
     setPageMessageTone('info')
     setFormData({
       name: employee.name,
+      email: '',
       username: employee.username,
       password: '',
       branchId: employee.branchId || '',
@@ -169,20 +172,22 @@ function UsersPage() {
 
     try {
       if (isSupabaseAuthEnabled) {
-        if (!editingEmployee) {
-          throw new Error(
-            'Create the Auth user in Supabase Dashboard first, then edit the profile here.',
+        if (editingEmployee) {
+          const updatedEmployee = await updateProfileDirectoryEntry(
+            editingEmployee.id,
+            formData,
           )
+          setPageMessage(
+            `${updatedEmployee.name} is now assigned to ${updatedEmployee.branchName}.`,
+          )
+          setPageMessageTone('success')
+        } else {
+          const createdEmployee = await createManagedEmployeeAccount(formData)
+          setPageMessage(
+            `${createdEmployee.name} was created in Supabase Auth and assigned to ${createdEmployee.branchName}.`,
+          )
+          setPageMessageTone('success')
         }
-
-        const updatedEmployee = await updateProfileDirectoryEntry(
-          editingEmployee.id,
-          formData,
-        )
-        setPageMessage(
-          `${updatedEmployee.name} is now assigned to ${updatedEmployee.branchName}.`,
-        )
-        setPageMessageTone('success')
       } else if (editingEmployee) {
         const updatedEmployee = updateEmployeeAccount(editingEmployee.id, formData)
         setPageMessage(
@@ -336,22 +341,21 @@ function UsersPage() {
             {editingEmployee
               ? 'Update Employee Account'
               : isSupabaseAuthEnabled
-                ? 'Supabase Employee Directory'
+                ? 'Create Supabase Employee Account'
                 : 'Create Employee Account'}
           </h2>
           <p className="supporting-text">
             {isSupabaseAuthEnabled
-              ? 'Roles, branch assignments, and account status now come from Supabase profiles.'
+              ? 'Create real Auth accounts through the secured server-side flow, then manage branch assignment and account status here.'
               : 'Create dummy employee accounts here and assign each one to a branch.'}
           </p>
 
           {isSupabaseAuthEnabled && !editingEmployee ? (
             <div className="users-auth-note">
-              <strong>Safe admin flow</strong>
+              <strong>Secure account creation</strong>
               <p>
-                New login accounts should still be created in Supabase Dashboard under
-                Authentication. Once they exist and the profile trigger runs, refresh this
-                directory and click Edit to finish the branch assignment here.
+                New employee login accounts are created through the secured Supabase Edge
+                Function. The password entered here becomes the temporary first login password.
               </p>
               <div className="users-form-actions">
                 <button
@@ -361,7 +365,7 @@ function UsersPage() {
                     void handleRefreshDirectory()
                   }}
                 >
-                  Refresh Supabase Directory
+                  Refresh Employee Directory
                 </button>
               </div>
             </div>
@@ -379,6 +383,20 @@ function UsersPage() {
                 disabled={isDirectorySaving}
               />
             </label>
+
+            {isSupabaseAuthEnabled && !editingEmployee ? (
+              <label className="users-field">
+                <span>Email</span>
+                <input
+                  type="email"
+                  name="email"
+                  value={formData.email}
+                  onChange={handleFieldChange}
+                  placeholder="cashier@samgyupsal.com"
+                  disabled={isDirectorySaving}
+                />
+              </label>
+            ) : null}
 
             <label className="users-field">
               <span>Username</span>
@@ -404,12 +422,24 @@ function UsersPage() {
                   disabled={isDirectorySaving}
                 />
               </label>
+            ) : !editingEmployee ? (
+              <label className="users-field">
+                <span>Temporary Password</span>
+                <input
+                  type="password"
+                  name="password"
+                  value={formData.password}
+                  onChange={handleFieldChange}
+                  placeholder="At least 8 characters"
+                  disabled={isDirectorySaving}
+                />
+              </label>
             ) : (
               <div className="users-field users-field-readonly">
                 <span>Auth Credentials</span>
                 <div className="users-inline-note">
-                  Email and password remain managed in Supabase Auth and are not edited from
-                  this page.
+                  Email and password remain managed in Supabase Auth after account creation.
+                  This screen currently updates profile, branch, and status only.
                 </div>
               </div>
             )}
@@ -462,15 +492,13 @@ function UsersPage() {
                 </button>
               ) : null}
 
-              {isSupabaseAuthEnabled && !editingEmployee ? null : (
-                <button type="submit" className="primary-button" disabled={isDirectorySaving}>
-                  {isDirectorySaving
-                    ? 'Saving...'
-                    : editingEmployee
-                      ? 'Save Employee'
-                      : 'Create Employee'}
-                </button>
-              )}
+              <button type="submit" className="primary-button" disabled={isDirectorySaving}>
+                {isDirectorySaving
+                  ? 'Saving...'
+                  : editingEmployee
+                    ? 'Save Employee'
+                    : 'Create Employee'}
+              </button>
             </div>
           </form>
         </div>
@@ -664,7 +692,7 @@ function UsersPage() {
         <h2>Active and Inactive Employee Accounts</h2>
         <p className="supporting-text">
           {isSupabaseAuthEnabled
-            ? 'These employee records now come from Supabase profiles. Real Auth user creation should still happen in Supabase Dashboard or a protected backend path.'
+            ? 'These employee records come from Supabase profiles, and new employee logins can now be created through the secured admin flow.'
             : 'These are dummy frontend accounts only. Backend access control will still need to enforce the same rules later.'}
         </p>
 
@@ -673,7 +701,7 @@ function UsersPage() {
             title="No employee accounts yet"
             description={
               isSupabaseAuthEnabled
-                ? 'Create the next employee in Supabase Authentication first, then refresh this screen to assign the branch and username.'
+                ? 'Create the first employee account from the form above and it will appear here after the profile sync completes.'
                 : 'Create the first branch-assigned employee account to start testing role-based screens.'
             }
           />
