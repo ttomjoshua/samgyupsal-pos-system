@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import EmptyState from '../components/common/EmptyState'
 import Loader from '../components/common/Loader'
 import NoticeBanner from '../components/common/NoticeBanner'
@@ -28,6 +28,25 @@ function ReportsPage() {
   const [filterError, setFilterError] = useState('')
   const [filterMessage, setFilterMessage] = useState('')
   const [loadError, setLoadError] = useState('')
+
+  const reviewWindowLabel = useMemo(() => {
+    const startDate = new Date(`${dateFrom}T00:00:00`)
+    const endDate = new Date(`${dateTo}T00:00:00`)
+
+    if (
+      Number.isNaN(startDate.getTime()) ||
+      Number.isNaN(endDate.getTime())
+    ) {
+      return 'Custom'
+    }
+
+    const daySpan = Math.max(
+      1,
+      Math.floor((endDate.getTime() - startDate.getTime()) / 86400000) + 1,
+    )
+
+    return `${daySpan} day${daySpan === 1 ? '' : 's'}`
+  }, [dateFrom, dateTo])
 
   useEffect(() => {
     void loadReportsForRange({ dateFrom, dateTo }, false)
@@ -105,23 +124,39 @@ function ReportsPage() {
 
   return (
     <section className="reports-page">
-      <div className="page-header reports-header">
-        <div>
+      <div className="reports-topbar">
+        <div className="reports-title-block">
           <p className="eyebrow">Business Reporting</p>
           <h1>Reports</h1>
           <p className="supporting-text">
             Review sales performance, cashier activity, and stock risk in one reporting workspace.
           </p>
         </div>
-        <div className="page-header-actions">
-          <div className="page-header-stat">
-            <strong>{shortDate(dateFrom)}</strong>
-            <span>From</span>
-          </div>
-          <div className="page-header-stat">
-            <strong>{shortDate(dateTo)}</strong>
-            <span>To</span>
-          </div>
+
+        <div className="reports-meta-grid">
+          <article className="reports-meta-card">
+            <span className="meta-label">From</span>
+            <strong className="meta-primary">{shortDate(dateFrom)}</strong>
+            <span className="meta-secondary">
+              Selected report start date for the active analysis window.
+            </span>
+          </article>
+
+          <article className="reports-meta-card">
+            <span className="meta-label">To</span>
+            <strong className="meta-primary">{shortDate(dateTo)}</strong>
+            <span className="meta-secondary">
+              Selected report end date for the current reporting snapshot.
+            </span>
+          </article>
+
+          <article className="reports-meta-card">
+            <span className="meta-label">Review Window</span>
+            <strong className="meta-primary">{reviewWindowLabel}</strong>
+            <span className="meta-secondary">
+              Active analysis period used for totals, best performers, and cashier results.
+            </span>
+          </article>
         </div>
       </div>
 

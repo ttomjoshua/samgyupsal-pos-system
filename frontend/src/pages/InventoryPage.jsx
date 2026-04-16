@@ -416,31 +416,49 @@ function InventoryPage() {
 
   return (
     <section className="inventory-page">
-      <div className="page-header inventory-header">
-        <div>
+      <div className="inventory-topbar">
+        <div className="inventory-title-block">
           <p className="eyebrow">Admin Inventory Screen</p>
           <h1>Inventory</h1>
           <p className="supporting-text">
             Control stock levels, expiry risk, and branch inventory actions from one workspace.
           </p>
         </div>
-        <div className="page-header-actions">
-          <div className="page-header-stat">
-            <strong>{activeBranch?.name || 'Branch pending'}</strong>
-            <span>Active Branch</span>
-          </div>
-          <div className="page-header-stat">
-            <strong>{filteredItems.length}</strong>
-            <span>Visible Products</span>
-          </div>
-          <button
-            type="button"
-            className="inventory-primary-action"
-            onClick={handleOpenAddProduct}
-            disabled={!activeBranchId}
-          >
-            Add Product
-          </button>
+
+        <div className="inventory-meta-grid">
+          <article className="inventory-meta-card">
+            <span className="meta-label">Active Branch</span>
+            <strong className="meta-primary">
+              {activeBranch?.name || 'Branch pending'}
+            </strong>
+            <span className="meta-secondary">
+              Current branch workspace for stock and expiry monitoring.
+            </span>
+          </article>
+
+          <article className="inventory-meta-card">
+            <span className="meta-label">Visible Products</span>
+            <strong className="meta-primary">{filteredItems.length}</strong>
+            <span className="meta-secondary">
+              Records matching the current branch, status, and category filters.
+            </span>
+          </article>
+
+          <article className="inventory-meta-card inventory-meta-card--action">
+            <span className="meta-label">Catalog Action</span>
+            <strong className="meta-primary">Add Product</strong>
+            <span className="meta-secondary">
+              Create a new branch inventory record and load it into the table immediately.
+            </span>
+            <button
+              type="button"
+              className="inventory-primary-action"
+              onClick={handleOpenAddProduct}
+              disabled={!activeBranchId}
+            >
+              Add Product
+            </button>
+          </article>
         </div>
       </div>
 
@@ -469,6 +487,19 @@ function InventoryPage() {
       ) : null}
 
       <div className="panel inventory-toolbar-panel">
+        <div className="inventory-toolbar-heading">
+          <div>
+            <p className="card-label">Inventory Controls</p>
+            <h2>Filter Current Branch View</h2>
+          </div>
+
+          <p className="inventory-result-copy">
+            {activeBranch ? `Branch: ${activeBranch.name} | ` : ''}
+            Showing <strong>{filteredItems.length}</strong> product
+            {filteredItems.length === 1 ? '' : 's'}
+          </p>
+        </div>
+
         <div className="inventory-toolbar">
           <div className="inventory-filter-group">
             <label className="inventory-category-control">
@@ -535,12 +566,6 @@ function InventoryPage() {
               </select>
             </label>
           </div>
-
-          <p className="inventory-result-copy">
-            {activeBranch ? `Branch: ${activeBranch.name} | ` : ''}
-            Showing <strong>{filteredItems.length}</strong> product
-            {filteredItems.length === 1 ? '' : 's'}
-          </p>
         </div>
       </div>
 

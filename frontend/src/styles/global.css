@@ -213,6 +213,48 @@ textarea:focus-visible {
   color: var(--accent);
 }
 
+.meta-label {
+  font-size: 0.78rem;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--accent);
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.meta-primary,
+.meta-code {
+  display: block;
+  margin: 0;
+  color: #231913;
+  line-height: 1.2;
+}
+
+.meta-primary {
+  font-size: clamp(1.4rem, 2.3vw, 1.85rem);
+  font-weight: 800;
+}
+
+.meta-code {
+  font-family: 'Consolas', 'SFMono-Regular', 'Courier New', monospace;
+  font-size: 1rem;
+  letter-spacing: 0.02em;
+  font-variant-numeric: tabular-nums;
+  overflow-wrap: anywhere;
+}
+
+.meta-secondary {
+  color: var(--text-soft);
+  font-size: 0.92rem;
+}
+
+.meta-tertiary {
+  color: var(--text-soft);
+  font-size: 0.78rem;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
 .primary-button {
   border: none;
   border-radius: 14px;
