@@ -7,6 +7,7 @@ function InventoryTable({
   onStockIn,
   onEdit,
   onAdjustStock,
+  onRemove,
 }) {
   if (items.length === 0) {
     return (
@@ -84,6 +85,13 @@ function InventoryTable({
                       onClick={() => onAdjustStock?.(item)}
                     >
                       Adjust Stock
+                    </button>
+                    <button
+                      type="button"
+                      className="table-action-button table-action-button-danger"
+                      onClick={() => onRemove?.(item)}
+                    >
+                      Remove
                     </button>
                   </div>
                 </td>

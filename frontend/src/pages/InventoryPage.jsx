@@ -11,6 +11,7 @@ import {
   hasInventoryCatalogConflict,
   isLowStock,
   isNearExpiry,
+  removeInventoryItem,
   updateInventoryItem,
   updateInventoryStock,
 } from '../services/inventoryService'
@@ -50,6 +51,9 @@ function InventoryPage() {
   const [quantityDialog, setQuantityDialog] = useState(null)
   const [quantityValue, setQuantityValue] = useState('')
   const [quantityError, setQuantityError] = useState('')
+  const [removeDialogItem, setRemoveDialogItem] = useState(null)
+  const [removeError, setRemoveError] = useState('')
+  const [isRemoving, setIsRemoving] = useState(false)
 
   const activeBranch = useMemo(
     () =>
@@ -282,6 +286,20 @@ function InventoryPage() {
     setQuantityError('')
   }
 
+  const handleOpenRemoveDialog = (item) => {
+    setFeedbackMessage('')
+    setRemoveError('')
+    setSelectedItem(item)
+    setRemoveDialogItem(item)
+  }
+
+  const handleCloseRemoveDialog = () => {
+    setRemoveDialogItem(null)
+    setSelectedItem(null)
+    setRemoveError('')
+    setIsRemoving(false)
+  }
+
   const handleSubmitQuantityDialog = async (event) => {
     event.preventDefault()
 
@@ -327,6 +345,35 @@ function InventoryPage() {
           error.message ||
           'Unable to update this stock quantity.',
       )
+    }
+  }
+
+  const handleConfirmRemove = async () => {
+    if (!removeDialogItem) {
+      return
+    }
+
+    try {
+      setIsRemoving(true)
+      const removedItem = await removeInventoryItem(removeDialogItem.id)
+
+      setInventoryItems((previousItems) =>
+        previousItems.filter((item) => item.id !== removeDialogItem.id),
+      )
+      setFeedbackTone('success')
+      setFeedbackMessage(
+        `${removedItem.product_name} was removed from ${
+          activeBranch?.name || removeDialogItem.branch_name || 'the selected branch'
+        } inventory.`,
+      )
+      handleCloseRemoveDialog()
+    } catch (error) {
+      setRemoveError(
+        error.response?.data?.message ||
+          error.message ||
+          'Unable to remove this inventory item.',
+      )
+      setIsRemoving(false)
     }
   }
 
@@ -475,6 +522,7 @@ function InventoryPage() {
           onStockIn={(item) => handleOpenQuantityDialog('stock-in', item)}
           onEdit={handleOpenEditProduct}
           onAdjustStock={(item) => handleOpenQuantityDialog('adjust-stock', item)}
+          onRemove={handleOpenRemoveDialog}
         />
       )}
 
@@ -659,6 +707,49 @@ function InventoryPage() {
             </button>
           </div>
         </form>
+      </Modal>
+
+      <Modal
+        isOpen={Boolean(removeDialogItem)}
+        eyebrow="Inventory Action"
+        title="Remove Product"
+        description={`This will permanently remove ${
+          removeDialogItem?.product_name || 'the selected product'
+        } from the current branch inventory.`}
+        onClose={handleCloseRemoveDialog}
+        width="520px"
+      >
+        <div className="inventory-form inventory-action-form">
+          <p className="inventory-remove-copy">
+            This action removes the product record itself, including its current stock
+            quantity, from the inventory list.
+          </p>
+
+          {removeError ? (
+            <p className="inventory-form-error" role="alert">
+              {removeError}
+            </p>
+          ) : null}
+
+          <div className="inventory-form-actions">
+            <button
+              type="button"
+              className="inventory-secondary-action"
+              onClick={handleCloseRemoveDialog}
+              disabled={isRemoving}
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              className="inventory-danger-action"
+              onClick={handleConfirmRemove}
+              disabled={isRemoving}
+            >
+              {isRemoving ? 'Removing...' : 'Remove Product'}
+            </button>
+          </div>
+        </div>
       </Modal>
     </section>
   )

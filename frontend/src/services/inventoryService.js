@@ -446,6 +446,60 @@ export async function updateInventoryStock(itemId, quantityDelta) {
   return updatedItem
 }
 
+export async function removeInventoryItem(itemId) {
+  if (isSupabaseConfigured) {
+    const supabase = getSupabaseClient()
+    const currentProduct = await fetchSupabaseProductById(itemId)
+
+    if (!currentProduct) {
+      throw new Error('The selected inventory item could not be found.')
+    }
+
+    const { error: legacyInventoryDeleteError } = await supabase
+      .from(supabaseTables.inventoryItems)
+      .delete()
+      .eq('product_id', Number(itemId))
+
+    if (legacyInventoryDeleteError) {
+      throw createSupabaseServiceError(
+        legacyInventoryDeleteError,
+        'Unable to clear legacy inventory records for this product.',
+      )
+    }
+
+    const { error } = await supabase
+      .from(supabaseTables.products)
+      .delete()
+      .eq('id', Number(itemId))
+
+    if (error) {
+      throw createSupabaseServiceError(
+        error,
+        'Unable to remove this inventory item from Supabase.',
+      )
+    }
+
+    return normalizeInventoryItem(currentProduct)
+  }
+
+  const currentItems = ensureLocalInventoryItems().map((item) =>
+    normalizeInventoryItem(item),
+  )
+  const selectedItem = currentItems.find(
+    (item) => String(item.id) === String(itemId),
+  )
+
+  if (!selectedItem) {
+    throw new Error('The selected inventory item could not be found.')
+  }
+
+  persistInventoryItems(
+    currentItems.filter((item) => String(item.id) !== String(itemId)),
+  )
+
+  return selectedItem
+}
+
 export function normalizeInventoryProductName(value) {
   return sanitizeInventoryText(value).toLowerCase()
 }
