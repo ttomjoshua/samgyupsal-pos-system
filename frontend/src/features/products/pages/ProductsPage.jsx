@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useDeferredValue, useEffect, useMemo, useState } from 'react'
 import EmptyState from '../../../shared/components/common/EmptyState'
 import Loader from '../../../shared/components/common/Loader'
 import NoticeBanner from '../../../shared/components/common/NoticeBanner'
@@ -38,6 +38,8 @@ function ProductsPage() {
   const [categoryPage, setCategoryPage] = useState(1)
   const [productPage, setProductPage] = useState(1)
   const [visibleCategoryPage, setVisibleCategoryPage] = useState(1)
+  const [categorySearch, setCategorySearch] = useState('')
+  const [productSearch, setProductSearch] = useState('')
   const [categoryEditor, setCategoryEditor] = useState(null)
   const [categoryEditorName, setCategoryEditorName] = useState('')
   const [categoryEditorError, setCategoryEditorError] = useState('')
@@ -45,6 +47,8 @@ function ProductsPage() {
   const [categoryRemovalTarget, setCategoryRemovalTarget] = useState(null)
   const [categoryRemovalError, setCategoryRemovalError] = useState('')
   const [isRemovingCategory, setIsRemovingCategory] = useState(false)
+  const deferredCategorySearch = useDeferredValue(categorySearch)
+  const deferredProductSearch = useDeferredValue(productSearch)
 
   useEffect(() => {
     const fetchProducts = async () => {
@@ -104,42 +108,104 @@ function ProductsPage() {
         })),
     [availableCategories, customCategories, productCategories],
   )
+  const productUsageByCategory = useMemo(() => {
+    const usageMap = new Map()
+
+    products.forEach((product) => {
+      const categoryName = prepareCategoryName(product.category || 'Uncategorized')
+      usageMap.set(categoryName, (usageMap.get(categoryName) || 0) + 1)
+    })
+
+    return usageMap
+  }, [products])
+  const normalizedCategorySearch = deferredCategorySearch.trim().toLowerCase()
+  const normalizedProductSearch = deferredProductSearch.trim().toLowerCase()
+  const filteredCustomCategoryRows = useMemo(() => {
+    if (!normalizedCategorySearch) {
+      return customCategoryRows
+    }
+
+    return customCategoryRows.filter((category) =>
+      category.toLowerCase().includes(normalizedCategorySearch),
+    )
+  }, [customCategoryRows, normalizedCategorySearch])
+  const filteredVisibleCategoryRows = useMemo(() => {
+    if (!normalizedCategorySearch) {
+      return visibleCategoryRows
+    }
+
+    return visibleCategoryRows.filter((category) =>
+      category.name.toLowerCase().includes(normalizedCategorySearch),
+    )
+  }, [normalizedCategorySearch, visibleCategoryRows])
+  const filteredProducts = useMemo(() => {
+    if (!normalizedProductSearch) {
+      return products
+    }
+
+    return products.filter((product) =>
+      [product.name, product.category, product.branchName, product.unit]
+        .filter(Boolean)
+        .some((value) => value.toLowerCase().includes(normalizedProductSearch)),
+    )
+  }, [normalizedProductSearch, products])
+  const visibleProductBranchCount = useMemo(
+    () =>
+      new Set(
+        filteredProducts
+          .map((product) => product.branchName)
+          .filter(Boolean),
+      ).size,
+    [filteredProducts],
+  )
+  const visibleProductCategoryCount = useMemo(
+    () =>
+      new Set(
+        filteredProducts
+          .map((product) => prepareCategoryName(product.category || 'Uncategorized'))
+          .filter(Boolean),
+      ).size,
+    [filteredProducts],
+  )
   const categoryTotalPages = Math.max(
     1,
-    Math.ceil(customCategoryRows.length / CATEGORY_PAGE_SIZE),
+    Math.ceil(filteredCustomCategoryRows.length / CATEGORY_PAGE_SIZE),
   )
   const visibleCategoryTotalPages = Math.max(
     1,
-    Math.ceil(visibleCategoryRows.length / VISIBLE_CATEGORY_PAGE_SIZE),
+    Math.ceil(filteredVisibleCategoryRows.length / VISIBLE_CATEGORY_PAGE_SIZE),
   )
   const productTotalPages = Math.max(
     1,
-    Math.ceil(products.length / PRODUCT_PREVIEW_PAGE_SIZE),
+    Math.ceil(filteredProducts.length / PRODUCT_PREVIEW_PAGE_SIZE),
   )
   const paginatedCustomCategories = useMemo(() => {
     const startIndex = (categoryPage - 1) * CATEGORY_PAGE_SIZE
-    return customCategoryRows.slice(startIndex, startIndex + CATEGORY_PAGE_SIZE)
-  }, [categoryPage, customCategoryRows])
+    return filteredCustomCategoryRows.slice(
+      startIndex,
+      startIndex + CATEGORY_PAGE_SIZE,
+    )
+  }, [categoryPage, filteredCustomCategoryRows])
   const paginatedProducts = useMemo(() => {
     const startIndex = (productPage - 1) * PRODUCT_PREVIEW_PAGE_SIZE
-    return products.slice(startIndex, startIndex + PRODUCT_PREVIEW_PAGE_SIZE)
-  }, [productPage, products])
+    return filteredProducts.slice(startIndex, startIndex + PRODUCT_PREVIEW_PAGE_SIZE)
+  }, [filteredProducts, productPage])
   const paginatedVisibleCategories = useMemo(() => {
     const startIndex = (visibleCategoryPage - 1) * VISIBLE_CATEGORY_PAGE_SIZE
-    return visibleCategoryRows.slice(
+    return filteredVisibleCategoryRows.slice(
       startIndex,
       startIndex + VISIBLE_CATEGORY_PAGE_SIZE,
     )
-  }, [visibleCategoryPage, visibleCategoryRows])
+  }, [filteredVisibleCategoryRows, visibleCategoryPage])
 
   const getProductCategoryUsageCount = (categoryName) =>
-    products.filter(
-      (product) => product.category.toLowerCase() === categoryName.toLowerCase(),
-    ).length
+    productUsageByCategory.get(
+      prepareCategoryName(categoryName || 'Uncategorized'),
+    ) || 0
 
   useEffect(() => {
     setCategoryPage(1)
-  }, [customCategories])
+  }, [customCategories, normalizedCategorySearch])
 
   useEffect(() => {
     if (categoryPage > categoryTotalPages) {
@@ -155,7 +221,11 @@ function ProductsPage() {
 
   useEffect(() => {
     setVisibleCategoryPage(1)
-  }, [availableCategories])
+  }, [availableCategories, normalizedCategorySearch])
+
+  useEffect(() => {
+    setProductPage(1)
+  }, [normalizedProductSearch])
 
   useEffect(() => {
     if (visibleCategoryPage > visibleCategoryTotalPages) {
@@ -393,19 +463,51 @@ function ProductsPage() {
       <div className="products-management-grid">
         <div className="panel">
           <p className="card-label">Category Management</p>
-          <h2>Owner / Admin Categories</h2>
+          <h2>Category Governance</h2>
           <p className="supporting-text products-panel-copy">
-            Create and maintain category structures used for organization and filtering.
+            Shape how products are grouped, reviewed, and exposed as operational filters across the workspace.
           </p>
 
+          <div className="products-overview-grid">
+            <div className="products-overview-card">
+              <span className="products-overview-label">Visible Categories</span>
+              <strong>{availableCategories.length}</strong>
+              <span className="products-overview-meta">Available to the business workflow</span>
+            </div>
+            <div className="products-overview-card">
+              <span className="products-overview-label">Product-backed</span>
+              <strong>{productCategories.length}</strong>
+              <span className="products-overview-meta">Actively used by catalog records</span>
+            </div>
+            <div className="products-overview-card">
+              <span className="products-overview-label">Locally Managed</span>
+              <strong>{customCategories.length}</strong>
+              <span className="products-overview-meta">Admin-defined filter extensions</span>
+            </div>
+          </div>
+
+          <div className="products-toolbar">
+            <div className="products-toolbar-copy">
+              <strong>Create or refine category coverage</strong>
+              <span>
+                Use local categories for operational filtering, and edit product-backed categories when the live catalog itself needs to change.
+              </span>
+            </div>
+          </div>
+
           <form className="category-manager-form" onSubmit={handleAddCategory}>
-            <input
-              type="text"
-              placeholder="Add category name"
-              value={newCategoryName}
-              onChange={(event) => setNewCategoryName(event.target.value)}
-              aria-label="Add category name"
-            />
+            <div className="products-input-stack">
+              <input
+                type="text"
+                placeholder="Add category name"
+                value={newCategoryName}
+                onChange={(event) => setNewCategoryName(event.target.value)}
+                aria-label="Add category name"
+              />
+              <span className="products-field-help">
+                Keep names short, specific, and consistent with how staff search and browse products.
+              </span>
+            </div>
             <div className="products-category-form-actions">
               <button type="submit" className="primary-button">
                 Add Category
@@ -415,20 +517,52 @@ function ProductsPage() {
 
           <NoticeBanner
             variant={categoryMessageTone}
-            title="Category management"
+            title="Category workspace"
             message={categoryMessage}
           />
+
+          <div className="products-toolbar">
+            <div className="products-toolbar-copy">
+              <strong>Review categories with precision</strong>
+              <span>
+                Search the category workspace before editing or removing entries to reduce duplicate labels and accidental cleanup.
+              </span>
+            </div>
+            <div className="products-search-shell products-search-shell--compact">
+              <label className="products-search-label" htmlFor="category-search">
+                Find category
+              </label>
+              <input
+                id="category-search"
+                type="search"
+                className="products-search-input"
+                placeholder="Search category name"
+                value={categorySearch}
+                onChange={(event) => setCategorySearch(event.target.value)}
+              />
+            </div>
+          </div>
 
           <div className="category-section">
             <div className="category-section-header">
               <strong>Locally managed categories</strong>
-              <span>These can be removed safely from the frontend admin list.</span>
+              <span>
+                Frontend-managed categories support filtering needs without rewriting live catalog records.
+              </span>
             </div>
 
-            {customCategories.length === 0 ? (
+            {filteredCustomCategoryRows.length === 0 ? (
               <EmptyState
-              title="No custom categories yet"
-                description="Add one here if the business needs category filters beyond the current product catalog."
+                title={
+                  customCategories.length === 0
+                    ? 'No custom categories yet'
+                    : 'No local categories match this search'
+                }
+                description={
+                  customCategories.length === 0
+                    ? 'Add one here if the business needs category filters beyond the current product catalog.'
+                    : 'Try a different keyword or clear the search to review the full local category list.'
+                }
               />
             ) : (
               <>
@@ -447,8 +581,8 @@ function ProductsPage() {
                           <td>{category}</td>
                           <td className="products-table-muted">
                             {isProductCategory(category)
-                              ? 'Also used by product records'
-                              : 'Local admin category only'}
+                              ? 'Also connected to live catalog records'
+                              : 'Local filtering label only'}
                           </td>
                           <td>
                             <div className="products-table-actions">
@@ -491,7 +625,7 @@ function ProductsPage() {
                 <PaginationControls
                   currentPage={categoryPage}
                   totalPages={categoryTotalPages}
-                  totalItems={customCategoryRows.length}
+                  totalItems={filteredCustomCategoryRows.length}
                   pageSize={CATEGORY_PAGE_SIZE}
                   onPageChange={setCategoryPage}
                   summaryLabel="categories"
@@ -504,14 +638,22 @@ function ProductsPage() {
             <div className="category-section-header">
               <strong>Visible category filters</strong>
               <span>
-                Product-backed categories stay visible even if the local admin copy is removed.
+                This is the full category surface employees and admins will encounter while browsing the catalog.
               </span>
             </div>
 
-            {visibleCategoryRows.length === 0 ? (
+            {filteredVisibleCategoryRows.length === 0 ? (
               <EmptyState
-                title="No visible categories"
-                description="Categories will appear here once the catalog or local admin list is available."
+                title={
+                  visibleCategoryRows.length === 0
+                    ? 'No visible categories'
+                    : 'No visible categories match this search'
+                }
+                description={
+                  visibleCategoryRows.length === 0
+                    ? 'Categories will appear here once the catalog or local admin list is available.'
+                    : 'Try a different keyword or clear the category search to inspect the full visible list.'
+                }
               />
             ) : (
               <>
@@ -520,6 +662,7 @@ function ProductsPage() {
                     <thead>
                       <tr>
                         <th>Category</th>
+                        <th>Usage</th>
                         <th>Actions</th>
                       </tr>
                     </thead>
@@ -544,6 +687,10 @@ function ProductsPage() {
                                 ) : null}
                               </div>
                             </div>
+                          </td>
+                          <td className="products-table-muted">
+                            {getProductCategoryUsageCount(category.name)} product
+                            {getProductCategoryUsageCount(category.name) === 1 ? '' : 's'}
                           </td>
                           <td>
                             <div className="products-table-actions">
@@ -574,7 +721,7 @@ function ProductsPage() {
                 <PaginationControls
                   currentPage={visibleCategoryPage}
                   totalPages={visibleCategoryTotalPages}
-                  totalItems={visibleCategoryRows.length}
+                  totalItems={filteredVisibleCategoryRows.length}
                   pageSize={VISIBLE_CATEGORY_PAGE_SIZE}
                   onPageChange={setVisibleCategoryPage}
                   summaryLabel="visible categories"
@@ -586,10 +733,50 @@ function ProductsPage() {
 
         <div className="panel">
           <p className="card-label">Products</p>
-          <h2>Catalog Preview</h2>
+          <h2>Catalog Review Desk</h2>
           <p className="supporting-text products-panel-copy">
-            Review the current product list, category assignment, branch scope, and pricing in one table.
+            Review live catalog coverage by product, branch, category, and unit price from one control surface.
           </p>
+
+          <div className="products-overview-grid">
+            <div className="products-overview-card">
+              <span className="products-overview-label">Matching Products</span>
+              <strong>{filteredProducts.length}</strong>
+              <span className="products-overview-meta">Current review result set</span>
+            </div>
+            <div className="products-overview-card">
+              <span className="products-overview-label">Branches Covered</span>
+              <strong>{visibleProductBranchCount}</strong>
+              <span className="products-overview-meta">Catalog scope in this view</span>
+            </div>
+            <div className="products-overview-card">
+              <span className="products-overview-label">Categories in View</span>
+              <strong>{visibleProductCategoryCount}</strong>
+              <span className="products-overview-meta">Distinct product groupings shown</span>
+            </div>
+          </div>
+
+          <div className="products-toolbar">
+            <div className="products-toolbar-copy">
+              <strong>Search the catalog intelligently</strong>
+              <span>
+                Search by product name, category, branch, or unit label to isolate the exact records the business needs to review.
+              </span>
+            </div>
+            <div className="products-search-shell">
+              <label className="products-search-label" htmlFor="product-search">
+                Search catalog
+              </label>
+              <input
+                id="product-search"
+                type="search"
+                className="products-search-input"
+                placeholder="Search product, category, branch, or unit"
+                value={productSearch}
+                onChange={(event) => setProductSearch(event.target.value)}
+              />
+            </div>
+          </div>
 
           {isLoading ? (
             <Loader message="Loading products..." />
@@ -603,6 +790,11 @@ function ProductsPage() {
               title="No products available"
               description="Add or reconnect a product source so the catalog becomes available here."
             />
+          ) : filteredProducts.length === 0 ? (
+            <EmptyState
+              title="No products match this search"
+              description="Refine the search phrase or clear it to return to the full catalog review list."
+            />
           ) : (
             <>
               <div className="products-table-shell">
@@ -615,28 +807,39 @@ function ProductsPage() {
                       <th>Unit</th>
                       <th>Price</th>
                     </tr>
-                  </thead>
-                  <tbody>
-                    {paginatedProducts.map((item) => (
-                      <tr key={item.id}>
-                        <td>{item.name}</td>
-                        <td>{item.category}</td>
-                        <td>{item.branchName || 'Unassigned Branch'}</td>
-                        <td>{item.unit || 'N/A'}</td>
-                        <td>{peso(item.price)}</td>
-                      </tr>
-                    ))}
-                  </tbody>
+                    </thead>
+                    <tbody>
+                      {paginatedProducts.map((item) => (
+                        <tr key={item.id}>
+                          <td>
+                            <div className="products-product-cell">
+                              <strong>{item.name}</strong>
+                              <span>
+                                {item.unit ? `Pack / unit: ${item.unit}` : 'No unit label provided'}
+                              </span>
+                            </div>
+                          </td>
+                          <td>{item.category}</td>
+                          <td>
+                            <span className="products-inline-pill">
+                              {item.branchName || 'Unassigned Branch'}
+                            </span>
+                          </td>
+                          <td>{item.unit || 'N/A'}</td>
+                          <td>{peso(item.price)}</td>
+                        </tr>
+                      ))}
+                    </tbody>
                 </table>
               </div>
 
-              <PaginationControls
-                currentPage={productPage}
-                totalPages={productTotalPages}
-                totalItems={products.length}
-                pageSize={PRODUCT_PREVIEW_PAGE_SIZE}
-                onPageChange={setProductPage}
-                summaryLabel="products"
+                <PaginationControls
+                  currentPage={productPage}
+                  totalPages={productTotalPages}
+                  totalItems={filteredProducts.length}
+                  pageSize={PRODUCT_PREVIEW_PAGE_SIZE}
+                  onPageChange={setProductPage}
+                  summaryLabel="products"
               />
             </>
           )}
