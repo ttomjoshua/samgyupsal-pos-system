@@ -4,8 +4,9 @@ React + Vite frontend for the capstone POS and inventory system, deployed on Ver
 
 ## Repo Structure
 
-- `frontend/` - live React application, Supabase SQL files, and frontend services
+- `frontend/` - live React application and operational Supabase assets
 - `backend/` - reserved for a future trusted backend or admin automation layer
+- `documentation/` - canonical project documentation, rollout guides, and diagrams
 - `vercel.json` - root deployment config that builds and serves the Vite app from `frontend/`
 
 ## Current Architecture
@@ -38,7 +39,14 @@ npm run build
 
 ## Database Setup
 
-Run the SQL files in the order documented in `frontend/supabase/README.md`.
+Run the SQL files in the order documented in `documentation/supabase/sql-run-order.md`.
+
+## Documentation
+
+- App architecture: `documentation/architecture/frontend-application.md`
+- Supabase integration: `documentation/supabase/frontend-integration.md`
+- SQL rollout order: `documentation/supabase/sql-run-order.md`
+- Frontend handoff: `documentation/handoff/frontend-team-handoff.md`
 
 ## Deployment
 
