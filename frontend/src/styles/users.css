@@ -91,6 +91,38 @@
   cursor: pointer;
 }
 
+.users-overview-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.85rem;
+  margin-top: 1rem;
+}
+
+.users-overview-card {
+  display: grid;
+  gap: 0.45rem;
+  padding: 1rem 1.05rem;
+  border: 1px solid rgba(166, 63, 20, 0.12);
+  border-radius: 20px;
+  background: rgba(248, 243, 237, 0.86);
+}
+
+.users-overview-card strong {
+  font-size: 2rem;
+  line-height: 1;
+  color: var(--text-strong);
+}
+
+.users-overview-card .supporting-text {
+  font-size: 0.95rem;
+}
+
+.users-panel-actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 1rem;
+}
+
 .branch-list,
 .admin-accounts {
   display: grid;
@@ -213,6 +245,11 @@
   gap: 0.5rem;
 }
 
+.branch-directory-modal {
+  display: grid;
+  gap: 1.25rem;
+}
+
 @media (max-width: 980px) {
   .users-management-grid,
   .users-form,
@@ -220,8 +257,20 @@
     grid-template-columns: 1fr;
   }
 
+  .users-overview-grid {
+    grid-template-columns: 1fr;
+  }
+
   .users-form-actions {
     flex-direction: column;
+  }
+
+  .users-panel-actions {
+    justify-content: stretch;
+  }
+
+  .users-panel-actions .primary-button {
+    width: 100%;
   }
 }
 

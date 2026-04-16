@@ -3,6 +3,7 @@ import EmptyState from '../components/common/EmptyState'
 import Loader from '../components/common/Loader'
 import NoticeBanner from '../components/common/NoticeBanner'
 import StatusBadge from '../components/common/StatusBadge'
+import Modal from '../components/ui/Modal'
 import { createBranch, getBranches } from '../services/branchService'
 import {
   createManagedEmployeeAccount,
@@ -50,6 +51,8 @@ function UsersPage() {
   const [branchFormError, setBranchFormError] = useState('')
   const [isBranchSaving, setIsBranchSaving] = useState(false)
   const [isDirectorySaving, setIsDirectorySaving] = useState(false)
+  const [isEmployeeModalOpen, setIsEmployeeModalOpen] = useState(false)
+  const [isBranchModalOpen, setIsBranchModalOpen] = useState(false)
   const [pageMessage, setPageMessage] = useState('')
   const [pageMessageTone, setPageMessageTone] = useState('info')
   const [pageError, setPageError] = useState('')
@@ -150,8 +153,29 @@ function UsersPage() {
     setBranchFormError('')
   }
 
+  const handleOpenEmployeeModal = () => {
+    resetEmployeeForm()
+    setIsEmployeeModalOpen(true)
+  }
+
+  const handleCloseEmployeeModal = () => {
+    setIsEmployeeModalOpen(false)
+    resetEmployeeForm()
+  }
+
+  const handleOpenBranchModal = () => {
+    resetBranchForm()
+    setIsBranchModalOpen(true)
+  }
+
+  const handleCloseBranchModal = () => {
+    setIsBranchModalOpen(false)
+    resetBranchForm()
+  }
+
   const handleEditEmployee = (employee) => {
     setEditingEmployee(employee)
+    setIsEmployeeModalOpen(true)
     setFormError('')
     setPageMessage(`Editing ${employee.name}. Save changes when ready.`)
     setPageMessageTone('info')
@@ -203,7 +227,7 @@ function UsersPage() {
       }
 
       await loadDirectory()
-      resetEmployeeForm()
+      handleCloseEmployeeModal()
     } catch (error) {
       setFormError(error.message || 'Unable to save this employee account.')
     } finally {
@@ -219,7 +243,7 @@ function UsersPage() {
     try {
       const createdBranch = await createBranch(branchFormData)
       await loadDirectory()
-      resetBranchForm()
+      handleCloseBranchModal()
       setPageMessage(
         `${createdBranch.name} (${createdBranch.code}) is now available for employee assignment.`,
       )
@@ -321,161 +345,301 @@ function UsersPage() {
       <div className="users-management-grid">
         <div className="panel">
           <p className="card-label">Employee Accounts</p>
-          <h2>
-            {editingEmployee
-              ? 'Edit Employee Account'
-              : isSupabaseAuthEnabled
-                ? 'Add Employee Account'
-                : 'Create Employee Account'}
-          </h2>
+          <h2>Access and Assignment</h2>
           <p className="supporting-text">
             {isSupabaseAuthEnabled
-              ? 'Create employee login accounts and assign each one to a branch.'
-              : 'Create employee accounts here and assign each one to a branch.'}
+              ? 'Open a dedicated employee workspace to create login accounts, assign branches, and update employee status.'
+              : 'Open a dedicated employee workspace to create demo accounts, assign branches, and update employee status.'}
           </p>
 
-          <form className="users-form" onSubmit={handleSubmitEmployee}>
-            <label className="users-field">
-              <span>Full Name</span>
-              <input
-                type="text"
-                name="name"
-                value={formData.name}
-                onChange={handleFieldChange}
-                placeholder="North Branch Cashier"
-                disabled={isDirectorySaving}
-              />
-            </label>
+          <div className="users-overview-grid">
+            <article className="users-overview-card">
+              <span className="card-label">Employee Directory</span>
+              <strong>{employeeAccounts.length}</strong>
+              <p className="supporting-text">Accounts currently listed in the employee directory.</p>
+            </article>
 
-            {isSupabaseAuthEnabled && !editingEmployee ? (
-              <label className="users-field">
-                <span>Email</span>
-                <input
-                  type="email"
-                  name="email"
-                  value={formData.email}
-                  onChange={handleFieldChange}
-                  placeholder="cashier@samgyupsal.com"
-                  disabled={isDirectorySaving}
-                />
-              </label>
-            ) : null}
+            <article className="users-overview-card">
+              <span className="card-label">Active Today</span>
+              <strong>{activeEmployees.length}</strong>
+              <p className="supporting-text">Employee accounts ready for sign-in and POS access.</p>
+            </article>
+          </div>
 
-            <label className="users-field">
-              <span>Username</span>
-              <input
-                type="text"
-                name="username"
-                value={formData.username}
-                onChange={handleFieldChange}
-                placeholder="cashier.north"
-                disabled={isDirectorySaving}
-              />
-            </label>
-
-            {!isSupabaseAuthEnabled ? (
-              <label className="users-field">
-                <span>{editingEmployee ? 'Password Reset' : 'Temporary Password'}</span>
-                <input
-                  type="password"
-                  name="password"
-                  value={formData.password}
-                  onChange={handleFieldChange}
-                  placeholder={editingEmployee ? 'Leave blank to keep current password' : 'cashier123'}
-                  disabled={isDirectorySaving}
-                />
-              </label>
-            ) : !editingEmployee ? (
-              <label className="users-field users-field-wide">
-                <span>Temporary Password</span>
-                <input
-                  type="password"
-                  name="password"
-                  value={formData.password}
-                  onChange={handleFieldChange}
-                  placeholder="At least 8 characters"
-                  disabled={isDirectorySaving}
-                />
-                <div className="users-inline-note">
-                  Use a temporary password the employee can change after first login.
-                </div>
-              </label>
-            ) : (
-              <div className="users-field users-field-readonly">
-                <span>Auth Credentials</span>
-                <div className="users-inline-note">
-                  Email and password stay managed in Supabase Auth. Use this screen for
-                  name, username, branch, and status updates.
-                </div>
-              </div>
-            )}
-
-            <label className="users-field">
-              <span>Assigned Branch</span>
-              <select
-                name="branchId"
-                value={formData.branchId}
-                onChange={handleFieldChange}
-                disabled={isDirectorySaving}
-              >
-                <option value="">Select branch</option>
-                {branchOptions.map((branch) => (
-                  <option key={branch.id} value={branch.id}>
-                    {branch.name} ({branch.code})
-                  </option>
-                ))}
-              </select>
-            </label>
-
-            <label className="users-field users-field-wide">
-              <span>Status</span>
-              <select
-                name="status"
-                value={formData.status}
-                onChange={handleFieldChange}
-                disabled={isDirectorySaving}
-              >
-                <option value="active">Active</option>
-                <option value="inactive">Inactive</option>
-              </select>
-            </label>
-
-            {formError ? (
-              <p className="users-form-error" role="alert">
-                {formError}
-              </p>
-            ) : null}
-
-            <div className="users-form-actions">
-              {editingEmployee ? (
-                <button
-                  type="button"
-                  className="users-secondary-action"
-                  onClick={resetEmployeeForm}
-                  disabled={isDirectorySaving}
-                >
-                  Cancel Edit
-                </button>
-              ) : null}
-
-              <button type="submit" className="primary-button" disabled={isDirectorySaving}>
-                {isDirectorySaving
-                  ? 'Saving...'
-                  : editingEmployee
-                    ? 'Save Employee'
-                    : 'Create Employee'}
-              </button>
-            </div>
-          </form>
+          <div className="users-panel-actions">
+            <button
+              type="button"
+              className="primary-button"
+              onClick={handleOpenEmployeeModal}
+            >
+              Open Employee Manager
+            </button>
+          </div>
         </div>
 
         <div className="panel">
           <p className="card-label">Branch Directory</p>
-          <h2>Branches and Assignment</h2>
+          <h2>Branches and Oversight</h2>
           <p className="supporting-text">
-            Add branches and keep manager, contact, and assignment details updated in one place.
+            Open a dedicated branch workspace to add branches and review assignment coverage, contacts, and admin oversight.
           </p>
 
+          <div className="users-overview-grid">
+            <article className="users-overview-card">
+              <span className="card-label">Branch Records</span>
+              <strong>{branchOptions.length}</strong>
+              <p className="supporting-text">Available branch definitions ready for staff assignment.</p>
+            </article>
+
+            <article className="users-overview-card">
+              <span className="card-label">Admin Accounts</span>
+              <strong>{adminAccounts.length}</strong>
+              <p className="supporting-text">Accounts with full access to branch and employee controls.</p>
+            </article>
+          </div>
+
+          <div className="users-panel-actions">
+            <button
+              type="button"
+              className="primary-button"
+              onClick={handleOpenBranchModal}
+            >
+              Open Branch Directory
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div className="panel">
+        <p className="card-label">Employee Directory</p>
+        <h2>Active and Inactive Employee Accounts</h2>
+        <p className="supporting-text">
+          {isSupabaseAuthEnabled
+            ? 'Review employee status and branch assignment here.'
+            : 'Review employee status and branch assignment in the local demo directory.'}
+        </p>
+
+        {employeeAccounts.length === 0 ? (
+          <EmptyState
+            title="No employee accounts yet"
+            description={
+              isSupabaseAuthEnabled
+                ? 'Create the first employee account from the form above and it will appear here after the profile sync completes.'
+                : 'Create the first branch-assigned employee account to start testing role-based screens.'
+            }
+          />
+        ) : (
+          <div className="users-table-shell">
+            <table className="users-table">
+              <thead>
+                <tr>
+                  <th>Name</th>
+                  <th>Username</th>
+                  <th>Branch</th>
+                  <th>Status</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {employeeAccounts.map((employee) => (
+                  <tr key={employee.id}>
+                    <td>{employee.name}</td>
+                    <td>{employee.username || 'Username pending'}</td>
+                    <td>{employee.branchName}</td>
+                    <td>
+                      <StatusBadge
+                        text={employee.status === 'active' ? 'Active' : 'Inactive'}
+                        variant={employee.status === 'active' ? 'success' : 'default'}
+                      />
+                    </td>
+                    <td>
+                      <div className="users-table-actions">
+                        <button
+                          type="button"
+                          className="users-table-button"
+                          onClick={() => handleEditEmployee(employee)}
+                        >
+                          Edit
+                        </button>
+                        <button
+                          type="button"
+                          className="users-table-button"
+                          onClick={() => {
+                            void handleToggleStatus(employee)
+                          }}
+                        >
+                          {employee.status === 'active' ? 'Deactivate' : 'Activate'}
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+
+      <Modal
+        isOpen={isEmployeeModalOpen}
+        eyebrow="Employee Accounts"
+        title={
+          editingEmployee
+            ? 'Edit Employee Account'
+            : isSupabaseAuthEnabled
+              ? 'Add Employee Account'
+              : 'Create Employee Account'
+        }
+        description={
+          isSupabaseAuthEnabled
+            ? 'Create employee login accounts, assign branches, and keep employee status accurate from one dedicated workspace.'
+            : 'Create employee demo accounts, assign branches, and keep employee status accurate from one dedicated workspace.'
+        }
+        onClose={handleCloseEmployeeModal}
+        width="860px"
+      >
+        <form className="users-form" onSubmit={handleSubmitEmployee}>
+          <label className="users-field">
+            <span>Full Name</span>
+            <input
+              type="text"
+              name="name"
+              value={formData.name}
+              onChange={handleFieldChange}
+              placeholder="North Branch Cashier"
+              disabled={isDirectorySaving}
+            />
+          </label>
+
+          {isSupabaseAuthEnabled && !editingEmployee ? (
+            <label className="users-field">
+              <span>Email</span>
+              <input
+                type="email"
+                name="email"
+                value={formData.email}
+                onChange={handleFieldChange}
+                placeholder="cashier@samgyupsal.com"
+                disabled={isDirectorySaving}
+              />
+            </label>
+          ) : null}
+
+          <label className="users-field">
+            <span>Username</span>
+            <input
+              type="text"
+              name="username"
+              value={formData.username}
+              onChange={handleFieldChange}
+              placeholder="cashier.north"
+              disabled={isDirectorySaving}
+            />
+          </label>
+
+          {!isSupabaseAuthEnabled ? (
+            <label className="users-field">
+              <span>{editingEmployee ? 'Password Reset' : 'Temporary Password'}</span>
+              <input
+                type="password"
+                name="password"
+                value={formData.password}
+                onChange={handleFieldChange}
+                placeholder={editingEmployee ? 'Leave blank to keep current password' : 'cashier123'}
+                disabled={isDirectorySaving}
+              />
+            </label>
+          ) : !editingEmployee ? (
+            <label className="users-field users-field-wide">
+              <span>Temporary Password</span>
+              <input
+                type="password"
+                name="password"
+                value={formData.password}
+                onChange={handleFieldChange}
+                placeholder="At least 8 characters"
+                disabled={isDirectorySaving}
+              />
+              <div className="users-inline-note">
+                Use a temporary password the employee can change after first login.
+              </div>
+            </label>
+          ) : (
+            <div className="users-field users-field-readonly users-field-wide">
+              <span>Auth Credentials</span>
+              <div className="users-inline-note">
+                Email and password stay managed in Supabase Auth. Use this workspace for
+                name, username, branch, and status updates.
+              </div>
+            </div>
+          )}
+
+          <label className="users-field">
+            <span>Assigned Branch</span>
+            <select
+              name="branchId"
+              value={formData.branchId}
+              onChange={handleFieldChange}
+              disabled={isDirectorySaving}
+            >
+              <option value="">Select branch</option>
+              {branchOptions.map((branch) => (
+                <option key={branch.id} value={branch.id}>
+                  {branch.name} ({branch.code})
+                </option>
+              ))}
+            </select>
+          </label>
+
+          <label className="users-field users-field-wide">
+            <span>Status</span>
+            <select
+              name="status"
+              value={formData.status}
+              onChange={handleFieldChange}
+              disabled={isDirectorySaving}
+            >
+              <option value="active">Active</option>
+              <option value="inactive">Inactive</option>
+            </select>
+          </label>
+
+          {formError ? (
+            <p className="users-form-error" role="alert">
+              {formError}
+            </p>
+          ) : null}
+
+          <div className="users-form-actions">
+            <button
+              type="button"
+              className="users-secondary-action"
+              onClick={handleCloseEmployeeModal}
+              disabled={isDirectorySaving}
+            >
+              Cancel
+            </button>
+
+            <button type="submit" className="primary-button" disabled={isDirectorySaving}>
+              {isDirectorySaving
+                ? 'Saving...'
+                : editingEmployee
+                  ? 'Save Employee'
+                  : 'Create Employee'}
+            </button>
+          </div>
+        </form>
+      </Modal>
+
+      <Modal
+        isOpen={isBranchModalOpen}
+        eyebrow="Branch Directory"
+        title="Branches and Assignment"
+        description="Add branches and review branch oversight, contacts, and staffing coverage from one dedicated directory workspace."
+        onClose={handleCloseBranchModal}
+        width="940px"
+      >
+        <div className="branch-directory-modal">
           <form className="branch-form" onSubmit={handleSubmitBranch}>
             <label className="users-field">
               <span>Branch Name</span>
@@ -573,6 +737,15 @@ function UsersPage() {
             ) : null}
 
             <div className="users-form-actions">
+              <button
+                type="button"
+                className="users-secondary-action"
+                onClick={handleCloseBranchModal}
+                disabled={isBranchSaving}
+              >
+                Cancel
+              </button>
+
               <button type="submit" className="primary-button" disabled={isBranchSaving}>
                 {isBranchSaving ? 'Saving Branch...' : 'Add Branch'}
               </button>
@@ -642,77 +815,7 @@ function UsersPage() {
             ))}
           </div>
         </div>
-      </div>
-
-      <div className="panel">
-        <p className="card-label">Employee Directory</p>
-        <h2>Active and Inactive Employee Accounts</h2>
-        <p className="supporting-text">
-          {isSupabaseAuthEnabled
-            ? 'Review employee status and branch assignment here.'
-            : 'Review employee status and branch assignment in the local demo directory.'}
-        </p>
-
-        {employeeAccounts.length === 0 ? (
-          <EmptyState
-            title="No employee accounts yet"
-            description={
-              isSupabaseAuthEnabled
-                ? 'Create the first employee account from the form above and it will appear here after the profile sync completes.'
-                : 'Create the first branch-assigned employee account to start testing role-based screens.'
-            }
-          />
-        ) : (
-          <div className="users-table-shell">
-            <table className="users-table">
-              <thead>
-                <tr>
-                  <th>Name</th>
-                  <th>Username</th>
-                  <th>Branch</th>
-                  <th>Status</th>
-                  <th>Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {employeeAccounts.map((employee) => (
-                  <tr key={employee.id}>
-                    <td>{employee.name}</td>
-                    <td>{employee.username || 'Username pending'}</td>
-                    <td>{employee.branchName}</td>
-                    <td>
-                      <StatusBadge
-                        text={employee.status === 'active' ? 'Active' : 'Inactive'}
-                        variant={employee.status === 'active' ? 'success' : 'default'}
-                      />
-                    </td>
-                    <td>
-                      <div className="users-table-actions">
-                        <button
-                          type="button"
-                          className="users-table-button"
-                          onClick={() => handleEditEmployee(employee)}
-                        >
-                          Edit
-                        </button>
-                        <button
-                          type="button"
-                          className="users-table-button"
-                          onClick={() => {
-                            void handleToggleStatus(employee)
-                          }}
-                        >
-                          {employee.status === 'active' ? 'Deactivate' : 'Activate'}
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </div>
+      </Modal>
     </section>
   )
 }
