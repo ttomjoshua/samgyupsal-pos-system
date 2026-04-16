@@ -3,6 +3,7 @@ import Loader from '../components/common/Loader'
 import EmptyState from '../components/common/EmptyState'
 import InventoryTable from '../components/inventory/InventoryTable'
 import NoticeBanner from '../components/common/NoticeBanner'
+import PaginationControls from '../components/common/PaginationControls'
 import Modal from '../components/ui/Modal'
 import { getBranches } from '../services/branchService'
 import {
@@ -32,6 +33,8 @@ const INITIAL_PRODUCT_FORM = {
   reorder_level: '10',
 }
 
+const INVENTORY_PAGE_SIZE = 10
+
 function InventoryPage() {
   const [branchOptions, setBranchOptions] = useState([])
   const [isBranchLoading, setIsBranchLoading] = useState(true)
@@ -54,6 +57,7 @@ function InventoryPage() {
   const [removeDialogItem, setRemoveDialogItem] = useState(null)
   const [removeError, setRemoveError] = useState('')
   const [isRemoving, setIsRemoving] = useState(false)
+  const [currentPage, setCurrentPage] = useState(1)
 
   const activeBranch = useMemo(
     () =>
@@ -156,6 +160,26 @@ function InventoryPage() {
 
     return matchesStatusFilter && matchesCategory
   })
+
+  const totalPages = Math.max(
+    1,
+    Math.ceil(filteredItems.length / INVENTORY_PAGE_SIZE),
+  )
+
+  useEffect(() => {
+    setCurrentPage(1)
+  }, [activeBranchId, activeCategory, activeFilter])
+
+  useEffect(() => {
+    if (currentPage > totalPages) {
+      setCurrentPage(totalPages)
+    }
+  }, [currentPage, totalPages])
+
+  const paginatedItems = useMemo(() => {
+    const startIndex = (currentPage - 1) * INVENTORY_PAGE_SIZE
+    return filteredItems.slice(startIndex, startIndex + INVENTORY_PAGE_SIZE)
+  }, [currentPage, filteredItems])
 
   const handleOpenAddProduct = () => {
     setFormError('')
@@ -517,13 +541,26 @@ function InventoryPage() {
           description="The admin screen is still safe to open, but the current inventory list could not be loaded."
         />
       ) : (
-        <InventoryTable
-          items={filteredItems}
-          onStockIn={(item) => handleOpenQuantityDialog('stock-in', item)}
-          onEdit={handleOpenEditProduct}
-          onAdjustStock={(item) => handleOpenQuantityDialog('adjust-stock', item)}
-          onRemove={handleOpenRemoveDialog}
-        />
+        <>
+          <InventoryTable
+            items={paginatedItems}
+            onStockIn={(item) => handleOpenQuantityDialog('stock-in', item)}
+            onEdit={handleOpenEditProduct}
+            onAdjustStock={(item) => handleOpenQuantityDialog('adjust-stock', item)}
+            onRemove={handleOpenRemoveDialog}
+          />
+
+          {filteredItems.length > 0 ? (
+            <PaginationControls
+              currentPage={currentPage}
+              totalPages={totalPages}
+              totalItems={filteredItems.length}
+              pageSize={INVENTORY_PAGE_SIZE}
+              onPageChange={setCurrentPage}
+              summaryLabel="products"
+            />
+          ) : null}
+        </>
       )}
 
       <Modal

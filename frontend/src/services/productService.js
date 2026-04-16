@@ -3,6 +3,7 @@ import {
   createSupabaseServiceError,
   getSupabaseClient,
   isSupabaseConfigured,
+  supabaseTables,
   supabaseViews,
 } from './supabaseClient'
 
@@ -158,4 +159,56 @@ export async function getProductCatalog() {
   return extractProductArray(response.data)
     .map(normalizeCatalogProduct)
     .filter((product) => Boolean(product.id))
+}
+
+export async function renameProductCategory(currentCategoryName, nextCategoryName) {
+  if (!isSupabaseConfigured) {
+    throw new Error(
+      'Renaming product-backed categories requires the active Supabase catalog.',
+    )
+  }
+
+  const supabase = getSupabaseClient()
+  const { data, error } = await supabase
+    .from(supabaseTables.products)
+    .update({ category: nextCategoryName })
+    .eq('category', currentCategoryName)
+    .select('id')
+
+  if (error) {
+    throw createSupabaseServiceError(
+      error,
+      'Unable to rename this product category in Supabase.',
+    )
+  }
+
+  return Array.isArray(data) ? data.length : 0
+}
+
+export async function removeProductCategory(categoryName) {
+  if (!isSupabaseConfigured) {
+    throw new Error(
+      'Removing product-backed categories requires the active Supabase catalog.',
+    )
+  }
+
+  if (String(categoryName || '').trim() === 'Uncategorized') {
+    throw new Error('The Uncategorized category cannot be removed.')
+  }
+
+  const supabase = getSupabaseClient()
+  const { data, error } = await supabase
+    .from(supabaseTables.products)
+    .update({ category: 'Uncategorized' })
+    .eq('category', categoryName)
+    .select('id')
+
+  if (error) {
+    throw createSupabaseServiceError(
+      error,
+      'Unable to remove this product category from Supabase.',
+    )
+  }
+
+  return Array.isArray(data) ? data.length : 0
 }

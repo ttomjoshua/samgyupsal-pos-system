@@ -187,6 +187,8 @@ function ReportsPage() {
               rows={reportData.lowStock}
               eyebrow="Low-Stock Items"
               title="Restock watchlist"
+              pageSize={6}
+              summaryLabel="watchlist items"
             />
           </div>
 

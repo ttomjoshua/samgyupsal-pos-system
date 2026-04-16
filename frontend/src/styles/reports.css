@@ -142,6 +142,10 @@
   padding: 1.25rem;
 }
 
+.reports-panel-footer {
+  padding: 0 1.25rem 1.25rem;
+}
+
 @media (max-width: 1080px) {
   .reports-header,
   .reports-summary-grid,

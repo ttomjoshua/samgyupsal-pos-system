@@ -357,6 +357,58 @@ select {
   font-size: 0.94rem;
 }
 
+.app-pagination {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  align-items: center;
+  flex-wrap: wrap;
+  margin-top: 1rem;
+}
+
+.app-pagination-summary {
+  margin: 0;
+  color: var(--text-soft);
+}
+
+.app-pagination-controls {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 0.5rem;
+}
+
+.app-pagination-button {
+  min-width: 42px;
+  border: 1px solid rgba(166, 63, 20, 0.14);
+  border-radius: 12px;
+  padding: 0.65rem 0.85rem;
+  background: #ffffff;
+  color: #5f422d;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.app-pagination-button.active,
+.app-pagination-button:hover {
+  background: linear-gradient(135deg, var(--accent) 0%, #d76b33 100%);
+  color: #ffffff;
+}
+
+.app-pagination-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+.app-pagination-ellipsis {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 30px;
+  color: var(--text-soft);
+  font-weight: 700;
+}
+
 @keyframes spin {
   to {
     transform: rotate(360deg);
@@ -371,5 +423,14 @@ select {
   .products-management-grid,
   .category-manager-form {
     grid-template-columns: 1fr;
+  }
+
+  .app-pagination {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .app-pagination-controls {
+    justify-content: flex-start;
   }
 }

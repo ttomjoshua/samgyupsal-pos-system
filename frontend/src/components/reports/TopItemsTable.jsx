@@ -1,6 +1,40 @@
+import { useEffect, useMemo, useState } from 'react'
 import EmptyState from '../common/EmptyState'
+import PaginationControls from '../common/PaginationControls'
 
-function TopItemsTable({ columns, rows, eyebrow, title }) {
+function TopItemsTable({
+  columns,
+  rows,
+  eyebrow,
+  title,
+  pageSize = null,
+  summaryLabel = 'rows',
+}) {
+  const [currentPage, setCurrentPage] = useState(1)
+  const isPaginated = Number(pageSize) > 0
+  const totalPages = isPaginated
+    ? Math.max(1, Math.ceil(rows.length / Number(pageSize)))
+    : 1
+
+  useEffect(() => {
+    setCurrentPage(1)
+  }, [pageSize, rows])
+
+  useEffect(() => {
+    if (currentPage > totalPages) {
+      setCurrentPage(totalPages)
+    }
+  }, [currentPage, totalPages])
+
+  const visibleRows = useMemo(() => {
+    if (!isPaginated) {
+      return rows
+    }
+
+    const startIndex = (currentPage - 1) * Number(pageSize)
+    return rows.slice(startIndex, startIndex + Number(pageSize))
+  }, [currentPage, isPaginated, pageSize, rows])
+
   return (
     <section className="reports-panel">
       <div className="reports-panel-header">
@@ -28,8 +62,8 @@ function TopItemsTable({ columns, rows, eyebrow, title }) {
               </tr>
             </thead>
             <tbody>
-              {rows.map((row) => (
-                <tr key={row.id}>
+              {visibleRows.map((row, index) => (
+                <tr key={row.id ?? `${title}-${index}`}>
                   {columns.map((column) => (
                     <td key={column.key}>
                       {column.render ? column.render(row) : row[column.key]}
@@ -41,6 +75,19 @@ function TopItemsTable({ columns, rows, eyebrow, title }) {
           </table>
         </div>
       )}
+
+      {rows.length > 0 && isPaginated ? (
+        <div className="reports-panel-footer">
+          <PaginationControls
+            currentPage={currentPage}
+            totalPages={totalPages}
+            totalItems={rows.length}
+            pageSize={Number(pageSize)}
+            onPageChange={setCurrentPage}
+            summaryLabel={summaryLabel}
+          />
+        </div>
+      ) : null}
     </section>
   )
 }

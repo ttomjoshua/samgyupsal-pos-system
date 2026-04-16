@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useDeferredValue, useEffect, useMemo, useState } from 'react'
 import Loader from '../components/common/Loader'
 import EmptyState from '../components/common/EmptyState'
 import CartTable from '../components/pos/CartTable'
@@ -11,6 +11,32 @@ import { getProducts } from '../services/productService'
 import '../styles/pos.css'
 import { mergeProductAndStoredCategories } from '../utils/storage'
 import { normalizeSearchInput } from '../utils/validation'
+
+const PRODUCTS_PER_PAGE = 12
+
+function buildPaginationItems(currentPage, totalPages) {
+  if (totalPages <= 5) {
+    return Array.from({ length: totalPages }, (_, index) => index + 1)
+  }
+
+  if (currentPage <= 3) {
+    return [1, 2, 3, 4, 'end-ellipsis', totalPages]
+  }
+
+  if (currentPage >= totalPages - 2) {
+    return [1, 'start-ellipsis', totalPages - 3, totalPages - 2, totalPages - 1, totalPages]
+  }
+
+  return [
+    1,
+    'start-ellipsis',
+    currentPage - 1,
+    currentPage,
+    currentPage + 1,
+    'end-ellipsis',
+    totalPages,
+  ]
+}
 
 function PosPage() {
   const { user } = useAuth()
@@ -26,9 +52,11 @@ function PosPage() {
   const [isCatalogLoading, setIsCatalogLoading] = useState(true)
   const [activeCategory, setActiveCategory] = useState('All')
   const [searchTerm, setSearchTerm] = useState('')
+  const [currentPage, setCurrentPage] = useState(1)
   const [cartItems, setCartItems] = useState([])
   const [transactionSequence, setTransactionSequence] = useState(1)
   const [activeBranchId, setActiveBranchId] = useState(user?.branchId || '')
+  const deferredSearchTerm = useDeferredValue(searchTerm)
 
   useEffect(() => {
     const timer = window.setInterval(() => {
@@ -150,18 +178,60 @@ function PosPage() {
   const transactionNumber = `TRX-${clock.toISOString().slice(0, 10).replaceAll('-', '')}-${String(transactionSequence).padStart(3, '0')}`
 
   const filteredProducts = useMemo(() => {
-    const normalizedSearch = normalizeSearchInput(searchTerm).toLowerCase()
+    const normalizedSearch = normalizeSearchInput(deferredSearchTerm).toLowerCase()
 
     return catalogProducts.filter((product) => {
       const matchesCategory =
         activeCategory === 'All' || product.category === activeCategory
       const matchesSearch =
         normalizedSearch.length === 0 ||
-        product.name.toLowerCase().includes(normalizedSearch)
+        [
+          product.name,
+          product.category,
+          product.unit,
+          product.branchName,
+        ]
+          .filter(Boolean)
+          .join(' ')
+          .toLowerCase()
+          .includes(normalizedSearch)
 
       return matchesCategory && matchesSearch
     })
-  }, [activeCategory, catalogProducts, searchTerm])
+  }, [activeCategory, catalogProducts, deferredSearchTerm])
+
+  useEffect(() => {
+    setCurrentPage(1)
+  }, [activeBranchId, activeCategory, deferredSearchTerm])
+
+  const totalPages = Math.max(
+    1,
+    Math.ceil(filteredProducts.length / PRODUCTS_PER_PAGE),
+  )
+
+  useEffect(() => {
+    if (currentPage > totalPages) {
+      setCurrentPage(totalPages)
+    }
+  }, [currentPage, totalPages])
+
+  const paginatedProducts = useMemo(() => {
+    const startIndex = (currentPage - 1) * PRODUCTS_PER_PAGE
+    return filteredProducts.slice(startIndex, startIndex + PRODUCTS_PER_PAGE)
+  }, [currentPage, filteredProducts])
+
+  const visiblePaginationItems = useMemo(
+    () => buildPaginationItems(currentPage, totalPages),
+    [currentPage, totalPages],
+  )
+
+  const pageRangeStart =
+    filteredProducts.length === 0 ? 0 : (currentPage - 1) * PRODUCTS_PER_PAGE + 1
+  const pageRangeEnd = Math.min(
+    currentPage * PRODUCTS_PER_PAGE,
+    filteredProducts.length,
+  )
+  const hasActiveSearch = normalizeSearchInput(searchTerm).length > 0
 
   if (isBranchLoading && !user?.branchId && branchOptions.length === 0) {
     return <Loader message="Loading branch scope..." />
@@ -229,10 +299,11 @@ function PosPage() {
           <div className="pos-panel">
             <div className="panel-header">
               <div>
-                <p className="card-label">Product Search</p>
-                <h2>Browse menu and store items</h2>
+                <p className="card-label">Product Grid</p>
+                <h2>Available items</h2>
                 <p className="supporting-text">{catalogSource}</p>
               </div>
+              <span className="panel-count">{filteredProducts.length} items</span>
             </div>
 
             {catalogError ? (
@@ -251,46 +322,117 @@ function PosPage() {
               />
             ) : null}
 
-            <input
-              type="text"
-              className="pos-search"
-              placeholder="Search product"
-              value={searchTerm}
-              onChange={(event) => setSearchTerm(event.target.value)}
-            />
+            <div className="product-grid-toolbar">
+              <div className="product-grid-search-row">
+                <input
+                  type="text"
+                  className="pos-search"
+                  placeholder="Search product, category, or unit"
+                  value={searchTerm}
+                  aria-label="Search available products"
+                  onChange={(event) => setSearchTerm(event.target.value)}
+                />
 
-            <div className="category-row">
-              {categories.map((category) => (
-                <button
-                  key={category}
-                  type="button"
-                  className={
-                    activeCategory === category
-                      ? 'category-button active'
-                      : 'category-button'
-                  }
-                  onClick={() => setActiveCategory(category)}
-                >
-                  {category}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          <div className="pos-panel">
-            <div className="panel-header">
-              <div>
-                <p className="card-label">Product Grid</p>
-                <h2>Available items</h2>
+                {hasActiveSearch ? (
+                  <button
+                    type="button"
+                    className="ghost-action product-grid-clear-search"
+                    onClick={() => setSearchTerm('')}
+                  >
+                    Clear
+                  </button>
+                ) : null}
               </div>
-              <span className="panel-count">{filteredProducts.length} items</span>
+
+              <div className="category-row">
+                {categories.map((category) => (
+                  <button
+                    key={category}
+                    type="button"
+                    className={
+                      activeCategory === category
+                        ? 'category-button active'
+                        : 'category-button'
+                    }
+                    onClick={() => setActiveCategory(category)}
+                  >
+                    {category}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="product-grid-summary">
+              <p className="product-grid-results">
+                {filteredProducts.length === 0
+                  ? 'No matching products found.'
+                  : `Showing ${pageRangeStart}-${pageRangeEnd} of ${filteredProducts.length} matching item${
+                      filteredProducts.length === 1 ? '' : 's'
+                    }.`}
+              </p>
+
+              {totalPages > 1 ? (
+                <div className="product-grid-pagination">
+                  <button
+                    type="button"
+                    className="pagination-button"
+                    onClick={() => setCurrentPage((page) => Math.max(1, page - 1))}
+                    disabled={currentPage === 1}
+                    aria-label="Go to previous product page"
+                  >
+                    Previous
+                  </button>
+
+                  {visiblePaginationItems.map((item) => {
+                    if (typeof item !== 'number') {
+                      return (
+                        <span
+                          key={item}
+                          className="pagination-ellipsis"
+                        >
+                          ...
+                        </span>
+                      )
+                    }
+
+                    return (
+                      <button
+                        key={item}
+                        type="button"
+                        className={
+                          item === currentPage
+                            ? 'pagination-button active'
+                            : 'pagination-button'
+                        }
+                        onClick={() => setCurrentPage(item)}
+                        aria-label={`Go to product page ${item}`}
+                        aria-current={item === currentPage ? 'page' : undefined}
+                      >
+                        {item}
+                      </button>
+                    )
+                  })}
+
+                  <button
+                    type="button"
+                    className="pagination-button"
+                    onClick={() =>
+                      setCurrentPage((page) => Math.min(totalPages, page + 1))
+                    }
+                    disabled={currentPage === totalPages}
+                    aria-label="Go to next product page"
+                  >
+                    Next
+                  </button>
+                </div>
+              ) : null}
             </div>
 
             {isCatalogLoading ? (
               <Loader message="Loading POS catalog..." />
             ) : (
               <ProductGrid
-                products={filteredProducts}
+                products={paginatedProducts}
                 setCart={setCartItems}
               />
             )}
