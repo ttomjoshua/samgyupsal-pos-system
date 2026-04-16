@@ -221,7 +221,7 @@ function UsersPage() {
       await loadDirectory()
       resetBranchForm()
       setPageMessage(
-        `${createdBranch.name} (${createdBranch.code}) is now open under ${createdBranch.managerName} and ready for employee assignment.`,
+        `${createdBranch.name} (${createdBranch.code}) is now available for employee assignment.`,
       )
       setPageMessageTone('success')
     } catch (error) {
@@ -264,21 +264,6 @@ function UsersPage() {
     }
   }
 
-  const handleRefreshDirectory = async () => {
-    try {
-      await loadDirectory()
-      setPageMessage(
-        isSupabaseAuthEnabled
-          ? 'Supabase employee directory was refreshed.'
-          : 'Frontend employee directory was refreshed.',
-      )
-      setPageMessageTone('info')
-    } catch (error) {
-      setPageMessage(error.message || 'Unable to refresh the employee directory.')
-      setPageMessageTone('error')
-    }
-  }
-
   if (isLoading) {
     return <Loader message="Loading branch and employee accounts..." />
   }
@@ -287,10 +272,9 @@ function UsersPage() {
     <section className="page-shell users-page">
       <div className="page-header">
         <p className="eyebrow">Access Control</p>
-        <h2>Branch Assignment and Account Privileges</h2>
+        <h2>Users and Branch Access</h2>
         <p className="supporting-text">
-          Admin accounts keep full access. Employee accounts are limited to daily POS work
-          and must be attached to a branch.
+          Manage employee login access, branch assignment, and account status from one screen.
         </p>
       </div>
 
@@ -322,8 +306,8 @@ function UsersPage() {
           <strong>{employeeAccounts.length}</strong>
           <p className="supporting-text">
             {isSupabaseAuthEnabled
-              ? 'Supabase employee profiles currently visible to admin.'
-              : 'Dummy cashier accounts on the frontend.'}
+              ? 'Employee accounts currently synced from Supabase.'
+              : 'Employee accounts currently available in the local demo.'}
           </p>
         </article>
 
@@ -336,40 +320,19 @@ function UsersPage() {
 
       <div className="users-management-grid">
         <div className="panel">
-          <p className="card-label">Employee / Cashier Form</p>
+          <p className="card-label">Employee Accounts</p>
           <h2>
             {editingEmployee
-              ? 'Update Employee Account'
+              ? 'Edit Employee Account'
               : isSupabaseAuthEnabled
-                ? 'Create Supabase Employee Account'
+                ? 'Add Employee Account'
                 : 'Create Employee Account'}
           </h2>
           <p className="supporting-text">
             {isSupabaseAuthEnabled
-              ? 'Create real Auth accounts through the secured server-side flow, then manage branch assignment and account status here.'
-              : 'Create dummy employee accounts here and assign each one to a branch.'}
+              ? 'Create employee login accounts and assign each one to a branch.'
+              : 'Create employee accounts here and assign each one to a branch.'}
           </p>
-
-          {isSupabaseAuthEnabled && !editingEmployee ? (
-            <div className="users-auth-note">
-              <strong>Secure account creation</strong>
-              <p>
-                New employee login accounts are created through the secured Supabase Edge
-                Function. The password entered here becomes the temporary first login password.
-              </p>
-              <div className="users-form-actions">
-                <button
-                  type="button"
-                  className="users-secondary-action"
-                  onClick={() => {
-                    void handleRefreshDirectory()
-                  }}
-                >
-                  Refresh Employee Directory
-                </button>
-              </div>
-            </div>
-          ) : null}
 
           <form className="users-form" onSubmit={handleSubmitEmployee}>
             <label className="users-field">
@@ -423,7 +386,7 @@ function UsersPage() {
                 />
               </label>
             ) : !editingEmployee ? (
-              <label className="users-field">
+              <label className="users-field users-field-wide">
                 <span>Temporary Password</span>
                 <input
                   type="password"
@@ -433,13 +396,16 @@ function UsersPage() {
                   placeholder="At least 8 characters"
                   disabled={isDirectorySaving}
                 />
+                <div className="users-inline-note">
+                  Use a temporary password the employee can change after first login.
+                </div>
               </label>
             ) : (
               <div className="users-field users-field-readonly">
                 <span>Auth Credentials</span>
                 <div className="users-inline-note">
-                  Email and password remain managed in Supabase Auth after account creation.
-                  This screen currently updates profile, branch, and status only.
+                  Email and password stay managed in Supabase Auth. Use this screen for
+                  name, username, branch, and status updates.
                 </div>
               </div>
             )}
@@ -505,19 +471,10 @@ function UsersPage() {
 
         <div className="panel">
           <p className="card-label">Branch Directory</p>
-          <h2>Current Branch Scope</h2>
+          <h2>Branches and Assignment</h2>
           <p className="supporting-text">
-            Employee accounts can be pinned to one branch only in this frontend stage.
+            Add branches and keep manager, contact, and assignment details updated in one place.
           </p>
-
-          <div className="branch-process-note">
-            <strong>What opening a branch does here</strong>
-            <ul>
-              <li>Adds the branch to the shared assignment dropdown for employee accounts.</li>
-              <li>Writes the branch profile into the Supabase branch table when available.</li>
-              <li>Shows the responsible manager, contact, address, and opening date.</li>
-            </ul>
-          </div>
 
           <form className="branch-form" onSubmit={handleSubmitBranch}>
             <label className="users-field">
@@ -617,7 +574,7 @@ function UsersPage() {
 
             <div className="users-form-actions">
               <button type="submit" className="primary-button" disabled={isBranchSaving}>
-                {isBranchSaving ? 'Opening Branch...' : 'Open Branch'}
+                {isBranchSaving ? 'Saving Branch...' : 'Add Branch'}
               </button>
             </div>
           </form>
@@ -692,8 +649,8 @@ function UsersPage() {
         <h2>Active and Inactive Employee Accounts</h2>
         <p className="supporting-text">
           {isSupabaseAuthEnabled
-            ? 'These employee records come from Supabase profiles, and new employee logins can now be created through the secured admin flow.'
-            : 'These are dummy frontend accounts only. Backend access control will still need to enforce the same rules later.'}
+            ? 'Review employee status and branch assignment here.'
+            : 'Review employee status and branch assignment in the local demo directory.'}
         </p>
 
         {employeeAccounts.length === 0 ? (
@@ -712,10 +669,8 @@ function UsersPage() {
                 <tr>
                   <th>Name</th>
                   <th>Username</th>
-                  <th>Role</th>
                   <th>Branch</th>
                   <th>Status</th>
-                  <th>Privileges</th>
                   <th>Actions</th>
                 </tr>
               </thead>
@@ -724,7 +679,6 @@ function UsersPage() {
                   <tr key={employee.id}>
                     <td>{employee.name}</td>
                     <td>{employee.username || 'Username pending'}</td>
-                    <td>{employee.role}</td>
                     <td>{employee.branchName}</td>
                     <td>
                       <StatusBadge
@@ -732,7 +686,6 @@ function UsersPage() {
                         variant={employee.status === 'active' ? 'success' : 'default'}
                       />
                     </td>
-                    <td>POS only</td>
                     <td>
                       <div className="users-table-actions">
                         <button

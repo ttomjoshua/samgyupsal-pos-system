@@ -25,13 +25,13 @@ const VISIBLE_CATEGORY_PAGE_SIZE = 8
 function ProductsPage() {
   const [products, setProducts] = useState([])
   const [isLoading, setIsLoading] = useState(true)
-  const [sourceLabel, setSourceLabel] = useState('Loading products...')
+  const [sourceLabel, setSourceLabel] = useState('Loading product catalog...')
   const [customCategories, setCustomCategories] = useState(() =>
     getStoredCategories(),
   )
   const [newCategoryName, setNewCategoryName] = useState('')
   const [categoryMessage, setCategoryMessage] = useState(
-    'Add categories here for future owner/admin product organization.',
+    'Add local categories here to support product organization and filtering.',
   )
   const [categoryMessageTone, setCategoryMessageTone] = useState('info')
   const [loadError, setLoadError] = useState('')
@@ -53,14 +53,14 @@ function ProductsPage() {
         setProducts(productList)
         setSourceLabel(
           isSupabaseConfigured
-            ? 'Loaded from the active Supabase catalog.'
-            : 'Loaded from the fallback product catalog.',
+            ? 'Connected to the live Supabase catalog.'
+            : 'Using the local catalog source.',
         )
         setLoadError('')
       } catch (error) {
         console.error('Failed to load products:', error)
         setProducts([])
-        setSourceLabel('Unable to load products from the active catalog source.')
+        setSourceLabel('Catalog source unavailable.')
         setLoadError(
           error.response?.data?.message ||
             'The product list could not be loaded from the active catalog source.',
@@ -364,26 +364,38 @@ function ProductsPage() {
 
   return (
     <section className="page-shell products-page">
-      <div className="panel">
-        <p className="eyebrow">Products</p>
-        <h2>Product Catalog</h2>
-        <p className="supporting-text">{sourceLabel}</p>
+      <div className="page-header products-header">
+        <div>
+          <p className="eyebrow">Products</p>
+          <h2>Catalog and Categories</h2>
+          <p className="supporting-text">
+            Manage product visibility, category structure, and catalog consistency across the system.
+          </p>
+        </div>
+        <div className="page-header-actions">
+          <div className="page-header-stat">
+            <strong>{products.length}</strong>
+            <span>Catalog Items</span>
+          </div>
+          <div className="page-header-stat">
+            <strong>{availableCategories.length}</strong>
+            <span>Visible Categories</span>
+          </div>
+        </div>
       </div>
 
-      {loadError ? (
-        <NoticeBanner
-          variant="error"
-          title="Products could not be loaded"
-          message={loadError}
-        />
-      ) : null}
+      <NoticeBanner
+        variant={loadError ? 'error' : 'info'}
+        title={loadError ? 'Catalog source unavailable' : 'Catalog source'}
+        message={loadError || sourceLabel}
+      />
 
       <div className="products-management-grid">
         <div className="panel">
           <p className="card-label">Category Management</p>
           <h2>Owner / Admin Categories</h2>
           <p className="supporting-text products-panel-copy">
-            Create categories for product organization and future POS filtering.
+            Create and maintain category structures used for organization and filtering.
           </p>
 
           <form className="category-manager-form" onSubmit={handleAddCategory}>
@@ -415,8 +427,8 @@ function ProductsPage() {
 
             {customCategories.length === 0 ? (
               <EmptyState
-                title="No custom categories yet"
-                description="Add one here if the owner wants extra category filters beyond the current product catalog."
+              title="No custom categories yet"
+                description="Add one here if the business needs category filters beyond the current product catalog."
               />
             ) : (
               <>
@@ -576,7 +588,7 @@ function ProductsPage() {
           <p className="card-label">Products</p>
           <h2>Catalog Preview</h2>
           <p className="supporting-text products-panel-copy">
-            Products are loaded from Supabase when configured, otherwise from the fallback catalog path.
+            Review the current product list, category assignment, branch scope, and pricing in one table.
           </p>
 
           {isLoading ? (
@@ -589,7 +601,7 @@ function ProductsPage() {
           ) : products.length === 0 ? (
             <EmptyState
               title="No products available"
-              description="Seed the Supabase catalog or reconnect the fallback product source."
+              description="Add or reconnect a product source so the catalog becomes available here."
             />
           ) : (
             <>

@@ -1,0 +1,121 @@
+.dashboard-page {
+  gap: 1rem;
+}
+
+.dashboard-metrics-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 1rem;
+}
+
+.dashboard-secondary-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.15fr) minmax(280px, 0.85fr);
+  gap: 1rem;
+}
+
+.dashboard-panel-title {
+  margin: 0.35rem 0 0;
+  color: #2a1e17;
+}
+
+.dashboard-list {
+  list-style: none;
+  margin: 1rem 0 0;
+  padding: 0;
+  display: grid;
+  gap: 0.75rem;
+}
+
+.dashboard-list-item {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  border: 1px solid rgba(166, 63, 20, 0.12);
+  border-radius: 18px;
+  padding: 0.95rem 1rem;
+  background: rgba(255, 248, 241, 0.6);
+}
+
+.dashboard-list-copy,
+.dashboard-list-meta,
+.dashboard-action-copy {
+  display: grid;
+  gap: 0.2rem;
+}
+
+.dashboard-list-copy strong,
+.dashboard-list-meta strong,
+.dashboard-action-copy strong {
+  color: #2a1e17;
+}
+
+.dashboard-list-copy span,
+.dashboard-list-meta span,
+.dashboard-action-copy span {
+  color: var(--text-soft);
+  font-size: 0.92rem;
+}
+
+.dashboard-list-meta {
+  text-align: right;
+}
+
+.dashboard-actions {
+  display: grid;
+  gap: 0.75rem;
+  margin-top: 1rem;
+}
+
+.dashboard-action-link {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  border: 1px solid rgba(166, 63, 20, 0.12);
+  border-radius: 18px;
+  padding: 0.95rem 1rem;
+  background: rgba(255, 255, 255, 0.92);
+  transition:
+    transform 0.16s ease,
+    border-color 0.16s ease,
+    box-shadow 0.16s ease;
+}
+
+.dashboard-action-link:hover {
+  transform: translateY(-1px);
+  border-color: rgba(166, 63, 20, 0.24);
+  box-shadow: 0 12px 24px rgba(92, 53, 23, 0.1);
+}
+
+.dashboard-action-arrow {
+  color: var(--accent);
+  font-size: 1.2rem;
+  font-weight: 700;
+}
+
+@media (max-width: 1100px) {
+  .dashboard-metrics-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .dashboard-secondary-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 720px) {
+  .dashboard-metrics-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .dashboard-list-item,
+  .dashboard-action-link {
+    flex-direction: column;
+  }
+
+  .dashboard-list-meta {
+    text-align: left;
+  }
+}

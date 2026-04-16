@@ -4,27 +4,27 @@ import useAuth from '../hooks/useAuth'
 const routeMeta = {
   '/app/dashboard': {
     title: 'Dashboard',
-    description: 'Overview cards and quick project navigation.',
+    description: 'Operational summary and quick access to the main business screens.',
   },
   '/app/pos': {
     title: 'POS',
-    description: 'Checkout area for sales, cart flow, and payment actions.',
+    description: 'Live register workspace for branch checkout and order processing.',
   },
   '/app/inventory': {
     title: 'Inventory',
-    description: 'Stock records, restocking, and inventory alerts.',
+    description: 'Stock control, replenishment, and expiry monitoring.',
   },
   '/app/reports': {
     title: 'Reports',
-    description: 'Sales summaries, exports, and sync monitoring.',
+    description: 'Sales performance, cashier activity, and restock visibility.',
   },
   '/app/products': {
     title: 'Products',
-    description: 'Catalog maintenance, API-backed product loading, and category controls.',
+    description: 'Catalog structure, categories, and branch-ready product visibility.',
   },
   '/app/users': {
     title: 'Users',
-    description: 'Admin-only employee assignment, branch access, and account control.',
+    description: 'Branch directory, employee access, and account status control.',
   },
 }
 
@@ -33,8 +33,8 @@ function Header() {
   const { pathname } = useLocation()
   const { logout, user } = useAuth()
   const meta = routeMeta[pathname] || {
-    title: 'Samyupsal POS',
-    description: 'Expanded frontend structure is active.',
+    title: 'Samgyupsal POS',
+    description: 'Business operations workspace.',
   }
 
   const currentUser = {
@@ -50,7 +50,7 @@ function Header() {
 
   return (
     <header className="app-header">
-      <div>
+      <div className="app-header-copy">
         <p className="eyebrow">Workspace</p>
         <h2>{meta.title}</h2>
         <p className="supporting-text">{meta.description}</p>
@@ -58,18 +58,19 @@ function Header() {
 
       <div className="header-actions">
         <div className="user-label">
-          <span className="user-label-title">Logged in as</span>
-          <strong>
-            {currentUser.name} ({currentUser.role})
-          </strong>
-          <span className="user-scope-copy">Branch: {currentUser.branchName}</span>
+          <span className="user-label-title">Signed in</span>
+          <strong>{currentUser.name}</strong>
+          <div className="user-label-meta">
+            <span>{currentUser.role}</span>
+            <span>{currentUser.branchName}</span>
+          </div>
         </div>
         <button
           type="button"
           className="logout-button"
           onClick={handleLogout}
         >
-          Logout
+          Sign Out
         </button>
       </div>
     </header>

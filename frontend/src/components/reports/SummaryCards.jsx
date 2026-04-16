@@ -20,7 +20,7 @@ function SummaryCards({ summary }) {
   return (
     <div className="reports-summary-grid">
       {cards.map((card) => (
-        <article key={card.label} className="summary-card">
+        <article key={card.label} className="summary-card info-card">
           <p className="card-label">{card.label}</p>
           <h3>{card.value}</h3>
         </article>

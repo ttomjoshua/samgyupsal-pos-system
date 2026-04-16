@@ -30,30 +30,44 @@ function ReportsPage() {
   const [loadError, setLoadError] = useState('')
 
   useEffect(() => {
-    const loadReports = async () => {
-      try {
-        const snapshot = await getReportSnapshot()
-        setReportData(snapshot)
-        setLoadError('')
-      } catch (error) {
-        console.error('Failed to load report snapshot:', error)
-        setReportData({
-          summary: {},
-          topItems: [],
-          lowStock: [],
-          cashierPerformance: [],
-        })
-        setLoadError(
-          error.response?.data?.message ||
-            'Reports could not be loaded right now.',
-        )
-      } finally {
-        setIsLoading(false)
-      }
-    }
-
-    loadReports()
+    void loadReportsForRange({ dateFrom, dateTo }, false)
   }, [])
+
+  const loadReportsForRange = async (
+    range = { dateFrom, dateTo },
+    announceRange = true,
+  ) => {
+    try {
+      if (announceRange) {
+        setFilterMessage('')
+      }
+      setIsLoading(true)
+      const snapshot = await getReportSnapshot(range)
+      setReportData(snapshot)
+      setLoadError('')
+
+      if (announceRange) {
+        setFilterMessage(
+          `Showing results from ${shortDate(range.dateFrom)} to ${shortDate(range.dateTo)}.`,
+        )
+      }
+    } catch (error) {
+      console.error('Failed to load report snapshot:', error)
+      setFilterMessage('')
+      setReportData({
+        summary: {},
+        topItems: [],
+        lowStock: [],
+        cashierPerformance: [],
+      })
+      setLoadError(
+        error.response?.data?.message ||
+          'Reports could not be loaded right now.',
+      )
+    } finally {
+      setIsLoading(false)
+    }
+  }
 
   const handleApplyFilter = () => {
     const validation = validateReportDateRange({ dateFrom, dateTo })
@@ -65,9 +79,7 @@ function ReportsPage() {
     }
 
     setFilterError('')
-    setFilterMessage(
-      `Date range ${shortDate(dateFrom)} to ${shortDate(dateTo)} is valid. Filtered report queries can plug into the backend when the API is ready.`,
-    )
+    void loadReportsForRange({ dateFrom, dateTo })
   }
 
   const topItemsColumns = [
@@ -93,12 +105,32 @@ function ReportsPage() {
 
   return (
     <section className="reports-page">
-      <div className="reports-header">
+      <div className="page-header reports-header">
         <div>
-          <p className="eyebrow">Simple But Useful Reports</p>
+          <p className="eyebrow">Business Reporting</p>
           <h1>Reports</h1>
           <p className="supporting-text">
-            Focus on summary totals, low-stock monitoring, and readable tables before adding charts.
+            Review sales performance, cashier activity, and stock risk in one reporting workspace.
+          </p>
+        </div>
+        <div className="page-header-actions">
+          <div className="page-header-stat">
+            <strong>{shortDate(dateFrom)}</strong>
+            <span>From</span>
+          </div>
+          <div className="page-header-stat">
+            <strong>{shortDate(dateTo)}</strong>
+            <span>To</span>
+          </div>
+        </div>
+      </div>
+
+      <div className="panel reports-filter-panel">
+        <div className="reports-filter-copy">
+          <p className="card-label">Reporting Period</p>
+          <h2>Set Review Range</h2>
+          <p className="supporting-text">
+            Update the reporting window to refresh sales totals, best performers, and cashier results.
           </p>
         </div>
 
@@ -133,8 +165,9 @@ function ReportsPage() {
             type="button"
             className="reports-filter-button"
             onClick={handleApplyFilter}
+            disabled={isLoading}
           >
-            Apply Filter
+            {isLoading ? 'Refreshing...' : 'Apply Range'}
           </button>
         </div>
       </div>
@@ -168,7 +201,7 @@ function ReportsPage() {
       ) : loadError ? (
         <EmptyState
           title="Reports are currently unavailable"
-          description="The reports screen stayed open safely, but the report snapshot could not be loaded."
+          description="The report snapshot could not be loaded. Check the data source and try again."
         />
       ) : (
         <>

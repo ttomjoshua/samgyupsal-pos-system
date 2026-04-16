@@ -16,6 +16,43 @@ function parseCurrencyValue(value) {
   return Number(String(value || '').replace(/[^\d.-]/g, '')) || 0
 }
 
+function toDateBoundary(value, boundary = 'start') {
+  if (!value) {
+    return null
+  }
+
+  const boundaryTime =
+    boundary === 'end' ? 'T23:59:59.999' : 'T00:00:00.000'
+  const parsedDate = new Date(`${value}${boundaryTime}`)
+
+  return Number.isNaN(parsedDate.getTime()) ? null : parsedDate
+}
+
+function isSaleWithinDateRange(sale, options = {}) {
+  const rangeStart = toDateBoundary(options.dateFrom, 'start')
+  const rangeEnd = toDateBoundary(options.dateTo, 'end')
+
+  if (!rangeStart && !rangeEnd) {
+    return true
+  }
+
+  const submittedAt = new Date(sale.submitted_at || sale.created_at || '')
+
+  if (Number.isNaN(submittedAt.getTime())) {
+    return false
+  }
+
+  if (rangeStart && submittedAt < rangeStart) {
+    return false
+  }
+
+  if (rangeEnd && submittedAt > rangeEnd) {
+    return false
+  }
+
+  return true
+}
+
 function summarizeSales(sales) {
   return sales.reduce(
     (summary, sale) => {
@@ -188,14 +225,18 @@ async function getSupabaseSalesHistory() {
   return Array.from(saleMap.values())
 }
 
-export async function getReportSnapshot() {
+export async function getReportSnapshot(options = {}) {
   const inventoryResponse = await getInventoryItems()
   const inventorySnapshot = inventoryResponse.items || inventoryResponse
   const lowStockRows = buildLowStockRows(inventorySnapshot)
+  const hasDateRange = Boolean(options.dateFrom || options.dateTo)
 
   if (isSupabaseConfigured) {
     const salesHistory = await getSupabaseSalesHistory()
-    const saleSummary = summarizeSales(salesHistory)
+    const filteredSalesHistory = salesHistory.filter((sale) =>
+      isSaleWithinDateRange(sale, options),
+    )
+    const saleSummary = summarizeSales(filteredSalesHistory)
 
     return {
       summary: {
@@ -204,24 +245,37 @@ export async function getReportSnapshot() {
         items_sold: saleSummary.itemsSold,
         low_stock_count: lowStockRows.length,
       },
-      topItems: buildTopItems([], salesHistory),
+      topItems: buildTopItems([], filteredSalesHistory),
       lowStock: lowStockRows,
-      cashierPerformance: buildCashierPerformance([], salesHistory),
+      cashierPerformance: buildCashierPerformance([], filteredSalesHistory),
     }
   }
 
   const storedSales = getStoredSalesHistory()
-  const saleSummary = summarizeSales(storedSales)
+  const filteredStoredSales = storedSales.filter((sale) =>
+    isSaleWithinDateRange(sale, options),
+  )
+  const saleSummary = summarizeSales(filteredStoredSales)
+  const useSeededFallback = !hasDateRange
+  const fallbackTotalSales = useSeededFallback ? 312440 : 0
+  const fallbackTransactionCount = useSeededFallback ? 29 : 0
+  const fallbackItemsSold = useSeededFallback ? 165 : 0
 
   return {
     summary: {
-      total_sales: 312440 + saleSummary.totalSales,
-      transaction_count: 29 + saleSummary.transactionCount,
-      items_sold: 165 + saleSummary.itemsSold,
+      total_sales: fallbackTotalSales + saleSummary.totalSales,
+      transaction_count: fallbackTransactionCount + saleSummary.transactionCount,
+      items_sold: fallbackItemsSold + saleSummary.itemsSold,
       low_stock_count: lowStockRows.length,
     },
-    topItems: buildTopItems(topSellingItems, storedSales),
+    topItems: buildTopItems(
+      useSeededFallback ? topSellingItems : [],
+      filteredStoredSales,
+    ),
     lowStock: lowStockRows,
-    cashierPerformance: buildCashierPerformance(cashierSales, storedSales),
+    cashierPerformance: buildCashierPerformance(
+      useSeededFallback ? cashierSales : [],
+      filteredStoredSales,
+    ),
   }
 }

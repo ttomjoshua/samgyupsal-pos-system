@@ -416,23 +416,32 @@ function InventoryPage() {
 
   return (
     <section className="inventory-page">
-      <div className="inventory-header">
+      <div className="page-header inventory-header">
         <div>
           <p className="eyebrow">Admin Inventory Screen</p>
           <h1>Inventory</h1>
           <p className="supporting-text">
-            Track product quantities, expiry dates, stock status, and quick admin actions.
+            Control stock levels, expiry risk, and branch inventory actions from one workspace.
           </p>
         </div>
-
-        <button
-          type="button"
-          className="inventory-primary-action"
-          onClick={handleOpenAddProduct}
-          disabled={!activeBranchId}
-        >
-          Add Product
-        </button>
+        <div className="page-header-actions">
+          <div className="page-header-stat">
+            <strong>{activeBranch?.name || 'Branch pending'}</strong>
+            <span>Active Branch</span>
+          </div>
+          <div className="page-header-stat">
+            <strong>{filteredItems.length}</strong>
+            <span>Visible Products</span>
+          </div>
+          <button
+            type="button"
+            className="inventory-primary-action"
+            onClick={handleOpenAddProduct}
+            disabled={!activeBranchId}
+          >
+            Add Product
+          </button>
+        </div>
       </div>
 
       {loadError ? (
@@ -459,78 +468,80 @@ function InventoryPage() {
         />
       ) : null}
 
-      <div className="inventory-toolbar">
-        <div className="inventory-filter-group">
-          <label className="inventory-category-control">
-            <span>Branch</span>
-            <select
-              name="activeBranch"
-              value={activeBranchId}
-              onChange={(event) => setActiveBranchId(Number(event.target.value))}
-            >
-              {branchOptions.map((branch) => (
-                <option key={branch.id} value={branch.id}>
-                  {branch.name}
-                </option>
-              ))}
-            </select>
-          </label>
+      <div className="panel inventory-toolbar-panel">
+        <div className="inventory-toolbar">
+          <div className="inventory-filter-group">
+            <label className="inventory-category-control">
+              <span>Branch</span>
+              <select
+                name="activeBranch"
+                value={activeBranchId}
+                onChange={(event) => setActiveBranchId(Number(event.target.value))}
+              >
+                {branchOptions.map((branch) => (
+                  <option key={branch.id} value={branch.id}>
+                    {branch.name}
+                  </option>
+                ))}
+              </select>
+            </label>
 
-          <button
-            type="button"
-            className={
-              activeFilter === 'all'
-                ? 'inventory-filter active'
-                : 'inventory-filter'
-            }
-            onClick={() => setActiveFilter('all')}
-          >
-            All Items
-          </button>
-          <button
-            type="button"
-            className={
-              activeFilter === 'low-stock'
-                ? 'inventory-filter active'
-                : 'inventory-filter'
-            }
-            onClick={() => setActiveFilter('low-stock')}
-          >
-            Low Stock
-          </button>
-          <button
-            type="button"
-            className={
-              activeFilter === 'near-expiry'
-                ? 'inventory-filter active'
-                : 'inventory-filter'
-            }
-            onClick={() => setActiveFilter('near-expiry')}
-          >
-            Near Expiry
-          </button>
-          <label className="inventory-category-control">
-            <span>Category</span>
-            <select
-              name="activeCategory"
-              value={activeCategory}
-              onChange={(event) => setActiveCategory(event.target.value)}
+            <button
+              type="button"
+              className={
+                activeFilter === 'all'
+                  ? 'inventory-filter active'
+                  : 'inventory-filter'
+              }
+              onClick={() => setActiveFilter('all')}
             >
-              <option value="all">All Categories</option>
-              {categorySuggestions.map((category) => (
-                <option key={category} value={category}>
-                  {category}
-                </option>
-              ))}
-            </select>
-          </label>
+              All Items
+            </button>
+            <button
+              type="button"
+              className={
+                activeFilter === 'low-stock'
+                  ? 'inventory-filter active'
+                  : 'inventory-filter'
+              }
+              onClick={() => setActiveFilter('low-stock')}
+            >
+              Low Stock
+            </button>
+            <button
+              type="button"
+              className={
+                activeFilter === 'near-expiry'
+                  ? 'inventory-filter active'
+                  : 'inventory-filter'
+              }
+              onClick={() => setActiveFilter('near-expiry')}
+            >
+              Near Expiry
+            </button>
+            <label className="inventory-category-control">
+              <span>Category</span>
+              <select
+                name="activeCategory"
+                value={activeCategory}
+                onChange={(event) => setActiveCategory(event.target.value)}
+              >
+                <option value="all">All Categories</option>
+                {categorySuggestions.map((category) => (
+                  <option key={category} value={category}>
+                    {category}
+                  </option>
+                ))}
+              </select>
+            </label>
+          </div>
+
+          <p className="inventory-result-copy">
+            {activeBranch ? `Branch: ${activeBranch.name} | ` : ''}
+            Showing <strong>{filteredItems.length}</strong> product
+            {filteredItems.length === 1 ? '' : 's'}
+          </p>
         </div>
-
-        <p className="inventory-result-copy">
-          {activeBranch ? `Branch: ${activeBranch.name} | ` : ''}
-          Showing <strong>{filteredItems.length}</strong> product
-          {filteredItems.length === 1 ? '' : 's'}
-        </p>
       </div>
 
       {isLoading ? (
@@ -538,7 +549,7 @@ function InventoryPage() {
       ) : loadError ? (
         <EmptyState
           title="Inventory records are unavailable"
-          description="The admin screen is still safe to open, but the current inventory list could not be loaded."
+          description="The current inventory list could not be loaded. Check the data source and try again."
         />
       ) : (
         <>
@@ -569,8 +580,8 @@ function InventoryPage() {
         title={productDialogMode === 'edit' ? 'Edit Product' : 'Add Product'}
         description={
           productDialogMode === 'edit'
-            ? 'Update the product details and refresh the branch inventory table right away.'
-            : 'Create a branch-specific inventory record so the admin list updates right away.'
+            ? 'Update the product details and refresh the branch inventory table immediately.'
+            : 'Create a branch-specific inventory record so the inventory list updates immediately.'
         }
         onClose={handleCloseProductDialog}
       >

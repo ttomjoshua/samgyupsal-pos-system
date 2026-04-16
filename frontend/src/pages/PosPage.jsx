@@ -11,6 +11,7 @@ import { getProducts } from '../services/productService'
 import '../styles/pos.css'
 import { mergeProductAndStoredCategories } from '../utils/storage'
 import { normalizeSearchInput } from '../utils/validation'
+import { getRoleLabel } from '../utils/permissions'
 
 const PRODUCTS_PER_PAGE = 12
 
@@ -176,6 +177,8 @@ function PosPage() {
     [catalogProducts],
   )
   const transactionNumber = `TRX-${clock.toISOString().slice(0, 10).replaceAll('-', '')}-${String(transactionSequence).padStart(3, '0')}`
+  const cashierRoleLabel = getRoleLabel(user?.roleKey || user?.role)
+  const transactionSuffix = String(transactionSequence).padStart(3, '0')
 
   const filteredProducts = useMemo(() => {
     const normalizedSearch = normalizeSearchInput(deferredSearchTerm).toLowerCase()
@@ -253,43 +256,58 @@ function PosPage() {
           <p className="eyebrow">Primary Business Screen</p>
           <h1>Point of Sale</h1>
           <p className="supporting-text">
-            Start transactions here before wiring the real cart behavior and checkout flow.
+            Complete checkout, confirm branch scope, and manage the current order from one workspace.
           </p>
         </div>
 
         <div className="pos-meta-grid">
           <article className="pos-meta-card">
             <span className="meta-label">Cashier</span>
-            <strong>{user?.name || 'Admin User'}</strong>
+            <strong className="meta-primary">{user?.name || 'Admin User'}</strong>
+            <span className="meta-secondary">{cashierRoleLabel}</span>
           </article>
 
           <article className="pos-meta-card">
             <span className="meta-label">Branch Scope</span>
-            <strong>{activeBranch?.name || user?.branchName || 'All Branches'}</strong>
+            <strong className="meta-primary">
+              {activeBranch?.name || user?.branchName || 'All Branches'}
+            </strong>
+            <span className="meta-secondary">
+              {user?.branchId
+                ? 'Assigned to your account'
+                : 'Select the active branch for checkout'}
+            </span>
             {user?.branchId ? null : branchOptions.length > 0 ? (
-              <select
-                className="pos-branch-select"
-                value={activeBranchId}
-                onChange={(event) => setActiveBranchId(Number(event.target.value))}
-              >
-                {branchOptions.map((branch) => (
-                  <option key={branch.id} value={branch.id}>
-                    {branch.name}
-                  </option>
-                ))}
-              </select>
+              <label className="pos-inline-field">
+                <span>Active branch</span>
+                <select
+                  className="pos-branch-select"
+                  value={activeBranchId}
+                  onChange={(event) => setActiveBranchId(Number(event.target.value))}
+                  aria-label="Select active POS branch"
+                >
+                  {branchOptions.map((branch) => (
+                    <option key={branch.id} value={branch.id}>
+                      {branch.name}
+                    </option>
+                  ))}
+                </select>
+              </label>
             ) : null}
           </article>
 
           <article className="pos-meta-card">
             <span className="meta-label">Date and Time</span>
-            <strong>{formattedDate}</strong>
-            <span className="meta-copy">{formattedTime}</span>
+            <strong className="meta-primary meta-primary--clock">{formattedTime}</strong>
+            <span className="meta-secondary">{formattedDate}</span>
+            <span className="meta-tertiary">Philippine Standard Time</span>
           </article>
 
           <article className="pos-meta-card">
             <span className="meta-label">Transaction No.</span>
-            <strong>{transactionNumber}</strong>
+            <strong className="meta-code">{transactionNumber}</strong>
+            <span className="meta-secondary">Current checkout reference</span>
+            <span className="meta-tertiary">Sequence {transactionSuffix}</span>
           </article>
         </div>
       </div>

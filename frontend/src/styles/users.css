@@ -12,38 +12,18 @@
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 1rem;
-  margin-top: 1rem;
 }
 
 .branch-form {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 1rem;
-  margin-top: 1rem;
 }
 
 .users-field {
   display: flex;
   flex-direction: column;
   gap: 0.45rem;
-}
-
-.users-auth-note {
-  margin-top: 1rem;
-  border: 1px solid rgba(29, 78, 216, 0.12);
-  border-radius: 18px;
-  padding: 1rem 1.1rem;
-  background: rgba(239, 246, 255, 0.78);
-}
-
-.users-auth-note strong {
-  display: block;
-  color: #1e3a8a;
-}
-
-.users-auth-note p {
-  margin: 0.55rem 0 0;
-  color: #2f4477;
 }
 
 .users-field span {
@@ -75,7 +55,7 @@
   border: 1px dashed rgba(166, 63, 20, 0.18);
   border-radius: 14px;
   padding: 0.9rem 1rem;
-  background: rgba(255, 248, 241, 0.72);
+  background: rgba(248, 243, 237, 0.86);
   color: var(--text-soft);
 }
 
@@ -117,29 +97,6 @@
   gap: 0.75rem;
 }
 
-.branch-process-note {
-  margin-top: 1rem;
-  border: 1px solid rgba(166, 63, 20, 0.12);
-  border-radius: 18px;
-  padding: 1rem 1.1rem;
-  background: rgba(255, 248, 241, 0.72);
-}
-
-.branch-process-note strong {
-  display: block;
-  color: #5f422d;
-}
-
-.branch-process-note ul {
-  margin: 0.65rem 0 0;
-  padding-left: 1.15rem;
-  color: var(--text-soft);
-}
-
-.branch-process-note li + li {
-  margin-top: 0.35rem;
-}
-
 .branch-list {
   margin-top: 1rem;
 }
@@ -150,10 +107,10 @@
 
 .branch-card,
 .admin-card {
-  padding: 1rem;
+  padding: 1rem 1.05rem;
   border: 1px solid rgba(166, 63, 20, 0.12);
-  border-radius: 18px;
-  background: rgba(255, 248, 241, 0.6);
+  border-radius: 20px;
+  background: rgba(248, 243, 237, 0.86);
 }
 
 .branch-card {
@@ -187,8 +144,8 @@
   align-items: center;
   border-radius: 999px;
   padding: 0.3rem 0.6rem;
-  background: rgba(29, 78, 216, 0.08);
-  color: #1d4ed8;
+  background: rgba(31, 49, 69, 0.08);
+  color: var(--brand);
   font-size: 0.75rem;
   font-weight: 700;
   letter-spacing: 0.08em;
@@ -236,38 +193,18 @@
   margin: 0;
   border-radius: 14px;
   padding: 0.85rem 0.95rem;
-  background: rgba(29, 78, 216, 0.06);
-  color: #2f4477;
+  background: rgba(31, 49, 69, 0.06);
+  color: #39526b;
 }
 
 .users-table-shell {
-  overflow-x: auto;
   margin-top: 1rem;
-  border: 1px solid var(--border);
-  border-radius: 24px;
-  background: rgba(255, 255, 255, 0.92);
 }
 
 .users-table {
   width: 100%;
-  min-width: 920px;
+  min-width: 760px;
   border-collapse: collapse;
-}
-
-.users-table th,
-.users-table td {
-  padding: 1rem;
-  text-align: left;
-  border-bottom: 1px solid rgba(92, 53, 23, 0.08);
-  vertical-align: top;
-}
-
-.users-table thead th {
-  font-size: 0.8rem;
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-  color: var(--text-soft);
-  background: rgba(255, 248, 241, 0.78);
 }
 
 .users-table-actions {
