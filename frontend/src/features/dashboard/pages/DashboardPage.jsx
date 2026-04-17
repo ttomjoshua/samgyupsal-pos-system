@@ -119,7 +119,7 @@ function DashboardPage() {
   }
 
   if (snapshot.isLoading) {
-    return <Loader message="Loading dashboard snapshot..." />
+    return <Loader message="Loading dashboard..." />
   }
 
   return (
@@ -135,8 +135,8 @@ function DashboardPage() {
       {snapshot.hasPartialError ? (
         <NoticeBanner
           variant="warning"
-          title="Some live widgets are unavailable"
-          message="The dashboard loaded with partial data. Core screens still remain available while the missing stats recover."
+          title="Partial data loaded"
+          message="Some dashboard data could not be loaded. You can still navigate to other screens."
         />
       ) : lowStockRows.length > 0 ? (
         <NoticeBanner

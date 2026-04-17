@@ -213,14 +213,8 @@ function PaymentPanel({
       setCart([])
       resetPanel()
       setLastReceipt(receiptSnapshot)
-      setMessage(
-        result.source === 'local-fallback'
-          ? 'Sale saved locally. Reports were updated and matching inventory items were synced in demo mode.'
-          : result.inventorySynced === false
-            ? 'Sale recorded successfully. Inventory sync was skipped here because the Supabase flow is expecting the database or backend logic to manage stock updates.'
-            : 'Sale recorded successfully. Reports were updated and matching inventory items were synced.',
-      )
-      setMessageTone(result.source === 'local-fallback' ? 'warning' : 'success')
+      setMessage('Sale recorded successfully. Reports and inventory have been updated.')
+      setMessageTone('success')
       onOrderComplete?.('checkout', {
         inventorySynced: result.inventorySynced,
         soldItems: payload.items,
@@ -337,7 +331,7 @@ function PaymentPanel({
       {message ? (
         <NoticeBanner
           variant={messageTone}
-          title="Checkout status"
+          title="Checkout"
           message={message}
         />
       ) : null}

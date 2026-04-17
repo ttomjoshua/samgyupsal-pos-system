@@ -25,13 +25,13 @@ const VISIBLE_CATEGORY_PAGE_SIZE = 8
 function ProductsPage() {
   const [products, setProducts] = useState([])
   const [isLoading, setIsLoading] = useState(true)
-  const [sourceLabel, setSourceLabel] = useState('Loading product catalog...')
+
   const [customCategories, setCustomCategories] = useState(() =>
     getStoredCategories(),
   )
   const [newCategoryName, setNewCategoryName] = useState('')
   const [categoryMessage, setCategoryMessage] = useState(
-    'Add local categories here to support product organization and filtering.',
+    'Add categories to organize and filter products.',
   )
   const [categoryMessageTone, setCategoryMessageTone] = useState('info')
   const [loadError, setLoadError] = useState('')
@@ -55,16 +55,11 @@ function ProductsPage() {
       try {
         const productList = await getProductCatalog()
         setProducts(productList)
-        setSourceLabel(
-          isSupabaseDataEnabled
-            ? 'Connected to the live Supabase catalog.'
-            : 'Using the local demo catalog source.',
-        )
         setLoadError('')
       } catch (error) {
         console.error('Failed to load products:', error)
         setProducts([])
-        setSourceLabel('Catalog source unavailable.')
+
         setLoadError(
           error.response?.data?.message ||
             'The product list could not be loaded from the active catalog source.',
@@ -439,7 +434,7 @@ function ProductsPage() {
           <p className="eyebrow">Products</p>
           <h2>Catalog and Categories</h2>
           <p className="supporting-text">
-            Manage product visibility, category structure, and catalog consistency across the system.
+            Manage products, categories, and catalog organization.
           </p>
         </div>
         <div className="page-header-actions">
@@ -454,43 +449,45 @@ function ProductsPage() {
         </div>
       </div>
 
-      <NoticeBanner
-        variant={loadError ? 'error' : 'info'}
-        title={loadError ? 'Catalog source unavailable' : 'Catalog source'}
-        message={loadError || sourceLabel}
-      />
+      {loadError ? (
+        <NoticeBanner
+          variant="error"
+          title="Catalog unavailable"
+          message={loadError}
+        />
+      ) : null}
 
       <div className="products-management-grid">
         <div className="panel">
           <p className="card-label">Category Management</p>
           <h2>Category Governance</h2>
           <p className="supporting-text products-panel-copy">
-            Shape how products are grouped, reviewed, and exposed as operational filters across the workspace.
+            Organize how products are grouped and filtered.
           </p>
 
           <div className="products-overview-grid">
             <div className="products-overview-card">
               <span className="products-overview-label">Visible Categories</span>
               <strong>{availableCategories.length}</strong>
-              <span className="products-overview-meta">Available to the business workflow</span>
+              <span className="products-overview-meta">Available across the system</span>
             </div>
             <div className="products-overview-card">
               <span className="products-overview-label">Product-backed</span>
               <strong>{productCategories.length}</strong>
-              <span className="products-overview-meta">Actively used by catalog records</span>
+              <span className="products-overview-meta">Used by catalog products</span>
             </div>
             <div className="products-overview-card">
               <span className="products-overview-label">Locally Managed</span>
               <strong>{customCategories.length}</strong>
-              <span className="products-overview-meta">Admin-defined filter extensions</span>
+              <span className="products-overview-meta">Manually added categories</span>
             </div>
           </div>
 
           <div className="products-toolbar">
             <div className="products-toolbar-copy">
-              <strong>Create or refine category coverage</strong>
+              <strong>Manage Categories</strong>
               <span>
-                Use local categories for operational filtering, and edit product-backed categories when the live catalog itself needs to change.
+                Add, rename, or remove categories to keep the product catalog organized.
               </span>
             </div>
           </div>
@@ -505,7 +502,7 @@ function ProductsPage() {
                 aria-label="Add category name"
               />
               <span className="products-field-help">
-                Keep names short, specific, and consistent with how staff search and browse products.
+                Use short, clear names that match how staff search for products.
               </span>
             </div>
             <div className="products-category-form-actions">
@@ -517,15 +514,15 @@ function ProductsPage() {
 
           <NoticeBanner
             variant={categoryMessageTone}
-            title="Category workspace"
+            title="Category update"
             message={categoryMessage}
           />
 
           <div className="products-toolbar">
             <div className="products-toolbar-copy">
-              <strong>Review categories with precision</strong>
+              <strong>Search Categories</strong>
               <span>
-                Search the category workspace before editing or removing entries to reduce duplicate labels and accidental cleanup.
+                Find specific categories to edit or remove.
               </span>
             </div>
             <div className="products-search-shell products-search-shell--compact">
@@ -545,9 +542,9 @@ function ProductsPage() {
 
           <div className="category-section">
             <div className="category-section-header">
-              <strong>Locally managed categories</strong>
+              <strong>Custom Categories</strong>
               <span>
-                Frontend-managed categories support filtering needs without rewriting live catalog records.
+                Manually added categories for additional product filtering.
               </span>
             </div>
 
@@ -560,8 +557,8 @@ function ProductsPage() {
                 }
                 description={
                   customCategories.length === 0
-                    ? 'Add one here if the business needs category filters beyond the current product catalog.'
-                    : 'Try a different keyword or clear the search to review the full local category list.'
+                    ? 'Add a category above to get started.'
+                    : 'Try a different keyword or clear the search.'
                 }
               />
             ) : (
@@ -581,8 +578,8 @@ function ProductsPage() {
                           <td>{category}</td>
                           <td className="products-table-muted">
                             {isProductCategory(category)
-                              ? 'Also connected to live catalog records'
-                              : 'Local filtering label only'}
+                              ? 'Used by products'
+                              : 'Custom filter only'}
                           </td>
                           <td>
                             <div className="products-table-actions">
@@ -636,9 +633,9 @@ function ProductsPage() {
 
           <div className="category-section products-visibility-copy">
             <div className="category-section-header">
-              <strong>Visible category filters</strong>
+              <strong>All Categories</strong>
               <span>
-                This is the full category surface employees and admins will encounter while browsing the catalog.
+                Categories visible to staff across the system.
               </span>
             </div>
 
@@ -651,8 +648,8 @@ function ProductsPage() {
                 }
                 description={
                   visibleCategoryRows.length === 0
-                    ? 'Categories will appear here once the catalog or local admin list is available.'
-                    : 'Try a different keyword or clear the category search to inspect the full visible list.'
+                    ? 'Categories will appear once products are loaded.'
+                    : 'Try a different keyword or clear the search.'
                 }
               />
             ) : (
@@ -735,32 +732,32 @@ function ProductsPage() {
           <p className="card-label">Products</p>
           <h2>Catalog Review Desk</h2>
           <p className="supporting-text products-panel-copy">
-            Review live catalog coverage by product, branch, category, and unit price from one control surface.
+            Browse products by branch, category, and pricing.
           </p>
 
           <div className="products-overview-grid">
             <div className="products-overview-card">
               <span className="products-overview-label">Matching Products</span>
               <strong>{filteredProducts.length}</strong>
-              <span className="products-overview-meta">Current review result set</span>
+              <span className="products-overview-meta">Based on current filters</span>
             </div>
             <div className="products-overview-card">
               <span className="products-overview-label">Branches Covered</span>
               <strong>{visibleProductBranchCount}</strong>
-              <span className="products-overview-meta">Catalog scope in this view</span>
+              <span className="products-overview-meta">In current view</span>
             </div>
             <div className="products-overview-card">
               <span className="products-overview-label">Categories in View</span>
               <strong>{visibleProductCategoryCount}</strong>
-              <span className="products-overview-meta">Distinct product groupings shown</span>
+              <span className="products-overview-meta">Displayed in results</span>
             </div>
           </div>
 
           <div className="products-toolbar">
             <div className="products-toolbar-copy">
-              <strong>Search the catalog intelligently</strong>
+              <strong>Search Products</strong>
               <span>
-                Search by product name, category, branch, or unit label to isolate the exact records the business needs to review.
+                Search by product name, category, branch, or unit.
               </span>
             </div>
             <div className="products-search-shell">
@@ -783,12 +780,12 @@ function ProductsPage() {
           ) : loadError ? (
             <EmptyState
               title="Products are currently unavailable"
-              description="The page is still responsive, but the product catalog could not be loaded from the current data source."
+              description="The product catalog could not be loaded. Please try again later."
             />
           ) : products.length === 0 ? (
             <EmptyState
               title="No products available"
-              description="Add or reconnect a product source so the catalog becomes available here."
+              description="Products will appear here once the catalog is available."
             />
           ) : filteredProducts.length === 0 ? (
             <EmptyState

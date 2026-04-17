@@ -139,7 +139,7 @@ function ReportsPage() {
             <span className="meta-label">From</span>
             <strong className="meta-primary">{shortDate(dateFrom)}</strong>
             <span className="meta-secondary">
-              Selected report start date for the active analysis window.
+              Start of selected reporting period.
             </span>
           </article>
 
@@ -147,7 +147,7 @@ function ReportsPage() {
             <span className="meta-label">To</span>
             <strong className="meta-primary">{shortDate(dateTo)}</strong>
             <span className="meta-secondary">
-              Selected report end date for the current reporting snapshot.
+              End of selected reporting period.
             </span>
           </article>
 
@@ -155,7 +155,7 @@ function ReportsPage() {
             <span className="meta-label">Review Window</span>
             <strong className="meta-primary">{reviewWindowLabel}</strong>
             <span className="meta-secondary">
-              Active analysis period used for totals, best performers, and cashier results.
+              Duration covered by this report.
             </span>
           </article>
         </div>
@@ -166,7 +166,7 @@ function ReportsPage() {
           <p className="card-label">Reporting Period</p>
           <h2>Set Review Range</h2>
           <p className="supporting-text">
-            Update the reporting window to refresh sales totals, best performers, and cashier results.
+            Adjust the date range to update all report figures.
           </p>
         </div>
 
@@ -211,7 +211,7 @@ function ReportsPage() {
       {loadError ? (
         <NoticeBanner
           variant="error"
-          title="Report snapshot unavailable"
+          title="Report unavailable"
           message={loadError}
         />
       ) : null}
@@ -219,7 +219,7 @@ function ReportsPage() {
       {filterError ? (
         <NoticeBanner
           variant="error"
-          title="Invalid report date range"
+          title="Invalid date range"
           message={filterError}
         />
       ) : null}
@@ -227,7 +227,7 @@ function ReportsPage() {
       {!filterError && filterMessage ? (
         <NoticeBanner
           variant="success"
-          title="Report filter ready"
+          title="Filter applied"
           message={filterMessage}
         />
       ) : null}

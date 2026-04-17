@@ -208,7 +208,7 @@ function UsersPage() {
         } else {
           const createdEmployee = await createManagedEmployeeAccount(formData)
           setPageMessage(
-            `${createdEmployee.name} was created in Supabase Auth and assigned to ${createdEmployee.branchName}.`,
+            `${createdEmployee.name} was created and assigned to ${createdEmployee.branchName}.`,
           )
           setPageMessageTone('success')
         }
@@ -313,7 +313,7 @@ function UsersPage() {
       {!pageError && pageMessage ? (
         <NoticeBanner
           variant={pageMessageTone}
-          title="Users screen update"
+          title="Update"
           message={pageMessage}
         />
       ) : null}
@@ -329,9 +329,7 @@ function UsersPage() {
           <p className="card-label">Employees</p>
           <strong>{employeeAccounts.length}</strong>
           <p className="supporting-text">
-            {isSupabaseAuthEnabled
-              ? 'Employee accounts currently synced from Supabase.'
-              : 'Employee accounts currently available in the local demo.'}
+            Employee accounts currently registered in the system.
           </p>
         </article>
 
@@ -347,9 +345,7 @@ function UsersPage() {
           <p className="card-label">Employee Accounts</p>
           <h2>Access and Assignment</h2>
           <p className="supporting-text">
-            {isSupabaseAuthEnabled
-              ? 'Open a dedicated employee workspace to create login accounts, assign branches, and update employee status.'
-              : 'Open a dedicated employee workspace to create demo accounts, assign branches, and update employee status.'}
+            Create employee accounts, assign branches, and manage employee status.
           </p>
 
           <div className="users-overview-grid">
@@ -414,18 +410,14 @@ function UsersPage() {
         <p className="card-label">Employee Directory</p>
         <h2>Active and Inactive Employee Accounts</h2>
         <p className="supporting-text">
-          {isSupabaseAuthEnabled
-            ? 'Review employee status and branch assignment here.'
-            : 'Review employee status and branch assignment in the local demo directory.'}
+          Review employee status and branch assignments.
         </p>
 
         {employeeAccounts.length === 0 ? (
           <EmptyState
             title="No employee accounts yet"
             description={
-              isSupabaseAuthEnabled
-                ? 'Create the first employee account from the form above and it will appear here after the profile sync completes.'
-                : 'Create the first branch-assigned employee account to start testing role-based screens.'
+              'Create the first employee account to get started.'
             }
           />
         ) : (
@@ -491,9 +483,7 @@ function UsersPage() {
               : 'Create Employee Account'
         }
         description={
-          isSupabaseAuthEnabled
-            ? 'Create employee login accounts, assign branches, and keep employee status accurate from one dedicated workspace.'
-            : 'Create employee demo accounts, assign branches, and keep employee status accurate from one dedicated workspace.'
+          'Create employee accounts, assign branches, and manage employee status.'
         }
         onClose={handleCloseEmployeeModal}
         width="860px"
@@ -566,10 +556,10 @@ function UsersPage() {
             </label>
           ) : (
             <div className="users-field users-field-readonly users-field-wide">
-              <span>Auth Credentials</span>
+              <span>Login Credentials</span>
               <div className="users-inline-note">
-                Email and password stay managed in Supabase Auth. Use this workspace for
-                name, username, branch, and status updates.
+                Email and password are managed separately. Use this form for name, username,
+                branch, and status updates.
               </div>
             </div>
           )}

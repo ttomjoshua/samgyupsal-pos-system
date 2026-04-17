@@ -418,7 +418,7 @@ function InventoryPage() {
     <section className="inventory-page">
       <div className="inventory-topbar">
         <div className="inventory-title-block">
-          <p className="eyebrow">Admin Inventory Screen</p>
+          <p className="eyebrow">Inventory</p>
           <h1>Inventory</h1>
           <p className="supporting-text">
             Control stock levels, expiry risk, and branch inventory actions from one workspace.
@@ -432,7 +432,7 @@ function InventoryPage() {
               {activeBranch?.name || 'Branch pending'}
             </strong>
             <span className="meta-secondary">
-              Current branch workspace for stock and expiry monitoring.
+              Selected branch for stock management.
             </span>
           </article>
 
@@ -440,7 +440,7 @@ function InventoryPage() {
             <span className="meta-label">Visible Products</span>
             <strong className="meta-primary">{filteredItems.length}</strong>
             <span className="meta-secondary">
-              Records matching the current branch, status, and category filters.
+              Based on current filters.
             </span>
           </article>
 
@@ -448,7 +448,7 @@ function InventoryPage() {
             <span className="meta-label">Catalog Action</span>
             <strong className="meta-primary">Add Product</strong>
             <span className="meta-secondary">
-              Create a new branch inventory record and load it into the table immediately.
+              Add a new product to this branch.
             </span>
             <button
               type="button"
@@ -570,7 +570,7 @@ function InventoryPage() {
       </div>
 
       {isLoading ? (
-        <Loader message="Loading inventory records..." />
+        <Loader message="Loading inventory..." />
       ) : loadError ? (
         <EmptyState
           title="Inventory records are unavailable"

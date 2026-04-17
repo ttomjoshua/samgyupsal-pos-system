@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import useAuth from '../hooks/useAuth'
-import { getDemoLoginAccounts } from '../../users/services/userService'
+
 import { isSupabaseAuthEnabled } from '../../../shared/api/supabaseClient'
 import { getDefaultAppPath } from '../../../shared/utils/permissions'
 import {
@@ -13,7 +13,7 @@ import '../styles/login.css'
 function LoginPage() {
   const navigate = useNavigate()
   const { login } = useAuth()
-  const demoAccounts = getDemoLoginAccounts()
+
   const usesSupabaseAuth = isSupabaseAuthEnabled
   const [formData, setFormData] = useState({
     email: '',
@@ -73,20 +73,7 @@ function LoginPage() {
           Point-of-Sale and Inventory Monitoring System
         </p>
 
-        {!usesSupabaseAuth ? (
-          <div className="login-demo">
-            <p className="login-demo-title">Temporary demo accounts</p>
-            {demoAccounts.map((account) => (
-              <p key={account.username}>
-                {account.role}: <code>{account.username}</code> / <code>{account.password}</code>{' '}
-                <span className="login-demo-branch">({account.branchName})</span>
-              </p>
-            ))}
-            <p className="login-demo-footnote">
-              New dummy employee accounts created by the admin can also sign in here.
-            </p>
-          </div>
-        ) : null}
+
 
         <div className="login-form">
           {usesSupabaseAuth ? (
