@@ -53,7 +53,7 @@ It also:
 - backfills the new flat columns from the current normalized tables when needed
 - recreates `product_catalog_view` and `inventory_catalog_view` as compatibility read models for the frontend
 
-## 3. Development/demo RLS policies and grants
+## 3. Authenticated-only bootstrap RLS policies and grants
 
 Run:
 
@@ -61,16 +61,16 @@ Run:
 
 This script:
 
-- grants anon/authenticated access needed for the current frontend demo
+- removes anonymous table access and keeps the bootstrap policy set on authenticated requests only
 - enables RLS on the new tables
-- adds broad demo policies for select/insert/update
+- adds broad bootstrap policies for the authenticated app flow, including delete operations already used by the frontend
 - grants select access to the frontend views
 
 Important:
 
-- This is intentionally permissive for capstone/demo use.
-- Tighten these policies before production.
-- Do not treat them as final security.
+- This step is still intentionally broad and is only the bootstrap access layer.
+- Do not stop here if Supabase Auth is enabled.
+- Run the role-aware hardening script later in this guide before production-like demos or security review.
 
 ## 4. Replace the demo catalog with the owner inventory snapshot
 
@@ -158,7 +158,27 @@ This script is just a template so you can assign:
 - branch scope
 - active status
 
-## 8. Deploy the secure admin-create-user Edge Function
+## 8. Replace the bootstrap policies with role-aware app policies
+
+Run after the auth rollout and admin seeding steps:
+
+- [`frontend/supabase/sql/09_auth_role_policies.sql`](../../frontend/supabase/sql/09_auth_role_policies.sql)
+
+This script:
+
+- revokes the bootstrap demo-era grants from `anon`
+- keeps the frontend compatibility views on `security_invoker`
+- narrows access to authenticated users only
+- limits branch reads, sales writes, and employee access by the authenticated profile
+- preserves the current browser-managed inventory sync path by allowing branch-scoped product updates for active employees
+
+Important:
+
+- This is the policy set you should defend with during capstone review.
+- It is materially safer than the bootstrap policy file, but it still inherits one design tradeoff from the current frontend: employees can update product rows within their assigned branch because the browser is still performing stock deductions after checkout.
+- The next recommended security step is moving checkout and stock deduction into a trusted RPC or Edge Function so product writes no longer need to come from the browser at all.
+
+## 9. Deploy the secure admin-create-user Edge Function
 
 The repo now includes:
 

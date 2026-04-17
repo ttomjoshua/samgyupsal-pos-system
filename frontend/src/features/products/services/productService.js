@@ -1,11 +1,12 @@
-import api from '../../../shared/api/apiClient'
 import {
   createSupabaseServiceError,
   getSupabaseClient,
-  isSupabaseConfigured,
+  isSupabaseDataEnabled,
   supabaseTables,
   supabaseViews,
 } from '../../../shared/api/supabaseClient'
+import { products as mockProducts } from '../../../shared/mocks/mockData'
+import { getInventoryItems } from '../../inventory/services/inventoryService'
 
 function extractProductArray(payload) {
   if (Array.isArray(payload)) {
@@ -101,8 +102,38 @@ function normalizeInventoryProduct(product, index) {
   }
 }
 
+function getFallbackBranchName(branchId) {
+  return Number(branchId) === 2 ? 'Dollar' : 'Sta. Lucia'
+}
+
+async function getLocalCatalogSource(options = {}) {
+  try {
+    const inventoryResponse = await getInventoryItems(options)
+    const inventoryItems = inventoryResponse.items || inventoryResponse
+
+    if (Array.isArray(inventoryItems) && inventoryItems.length > 0) {
+      return inventoryItems
+    }
+  } catch {
+    // Fall through to the seeded demo catalog.
+  }
+
+  return mockProducts.map((product) => ({
+    id: product.id,
+    product_id: product.id,
+    inventory_item_id: product.id,
+    branch_id: options.branchId ? Number(options.branchId) : 1,
+    branch_name: getFallbackBranchName(options.branchId),
+    product_name: product.name,
+    category_name: product.category,
+    price: Number(product.price || 0),
+    unit_label: '',
+    stock_quantity: 25,
+  }))
+}
+
 export async function getProducts(options = {}) {
-  if (isSupabaseConfigured) {
+  if (isSupabaseDataEnabled) {
     const supabase = getSupabaseClient()
     let query = supabase
       .from(supabaseViews.inventoryCatalog)
@@ -128,14 +159,14 @@ export async function getProducts(options = {}) {
       .filter((product) => Boolean(product.id))
   }
 
-  const response = await api.get('/products')
-  return extractProductArray(response.data)
+  const localCatalog = await getLocalCatalogSource(options)
+  return extractProductArray(localCatalog)
     .map(normalizeInventoryProduct)
     .filter((product) => Boolean(product.id))
 }
 
 export async function getProductCatalog() {
-  if (isSupabaseConfigured) {
+  if (isSupabaseDataEnabled) {
     const supabase = getSupabaseClient()
     const { data, error } = await supabase
       .from(supabaseViews.productCatalog)
@@ -155,14 +186,14 @@ export async function getProductCatalog() {
       .filter((product) => Boolean(product.id))
   }
 
-  const response = await api.get('/products')
-  return extractProductArray(response.data)
+  const localCatalog = await getLocalCatalogSource()
+  return extractProductArray(localCatalog)
     .map(normalizeCatalogProduct)
     .filter((product) => Boolean(product.id))
 }
 
 export async function renameProductCategory(currentCategoryName, nextCategoryName) {
-  if (!isSupabaseConfigured) {
+  if (!isSupabaseDataEnabled) {
     throw new Error(
       'Renaming product-backed categories requires the active Supabase catalog.',
     )
@@ -186,7 +217,7 @@ export async function renameProductCategory(currentCategoryName, nextCategoryNam
 }
 
 export async function removeProductCategory(categoryName) {
-  if (!isSupabaseConfigured) {
+  if (!isSupabaseDataEnabled) {
     throw new Error(
       'Removing product-backed categories requires the active Supabase catalog.',
     )

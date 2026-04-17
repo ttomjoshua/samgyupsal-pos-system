@@ -9,7 +9,7 @@ import {
   removeProductCategory,
   renameProductCategory,
 } from '../services/productService'
-import { isSupabaseConfigured } from '../../../shared/api/supabaseClient'
+import { isSupabaseDataEnabled } from '../../../shared/api/supabaseClient'
 import {
   getStoredCategories,
   prepareCategoryName,
@@ -56,9 +56,9 @@ function ProductsPage() {
         const productList = await getProductCatalog()
         setProducts(productList)
         setSourceLabel(
-          isSupabaseConfigured
+          isSupabaseDataEnabled
             ? 'Connected to the live Supabase catalog.'
-            : 'Using the local catalog source.',
+            : 'Using the local demo catalog source.',
         )
         setLoadError('')
       } catch (error) {

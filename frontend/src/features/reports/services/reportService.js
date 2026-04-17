@@ -3,10 +3,11 @@ import {
   topSellingItems,
 } from '../../../shared/mocks/mockData'
 import { getInventoryItems, isLowStock } from '../../inventory/services/inventoryService'
+import { getDefaultReportDateRange } from '../../../shared/utils/reporting.js'
 import {
   createSupabaseServiceError,
   getSupabaseClient,
-  isSupabaseConfigured,
+  isSupabaseDataEnabled,
   supabaseTables,
 } from '../../../shared/api/supabaseClient'
 import { peso } from '../../../shared/utils/formatters'
@@ -15,6 +16,8 @@ import { getStoredSalesHistory } from '../../../shared/utils/storage'
 function parseCurrencyValue(value) {
   return Number(String(value || '').replace(/[^\d.-]/g, '')) || 0
 }
+
+export { getDefaultReportDateRange }
 
 function toDateBoundary(value, boundary = 'start') {
   if (!value) {
@@ -231,7 +234,7 @@ export async function getReportSnapshot(options = {}) {
   const lowStockRows = buildLowStockRows(inventorySnapshot)
   const hasDateRange = Boolean(options.dateFrom || options.dateTo)
 
-  if (isSupabaseConfigured) {
+  if (isSupabaseDataEnabled) {
     const salesHistory = await getSupabaseSalesHistory()
     const filteredSalesHistory = salesHistory.filter((sale) =>
       isSaleWithinDateRange(sale, options),

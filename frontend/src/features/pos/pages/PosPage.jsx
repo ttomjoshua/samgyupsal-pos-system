@@ -236,6 +236,38 @@ function PosPage() {
   )
   const hasActiveSearch = normalizeSearchInput(searchTerm).length > 0
 
+  const handleOrderComplete = (action, details = {}) => {
+    if (action !== 'checkout') {
+      return
+    }
+
+    setTransactionSequence((current) => current + 1)
+
+    if (details.inventorySynced === false || !Array.isArray(details.soldItems)) {
+      return
+    }
+
+    setCatalogProducts((previousProducts) =>
+      previousProducts.map((product) => {
+        const soldItem = details.soldItems.find(
+          (item) => String(item.product_id ?? item.id) === String(product.id),
+        )
+
+        if (!soldItem) {
+          return product
+        }
+
+        return {
+          ...product,
+          stockQuantity: Math.max(
+            0,
+            Number(product.stockQuantity || 0) - Number(soldItem.quantity || 0),
+          ),
+        }
+      }),
+    )
+  }
+
   if (isBranchLoading && !user?.branchId && branchOptions.length === 0) {
     return <Loader message="Loading branch scope..." />
   }
@@ -450,6 +482,7 @@ function PosPage() {
               <Loader message="Loading POS catalog..." />
             ) : (
               <ProductGrid
+                cart={cartItems}
                 products={paginatedProducts}
                 setCart={setCartItems}
               />
@@ -476,11 +509,7 @@ function PosPage() {
             transactionNumber={transactionNumber}
             branchId={activeBranch?.id ?? user?.branchId ?? null}
             branchName={activeBranch?.name || user?.branchName || 'All Branches'}
-            onOrderComplete={(action) => {
-              if (action === 'checkout') {
-                setTransactionSequence((current) => current + 1)
-              }
-            }}
+            onOrderComplete={handleOrderComplete}
           />
         </aside>
       </div>

@@ -1,44 +1,45 @@
 import { createClient } from '@supabase/supabase-js'
 
-const supabaseUrl = String(import.meta.env.VITE_SUPABASE_URL || '').trim()
-const supabaseAnonKey = String(import.meta.env.VITE_SUPABASE_ANON_KEY || '').trim()
+const runtimeEnv = import.meta.env || {}
+
+const supabaseUrl = String(runtimeEnv.VITE_SUPABASE_URL || '').trim()
+const supabaseAnonKey = String(runtimeEnv.VITE_SUPABASE_ANON_KEY || '').trim()
 
 export const isSupabaseConfigured = Boolean(supabaseUrl && supabaseAnonKey)
 export const isSupabaseAuthEnabled =
   isSupabaseConfigured &&
-  String(import.meta.env.VITE_SUPABASE_AUTH_ENABLED || 'true')
+  String(runtimeEnv.VITE_SUPABASE_AUTH_ENABLED || 'true')
     .trim()
     .toLowerCase() === 'true'
+export const isSupabaseDataEnabled = isSupabaseAuthEnabled
 
 export const supabaseTables = {
-  products: import.meta.env.VITE_SUPABASE_PRODUCTS_TABLE || 'products',
-  categories: import.meta.env.VITE_SUPABASE_CATEGORIES_TABLE || 'categories',
+  products: runtimeEnv.VITE_SUPABASE_PRODUCTS_TABLE || 'products',
+  categories: runtimeEnv.VITE_SUPABASE_CATEGORIES_TABLE || 'categories',
   inventoryItems:
-    import.meta.env.VITE_SUPABASE_INVENTORY_TABLE || 'inventory_items',
-  sales: import.meta.env.VITE_SUPABASE_SALES_TABLE || 'sales',
-  saleItems: import.meta.env.VITE_SUPABASE_SALE_ITEMS_TABLE || 'sale_items',
-  branches: import.meta.env.VITE_SUPABASE_BRANCHES_TABLE || 'branches',
-  profiles: import.meta.env.VITE_SUPABASE_PROFILES_TABLE || 'profiles',
+    runtimeEnv.VITE_SUPABASE_INVENTORY_TABLE || 'inventory_items',
+  sales: runtimeEnv.VITE_SUPABASE_SALES_TABLE || 'sales',
+  saleItems: runtimeEnv.VITE_SUPABASE_SALE_ITEMS_TABLE || 'sale_items',
+  branches: runtimeEnv.VITE_SUPABASE_BRANCHES_TABLE || 'branches',
+  profiles: runtimeEnv.VITE_SUPABASE_PROFILES_TABLE || 'profiles',
 }
 
 export const supabaseViews = {
-  productCatalog:
-    import.meta.env.VITE_SUPABASE_PRODUCTS_VIEW || 'product_catalog_view',
-  inventoryCatalog:
-    import.meta.env.VITE_SUPABASE_INVENTORY_VIEW || 'inventory_catalog_view',
+  productCatalog: runtimeEnv.VITE_SUPABASE_PRODUCTS_VIEW || 'product_catalog_view',
+  inventoryCatalog: runtimeEnv.VITE_SUPABASE_INVENTORY_VIEW || 'inventory_catalog_view',
 }
 
 export const supabaseEdgeFunctions = {
   adminCreateUser:
-    import.meta.env.VITE_SUPABASE_ADMIN_CREATE_USER_FUNCTION || 'admin-create-user',
+    runtimeEnv.VITE_SUPABASE_ADMIN_CREATE_USER_FUNCTION || 'admin-create-user',
 }
 
 export const supabaseRuntime = {
   inventoryManagedOnSale:
-    String(import.meta.env.VITE_SUPABASE_SYNC_INVENTORY_ON_SALE || 'false')
+    String(runtimeEnv.VITE_SUPABASE_SYNC_INVENTORY_ON_SALE || 'false')
       .trim()
       .toLowerCase() === 'true',
-  defaultBranchId: Number(import.meta.env.VITE_SUPABASE_DEFAULT_BRANCH_ID || 1),
+  defaultBranchId: Number(runtimeEnv.VITE_SUPABASE_DEFAULT_BRANCH_ID || 1),
 }
 
 const supabase = isSupabaseConfigured

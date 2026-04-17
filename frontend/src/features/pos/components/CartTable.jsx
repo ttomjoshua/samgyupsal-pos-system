@@ -24,6 +24,16 @@ function CartTable({ cart, setCart }) {
     setCart((previousCart) => previousCart.filter((item) => item.id !== id))
   }
 
+  const canIncreaseQuantity = (item) => {
+    const availableStock = Number(item.stockQuantity ?? item.stock_quantity)
+
+    if (!Number.isFinite(availableStock)) {
+      return true
+    }
+
+    return Number(item.quantity || 0) < availableStock
+  }
+
   if (cart.length === 0) {
     return (
       <div className="cart-items empty">
@@ -43,6 +53,16 @@ function CartTable({ cart, setCart }) {
             <div className="cart-item-copy">
               <strong>{item.name}</strong>
               <span>{peso(item.price)} each</span>
+              {Number.isFinite(Number(item.stockQuantity ?? item.stock_quantity)) ? (
+                <span>
+                  {Math.max(
+                    0,
+                    Number(item.stockQuantity ?? item.stock_quantity) -
+                      Number(item.quantity || 0),
+                  )}{' '}
+                  remaining
+                </span>
+              ) : null}
             </div>
 
             <div className="cart-item-controls">
@@ -59,6 +79,7 @@ function CartTable({ cart, setCart }) {
                   type="button"
                   className="quantity-button"
                   onClick={() => increaseQty(item.id)}
+                  disabled={!canIncreaseQuantity(item)}
                 >
                   +
                 </button>

@@ -4,6 +4,18 @@ function collapseWhitespace(value) {
     .replace(/\s+/g, ' ')
 }
 
+function parseNumericInput(value) {
+  if (value === '' || value == null) {
+    return NaN
+  }
+
+  return Number(value)
+}
+
+function isWholeNumber(value) {
+  return Number.isInteger(parseNumericInput(value))
+}
+
 export function normalizeSearchInput(value) {
   return collapseWhitespace(value)
 }
@@ -64,6 +76,34 @@ export function validateCheckout({
     errors.cart = 'Cart cannot be empty.'
   }
 
+  if (!errors.cart && Array.isArray(cartItems)) {
+    for (const cartItem of cartItems) {
+      const quantity = parseNumericInput(cartItem?.quantity)
+      const availableStock = parseNumericInput(
+        cartItem?.stockQuantity ?? cartItem?.stock_quantity,
+      )
+      const itemName =
+        String(cartItem?.name || cartItem?.item_name || 'This item').trim() ||
+        'This item'
+
+      if (!Number.isInteger(quantity) || quantity <= 0) {
+        errors.cart = 'Cart quantities must be whole numbers greater than zero.'
+        break
+      }
+
+      if (
+        Number.isFinite(availableStock) &&
+        availableStock >= 0 &&
+        quantity > availableStock
+      ) {
+        errors.cart = `${itemName} only has ${availableStock} item${
+          availableStock === 1 ? '' : 's'
+        } in stock.`
+        break
+      }
+    }
+  }
+
   if (Number.isNaN(numericDiscount) || numericDiscount < 0) {
     errors.discount = 'Discount cannot be negative.'
   }
@@ -110,6 +150,8 @@ export function validateInventoryForm(formData = {}) {
 
   if (stockQuantity === '' || stockQuantity == null) {
     errors.stock = 'Stock quantity is required.'
+  } else if (!isWholeNumber(stockQuantity)) {
+    errors.stock = 'Stock quantity must be a whole number.'
   } else if (Number(stockQuantity) < 0) {
     errors.stock = 'Stock cannot be negative.'
   }
@@ -130,6 +172,8 @@ export function validateInventoryForm(formData = {}) {
 
   if (String(reorderLevel).trim() !== '' && Number(reorderLevel) < 0) {
     errors.reorderLevel = 'Reorder level cannot be negative.'
+  } else if (String(reorderLevel).trim() !== '' && !isWholeNumber(reorderLevel)) {
+    errors.reorderLevel = 'Reorder level must be a whole number.'
   }
 
   return {
@@ -139,10 +183,11 @@ export function validateInventoryForm(formData = {}) {
       ...formData,
       product_name: productName,
       category_name: categoryName,
-      stock_quantity: stockQuantity,
+      price: Number(priceValue),
+      stock_quantity: Number(stockQuantity),
       unit,
       expiry_date: expiryDate,
-      reorder_level: reorderLevel,
+      reorder_level: Number(reorderLevel ?? 0),
     },
   }
 }
@@ -157,8 +202,8 @@ export function validateInventoryQuantityAction({
 
   if (!selectedItem) {
     errors.quantity = 'Select an inventory item first.'
-  } else if (!Number.isFinite(sanitizedAmount) || sanitizedAmount === 0) {
-    errors.quantity = 'Enter a valid stock quantity to continue.'
+  } else if (!Number.isInteger(sanitizedAmount) || sanitizedAmount === 0) {
+    errors.quantity = 'Enter a whole number stock quantity to continue.'
   } else if (mode === 'stock-in' && sanitizedAmount < 0) {
     errors.quantity = 'Stock in only accepts a positive quantity.'
   } else if (

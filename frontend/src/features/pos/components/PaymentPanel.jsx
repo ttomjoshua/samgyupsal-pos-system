@@ -27,6 +27,7 @@ function PaymentPanel({
   const [submitting, setSubmitting] = useState(false)
   const [lastReceipt, setLastReceipt] = useState(null)
   const [isReceiptOpen, setIsReceiptOpen] = useState(false)
+  const [heldOrder, setHeldOrder] = useState(null)
 
   const subtotal = useMemo(
     () => cart.reduce((sum, item) => sum + item.price * item.quantity, 0),
@@ -72,11 +73,69 @@ function PaymentPanel({
       return
     }
 
+    if (heldOrder) {
+      setMessage('Restore or clear the current held order before placing another one on hold.')
+      setMessageTone('warning')
+      return
+    }
+
+    const heldOrderSnapshot = {
+      branchId,
+      branchName: branchName || user?.branchName || 'All Branches',
+      cashReceived,
+      cart: cart.map((item) => ({ ...item })),
+      discount,
+      heldAt: new Date().toISOString(),
+      paymentMethod,
+    }
+
+    setHeldOrder(heldOrderSnapshot)
     setCart([])
     resetPanel()
-    setMessage('Order placed on hold.')
+    setMessage(
+      `Order placed on hold for ${heldOrderSnapshot.branchName}. Restore it when the guest is ready.`,
+    )
     setMessageTone('info')
-    onOrderComplete?.('hold')
+  }
+
+  const handleRestoreHeldOrder = () => {
+    if (!heldOrder) {
+      return
+    }
+
+    if (cart.length > 0) {
+      setMessage('Clear or checkout the current cart before restoring the held order.')
+      setMessageTone('warning')
+      return
+    }
+
+    if (
+      heldOrder.branchId != null &&
+      branchId != null &&
+      Number(heldOrder.branchId) !== Number(branchId)
+    ) {
+      setMessage(`Switch back to ${heldOrder.branchName} before restoring this held order.`)
+      setMessageTone('warning')
+      return
+    }
+
+    setCart(heldOrder.cart.map((item) => ({ ...item })))
+    setDiscount(heldOrder.discount)
+    setPaymentMethod(heldOrder.paymentMethod)
+    setCashReceived(heldOrder.cashReceived)
+    setHeldOrder(null)
+    setMessage('Held order restored.')
+    setMessageTone('success')
+  }
+
+  const handleDiscardHeldOrder = () => {
+    if (!heldOrder) {
+      return
+    }
+
+    setHeldOrder(null)
+    setMessage('Held order cleared.')
+    setMessageTone('info')
   }
 
   const handleCheckout = async () => {
@@ -162,7 +221,10 @@ function PaymentPanel({
             : 'Sale recorded successfully. Reports were updated and matching inventory items were synced.',
       )
       setMessageTone(result.source === 'local-fallback' ? 'warning' : 'success')
-      onOrderComplete?.('checkout')
+      onOrderComplete?.('checkout', {
+        inventorySynced: result.inventorySynced,
+        soldItems: payload.items,
+      })
     } catch (error) {
       setMessage(error.response?.data?.message || 'Checkout failed.')
       setMessageTone('error')
@@ -278,6 +340,25 @@ function PaymentPanel({
           title="Checkout status"
           message={message}
         />
+      ) : null}
+
+      {heldOrder ? (
+        <div className="receipt-launcher">
+          <button
+            type="button"
+            className="ghost-action"
+            onClick={handleRestoreHeldOrder}
+          >
+            Restore Held Order
+          </button>
+          <button
+            type="button"
+            className="ghost-action"
+            onClick={handleDiscardHeldOrder}
+          >
+            Clear Held Order
+          </button>
+        </div>
       ) : null}
 
       {lastReceipt ? (

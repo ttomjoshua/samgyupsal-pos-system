@@ -2,6 +2,11 @@
 
 This frontend now treats `public.products` as the branch-scoped inventory source of truth, with compatibility views layered on top for read-heavy screens.
 
+Important:
+
+- when `VITE_SUPABASE_AUTH_ENABLED=false`, the stabilized frontend now stays on the local/demo data path instead of using anonymous Supabase table access
+- once real auth is enabled, apply the role-aware policy script in [`sql-run-order.md`](./sql-run-order.md) so the browser no longer depends on the bootstrap policy set
+
 ## What is already wired
 
 - branch-scoped POS product loading via [`frontend/src/features/products/services/productService.js`](../../frontend/src/features/products/services/productService.js)
@@ -142,6 +147,7 @@ Important:
 
 - `product_catalog_view` and `inventory_catalog_view` are compatibility read models built from `public.products`
 - `categories` and `inventory_items` may still exist in older projects, but the frontend write path now saves directly to `public.products`
+- both views should remain `security_invoker = true` so authenticated requests still obey the underlying table RLS policies
 
 ## Safe rollout order
 

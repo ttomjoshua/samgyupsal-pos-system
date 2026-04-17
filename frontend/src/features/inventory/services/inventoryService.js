@@ -1,8 +1,9 @@
 import api from '../../../shared/api/apiClient'
+import { resolveInventoryRecordIds } from '../../../shared/utils/inventoryRecords.js'
 import {
   createSupabaseServiceError,
   getSupabaseClient,
-  isSupabaseConfigured,
+  isSupabaseDataEnabled,
   supabaseRuntime,
   supabaseTables,
   supabaseViews,
@@ -162,6 +163,24 @@ async function fetchSupabaseInventoryItemById(itemId) {
   return data || null
 }
 
+async function fetchSupabaseInventoryItemByProductId(productId) {
+  const supabase = getSupabaseClient()
+  const { data, error } = await supabase
+    .from(supabaseViews.inventoryCatalog)
+    .select('*')
+    .eq('product_id', Number(productId))
+    .maybeSingle()
+
+  if (error) {
+    throw createSupabaseServiceError(
+      error,
+      'Unable to load the selected inventory item from Supabase.',
+    )
+  }
+
+  return data || null
+}
+
 async function fetchSupabaseProductById(productId) {
   const supabase = getSupabaseClient()
   const { data, error } = await supabase
@@ -207,8 +226,23 @@ async function findSupabaseProductConflict(values, fallbackItem = {}, excludePro
   return data || null
 }
 
+async function getSupabaseInventoryContext(itemId) {
+  const currentItem =
+    (await fetchSupabaseInventoryItemById(itemId)) ||
+    (await fetchSupabaseInventoryItemByProductId(itemId))
+
+  if (!currentItem) {
+    return null
+  }
+
+  return {
+    currentItem,
+    ...resolveInventoryRecordIds(currentItem),
+  }
+}
+
 export async function getInventoryItems(options = {}) {
-  if (isSupabaseConfigured) {
+  if (isSupabaseDataEnabled) {
     return {
       items: (await fetchSupabaseInventoryItems(options)).map((item) =>
         normalizeInventoryItem(item),
@@ -283,7 +317,7 @@ export function createInventoryItemRecord(values, existingItems = []) {
 }
 
 export async function createInventoryItem(values, existingItems = []) {
-  if (isSupabaseConfigured) {
+  if (isSupabaseDataEnabled) {
     const conflictingProduct = await findSupabaseProductConflict(values)
 
     if (conflictingProduct) {
@@ -307,7 +341,7 @@ export async function createInventoryItem(values, existingItems = []) {
       )
     }
 
-    const createdItem = await fetchSupabaseInventoryItemById(data.id)
+    const createdItem = await fetchSupabaseInventoryItemByProductId(data.id)
     return normalizeInventoryItem(createdItem || data)
   }
 
@@ -317,22 +351,24 @@ export async function createInventoryItem(values, existingItems = []) {
 }
 
 export async function updateInventoryItem(itemId, values) {
-  if (isSupabaseConfigured) {
-    const currentItem = await fetchSupabaseInventoryItemById(itemId)
+  if (isSupabaseDataEnabled) {
+    const inventoryContext = await getSupabaseInventoryContext(itemId)
+    const currentItem = inventoryContext?.currentItem
+    const productId = inventoryContext?.productId
 
-    if (!currentItem) {
+    if (!currentItem || productId == null) {
       throw new Error('The selected inventory item could not be found.')
     }
 
     const conflictingProduct = await findSupabaseProductConflict(
       values,
       currentItem,
-      itemId,
+      productId,
     )
 
     if (
       conflictingProduct &&
-      Number(conflictingProduct.id) !== Number(itemId)
+      Number(conflictingProduct.id) !== Number(productId)
     ) {
       throw new Error(
         'That product already exists in the selected branch. Use Stock In or Edit the existing record instead.',
@@ -344,7 +380,7 @@ export async function updateInventoryItem(itemId, values) {
     const { error } = await supabase
       .from(supabaseTables.products)
       .update(payload)
-      .eq('id', itemId)
+      .eq('id', productId)
 
     if (error) {
       throw createSupabaseServiceError(
@@ -353,7 +389,7 @@ export async function updateInventoryItem(itemId, values) {
       )
     }
 
-    const updatedItem = await fetchSupabaseInventoryItemById(itemId)
+    const updatedItem = await fetchSupabaseInventoryItemByProductId(productId)
     return normalizeInventoryItem(updatedItem)
   }
 
@@ -389,11 +425,14 @@ export async function updateInventoryStock(itemId, quantityDelta) {
     throw new Error('Enter a valid stock quantity to continue.')
   }
 
-  if (isSupabaseConfigured) {
+  if (isSupabaseDataEnabled) {
+    const inventoryContext = await getSupabaseInventoryContext(itemId)
+    const productId = inventoryContext?.productId
+    const currentInventoryItem = inventoryContext?.currentItem
     const supabase = getSupabaseClient()
-    const currentProduct = await fetchSupabaseProductById(itemId)
+    const currentProduct = await fetchSupabaseProductById(productId)
 
-    if (!currentProduct) {
+    if (!currentProduct || productId == null || !currentInventoryItem) {
       throw new Error('The selected inventory item could not be found.')
     }
 
@@ -405,7 +444,7 @@ export async function updateInventoryStock(itemId, quantityDelta) {
     const { error } = await supabase
       .from(supabaseTables.products)
       .update({ stock_quantity: nextStockQuantity })
-      .eq('id', itemId)
+      .eq('id', productId)
 
     if (error) {
       throw createSupabaseServiceError(
@@ -414,7 +453,7 @@ export async function updateInventoryStock(itemId, quantityDelta) {
       )
     }
 
-    const updatedItem = await fetchSupabaseInventoryItemById(itemId)
+    const updatedItem = await fetchSupabaseInventoryItemByProductId(productId)
     return normalizeInventoryItem(updatedItem)
   }
 
@@ -447,18 +486,20 @@ export async function updateInventoryStock(itemId, quantityDelta) {
 }
 
 export async function removeInventoryItem(itemId) {
-  if (isSupabaseConfigured) {
+  if (isSupabaseDataEnabled) {
+    const inventoryContext = await getSupabaseInventoryContext(itemId)
+    const productId = inventoryContext?.productId
     const supabase = getSupabaseClient()
-    const currentProduct = await fetchSupabaseProductById(itemId)
+    const currentProduct = await fetchSupabaseProductById(productId)
 
-    if (!currentProduct) {
+    if (!currentProduct || productId == null) {
       throw new Error('The selected inventory item could not be found.')
     }
 
     const { error: legacyInventoryDeleteError } = await supabase
       .from(supabaseTables.inventoryItems)
       .delete()
-      .eq('product_id', Number(itemId))
+      .eq('product_id', Number(productId))
 
     if (legacyInventoryDeleteError) {
       throw createSupabaseServiceError(
@@ -470,7 +511,7 @@ export async function removeInventoryItem(itemId) {
     const { error } = await supabase
       .from(supabaseTables.products)
       .delete()
-      .eq('id', Number(itemId))
+      .eq('id', Number(productId))
 
     if (error) {
       throw createSupabaseServiceError(
@@ -541,7 +582,7 @@ export function hasInventoryCatalogConflict(
 export function persistInventoryItems(items = []) {
   const normalizedItems = items.map((item) => normalizeInventoryItem(item))
 
-  if (!isSupabaseConfigured) {
+  if (!isSupabaseDataEnabled) {
     saveStoredInventoryItems(normalizedItems)
   }
 
@@ -570,7 +611,7 @@ export async function applySaleToInventory(soldItems = [], options = {}) {
     return inventoryResponse.items || inventoryResponse
   }
 
-  if (isSupabaseConfigured) {
+  if (isSupabaseDataEnabled) {
     if (!supabaseRuntime.inventoryManagedOnSale) {
       const inventoryResponse = await getInventoryItems(options)
       return inventoryResponse.items || inventoryResponse

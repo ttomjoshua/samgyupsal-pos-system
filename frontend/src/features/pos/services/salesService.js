@@ -5,7 +5,7 @@ import {
 import {
   createSupabaseServiceError,
   getSupabaseClient,
-  isSupabaseConfigured,
+  isSupabaseDataEnabled,
   supabaseRuntime,
   supabaseTables,
 } from '../../../shared/api/supabaseClient'
@@ -141,7 +141,7 @@ async function createSupabaseSale(localRecord, payload) {
 export async function createSale(payload, meta = {}) {
   const localRecord = buildLocalSaleRecord(payload, meta)
 
-  if (isSupabaseConfigured) {
+  if (isSupabaseDataEnabled) {
     return createSupabaseSale(localRecord, payload)
   }
 

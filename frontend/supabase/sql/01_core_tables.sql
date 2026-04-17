@@ -854,7 +854,8 @@ begin
 end
 $$;
 
-create or replace view public.product_catalog_view as
+create or replace view public.product_catalog_view
+with (security_invoker = true) as
 select
   p.id as product_id,
   p.branch,
@@ -877,7 +878,8 @@ from public.products p
 join public.categories c
   on c.id = p.category_id;
 
-create or replace view public.inventory_catalog_view as
+create or replace view public.inventory_catalog_view
+with (security_invoker = true) as
 select
   i.id as inventory_item_id,
   i.branch_id,

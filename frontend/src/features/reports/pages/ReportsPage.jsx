@@ -6,6 +6,7 @@ import StatusBadge from '../../../shared/components/common/StatusBadge'
 import SummaryCards from '../components/SummaryCards'
 import TopItemsTable from '../components/TopItemsTable'
 import {
+  getDefaultReportDateRange,
   getReportSnapshot,
 } from '../services/reportService'
 import {
@@ -15,6 +16,8 @@ import {
 import { shortDate } from '../../../shared/utils/formatters'
 import '../styles/reports.css'
 
+const INITIAL_REPORT_RANGE = getDefaultReportDateRange()
+
 function ReportsPage() {
   const [reportData, setReportData] = useState({
     summary: {},
@@ -23,15 +26,12 @@ function ReportsPage() {
     cashierPerformance: [],
   })
   const [isLoading, setIsLoading] = useState(true)
-  const [dateFrom, setDateFrom] = useState('2026-04-01')
-  const [dateTo, setDateTo] = useState('2026-04-14')
+  const [dateFrom, setDateFrom] = useState(INITIAL_REPORT_RANGE.dateFrom)
+  const [dateTo, setDateTo] = useState(INITIAL_REPORT_RANGE.dateTo)
   const [filterError, setFilterError] = useState('')
   const [filterMessage, setFilterMessage] = useState('')
   const [loadError, setLoadError] = useState('')
-  const initialRangeRef = useRef({
-    dateFrom: '2026-04-01',
-    dateTo: '2026-04-14',
-  })
+  const initialRangeRef = useRef(INITIAL_REPORT_RANGE)
 
   const reviewWindowLabel = useMemo(() => {
     const startDate = new Date(`${dateFrom}T00:00:00`)

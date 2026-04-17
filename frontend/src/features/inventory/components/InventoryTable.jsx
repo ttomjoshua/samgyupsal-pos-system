@@ -1,5 +1,6 @@
 import EmptyState from '../../../shared/components/common/EmptyState'
 import StatusBadge from '../../../shared/components/common/StatusBadge'
+import { getInventoryStatus } from '../services/inventoryService'
 import { shortDate } from '../../../shared/utils/formatters'
 
 function InventoryTable({
@@ -34,24 +35,7 @@ function InventoryTable({
         </thead>
         <tbody>
           {items.map((item) => {
-            const lowStock =
-              Number(item.stock_quantity) <= Number(item.reorder_level)
-            const nearExpiry =
-              item.days_to_expiry != null && Number(item.days_to_expiry) <= 30
-
-            let statusText = 'Normal'
-            let statusVariant = 'success'
-
-            if (lowStock && nearExpiry) {
-              statusText = 'Near expiry'
-              statusVariant = 'danger'
-            } else if (lowStock) {
-              statusText = 'Low stock'
-              statusVariant = 'warning'
-            } else if (nearExpiry) {
-              statusText = 'Near expiry'
-              statusVariant = 'danger'
-            }
+            const status = getInventoryStatus(item)
 
             return (
               <tr key={item.id}>
@@ -61,7 +45,7 @@ function InventoryTable({
                 <td>{item.unit}</td>
                 <td>{shortDate(item.expiry_date)}</td>
                 <td>
-                  <StatusBadge text={statusText} variant={statusVariant} />
+                  <StatusBadge text={status.label} variant={status.tone} />
                 </td>
                 <td>
                   <div className="inventory-actions">

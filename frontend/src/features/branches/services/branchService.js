@@ -6,7 +6,7 @@ import { createBranch as createLocalBranch, getMockBranches } from '../../users/
 import {
   createSupabaseServiceError,
   getSupabaseClient,
-  isSupabaseConfigured,
+  isSupabaseDataEnabled,
   supabaseTables,
 } from '../../../shared/api/supabaseClient'
 
@@ -132,7 +132,7 @@ function buildSupabaseBranchPayload(branch) {
 }
 
 export async function getBranches() {
-  if (!isSupabaseConfigured) {
+  if (!isSupabaseDataEnabled) {
     return getLocalBranchFallback()
   }
 
@@ -164,7 +164,7 @@ export async function getBranches() {
 }
 
 export async function createBranch(payload) {
-  if (!isSupabaseConfigured) {
+  if (!isSupabaseDataEnabled) {
     const createdBranch = createLocalBranch(payload)
     syncBranchCache(getMockBranches())
     return normalizeBranchRecord(createdBranch)

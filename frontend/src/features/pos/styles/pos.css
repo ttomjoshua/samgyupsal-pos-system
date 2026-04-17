@@ -290,6 +290,13 @@
   transform: translateY(-2px);
 }
 
+.product-card:disabled,
+.product-card-disabled {
+  cursor: not-allowed;
+  opacity: 0.62;
+  transform: none;
+}
+
 .product-category {
   font-size: 0.78rem;
   font-weight: 700;
@@ -301,6 +308,11 @@
 .product-price {
   color: var(--accent-dark);
   font-weight: 700;
+}
+
+.product-stock {
+  color: var(--text-soft);
+  font-size: 0.9rem;
 }
 
 .empty-products-copy {
@@ -398,6 +410,11 @@
   background: rgba(166, 63, 20, 0.12);
   color: var(--accent-dark);
   font-weight: 700;
+}
+
+.quantity-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
 }
 
 .quantity-value {
@@ -513,6 +530,8 @@
 .receipt-launcher {
   display: flex;
   justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 0.75rem;
   margin-top: 0.85rem;
 }
 

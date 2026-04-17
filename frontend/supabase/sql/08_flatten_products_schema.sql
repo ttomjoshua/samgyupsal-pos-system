@@ -209,7 +209,8 @@ create index if not exists idx_products_branch on public.products (branch);
 create index if not exists idx_products_category on public.products (category);
 create index if not exists idx_products_product_name on public.products (product_name);
 
-create or replace view public.product_catalog_view as
+create or replace view public.product_catalog_view
+with (security_invoker = true) as
 select
   p.id as product_id,
   p.branch,
@@ -232,7 +233,8 @@ from public.products p
 left join public.branches b
   on b.name = p.branch;
 
-create or replace view public.inventory_catalog_view as
+create or replace view public.inventory_catalog_view
+with (security_invoker = true) as
 select
   p.id as inventory_item_id,
   coalesce(
