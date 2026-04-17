@@ -4,6 +4,7 @@ import Loader from '../../../shared/components/common/Loader'
 import NoticeBanner from '../../../shared/components/common/NoticeBanner'
 import StatusBadge from '../../../shared/components/common/StatusBadge'
 import Modal from '../../../shared/components/ui/Modal'
+import SelectMenu from '../../../shared/components/ui/SelectMenu'
 import { createBranch, getBranches } from '../../branches/services/branchService'
 import {
   createManagedEmployeeAccount,
@@ -566,32 +567,34 @@ function UsersPage() {
 
           <label className="users-field">
             <span>Assigned Branch</span>
-            <select
+            <SelectMenu
               name="branchId"
               value={formData.branchId}
               onChange={handleFieldChange}
               disabled={isDirectorySaving}
-            >
-              <option value="">Select branch</option>
-              {branchOptions.map((branch) => (
-                <option key={branch.id} value={branch.id}>
-                  {branch.name} ({branch.code})
-                </option>
-              ))}
-            </select>
+              placeholder="Select branch"
+              options={[
+                { value: '', label: 'Select branch' },
+                ...branchOptions.map((branch) => ({
+                  value: branch.id,
+                  label: `${branch.name} (${branch.code})`
+                }))
+              ]}
+            />
           </label>
 
           <label className="users-field users-field-wide">
             <span>Status</span>
-            <select
+            <SelectMenu
               name="status"
               value={formData.status}
               onChange={handleFieldChange}
               disabled={isDirectorySaving}
-            >
-              <option value="active">Active</option>
-              <option value="inactive">Inactive</option>
-            </select>
+              options={[
+                { value: 'active', label: 'Active' },
+                { value: 'inactive', label: 'Inactive' }
+              ]}
+            />
           </label>
 
           {formError ? (

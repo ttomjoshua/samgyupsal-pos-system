@@ -4,6 +4,7 @@ import EmptyState from '../../../shared/components/common/EmptyState'
 import CartTable from '../components/CartTable'
 import PaymentPanel from '../components/PaymentPanel'
 import ProductGrid from '../components/ProductGrid'
+import SelectMenu from '../../../shared/components/ui/SelectMenu'
 import NoticeBanner from '../../../shared/components/common/NoticeBanner'
 import useAuth from '../../auth/hooks/useAuth'
 import { getBranches } from '../../branches/services/branchService'
@@ -312,18 +313,17 @@ function PosPage() {
             {user?.branchId ? null : branchOptions.length > 0 ? (
               <label className="pos-inline-field">
                 <span>Active branch</span>
-                <select
+                <SelectMenu
                   className="pos-branch-select"
                   value={activeBranchId}
                   onChange={(event) => setActiveBranchId(Number(event.target.value))}
-                  aria-label="Select active POS branch"
-                >
-                  {branchOptions.map((branch) => (
-                    <option key={branch.id} value={branch.id}>
-                      {branch.name}
-                    </option>
-                  ))}
-                </select>
+                  id="active-pos-branch-select"
+                  placeholder="Select active POS branch"
+                  options={branchOptions.map((branch) => ({
+                    value: branch.id,
+                    label: branch.name
+                  }))}
+                />
               </label>
             ) : null}
           </article>

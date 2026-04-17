@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react'
 import NoticeBanner from '../../../shared/components/common/NoticeBanner'
 import Modal from '../../../shared/components/ui/Modal'
+import SelectMenu from '../../../shared/components/ui/SelectMenu'
 import ReceiptPreview from './ReceiptPreview'
 import useAuth from '../../auth/hooks/useAuth'
 import { createSale, paymentMethods } from '../services/salesService'
@@ -247,20 +248,15 @@ function PaymentPanel({
 
         <label className="summary-field">
           <span>Payment Method</span>
-          <select
+          <SelectMenu
             value={paymentMethod}
             onChange={(event) => {
               clearStatusMessage()
               setPaymentMethod(event.target.value)
             }}
             aria-invalid={Boolean(message)}
-          >
-            {paymentMethods.map((method) => (
-              <option key={method.value} value={method.value}>
-                {method.label}
-              </option>
-            ))}
-          </select>
+            options={paymentMethods}
+          />
         </label>
       </div>
 

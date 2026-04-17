@@ -5,6 +5,7 @@ import InventoryTable from '../components/InventoryTable'
 import NoticeBanner from '../../../shared/components/common/NoticeBanner'
 import PaginationControls from '../../../shared/components/common/PaginationControls'
 import Modal from '../../../shared/components/ui/Modal'
+import SelectMenu from '../../../shared/components/ui/SelectMenu'
 import { getBranches } from '../../branches/services/branchService'
 import {
   createInventoryItem,
@@ -504,17 +505,15 @@ function InventoryPage() {
           <div className="inventory-filter-group">
             <label className="inventory-category-control">
               <span>Branch</span>
-              <select
-                name="activeBranch"
-                value={activeBranchId}
-                onChange={(event) => setActiveBranchId(Number(event.target.value))}
-              >
-                {branchOptions.map((branch) => (
-                  <option key={branch.id} value={branch.id}>
-                    {branch.name}
-                  </option>
-                ))}
-              </select>
+              <SelectMenu
+              name="activeBranch"
+              value={activeBranchId}
+              onChange={(event) => setActiveBranchId(Number(event.target.value))}
+              options={branchOptions.map((branch) => ({
+                value: branch.id,
+                label: branch.name
+              }))}
+            />
             </label>
 
             <button
@@ -552,18 +551,18 @@ function InventoryPage() {
             </button>
             <label className="inventory-category-control">
               <span>Category</span>
-              <select
-                name="activeCategory"
-                value={activeCategory}
-                onChange={(event) => setActiveCategory(event.target.value)}
-              >
-                <option value="all">All Categories</option>
-                {categorySuggestions.map((category) => (
-                  <option key={category} value={category}>
-                    {category}
-                  </option>
-                ))}
-              </select>
+              <SelectMenu
+              name="activeCategory"
+              value={activeCategory}
+              onChange={(event) => setActiveCategory(event.target.value)}
+              options={[
+                { value: 'all', label: 'All Categories' },
+                ...categorySuggestions.map((category) => ({
+                  value: category,
+                  label: category
+                }))
+              ]}
+            />
             </label>
           </div>
         </div>
@@ -625,19 +624,20 @@ function InventoryPage() {
 
           <label className="inventory-field">
             <span>Category</span>
-            <select
+            <SelectMenu
               name="category_name"
               value={formData.category_name}
               onChange={handleFieldChange}
               aria-invalid={Boolean(formError)}
-            >
-              <option value="">Select a category</option>
-              {categorySuggestions.map((category) => (
-                <option key={category} value={category}>
-                  {category}
-                </option>
-              ))}
-            </select>
+              placeholder="Select a category"
+              options={[
+                { value: '', label: 'Select a category' },
+                ...categorySuggestions.map((category) => ({
+                  value: category,
+                  label: category
+                }))
+              ]}
+            />
           </label>
 
           <label className="inventory-field">
