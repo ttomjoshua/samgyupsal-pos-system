@@ -50,10 +50,6 @@
   justify-content: space-between;
   align-items: end;
   gap: 1rem;
-  padding: 1rem 1.05rem;
-  border: 1px solid rgba(89, 67, 48, 0.08);
-  border-radius: 20px;
-  background: rgba(248, 244, 238, 0.56);
 }
 
 .products-toolbar-copy {
@@ -126,7 +122,7 @@
 }
 
 .products-table-shell {
-  margin-top: 1rem;
+  /* margin removed */
 }
 
 .products-table {
@@ -221,7 +217,7 @@
 }
 
 .products-visibility-copy {
-  margin-top: 1.25rem;
+  /* margin removed */
 }
 
 .products-product-cell {
