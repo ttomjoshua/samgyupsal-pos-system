@@ -483,33 +483,18 @@ function ProductsPage() {
             </div>
           </div>
 
-          <div className="products-toolbar">
-            <div className="products-toolbar-copy">
-              <strong>Manage Categories</strong>
-              <span>
-                Add, rename, or remove categories to keep the product catalog organized.
-              </span>
-            </div>
-          </div>
-
-          <form className="category-manager-form" onSubmit={handleAddCategory}>
-            <div className="products-input-stack">
-              <input
-                type="text"
-                placeholder="Add category name"
-                value={newCategoryName}
-                onChange={(event) => setNewCategoryName(event.target.value)}
-                aria-label="Add category name"
-              />
-              <span className="products-field-help">
-                Use short, clear names that match how staff search for products.
-              </span>
-            </div>
-            <div className="products-category-form-actions">
-              <button type="submit" className="primary-button">
-                Add Category
-              </button>
-            </div>
+          <form className="category-inline-form" onSubmit={handleAddCategory} style={{ marginBottom: '1rem', marginTop: '1rem' }}>
+            <input
+              type="text"
+              className="products-search-input"
+              placeholder="Add new category"
+              value={newCategoryName}
+              onChange={(event) => setNewCategoryName(event.target.value)}
+              aria-label="Add new category name"
+            />
+            <button type="submit" className="primary-button" style={{ whiteSpace: 'nowrap' }}>
+              Add Category
+            </button>
           </form>
 
           <NoticeBanner
@@ -518,26 +503,15 @@ function ProductsPage() {
             message={categoryMessage}
           />
 
-          <div className="products-toolbar">
-            <div className="products-toolbar-copy">
-              <strong>Search Categories</strong>
-              <span>
-                Find specific categories to edit or remove.
-              </span>
-            </div>
-            <div className="products-search-shell products-search-shell--compact">
-              <label className="products-search-label" htmlFor="category-search">
-                Find category
-              </label>
-              <input
-                id="category-search"
-                type="search"
-                className="products-search-input"
-                placeholder="Search category name"
-                value={categorySearch}
-                onChange={(event) => setCategorySearch(event.target.value)}
-              />
-            </div>
+          <div className="products-search-shell" style={{ marginBottom: '1rem' }}>
+            <input
+              id="category-search"
+              type="search"
+              className="products-search-input"
+              placeholder="Search existing categories..."
+              value={categorySearch}
+              onChange={(event) => setCategorySearch(event.target.value)}
+            />
           </div>
 
           <div className="category-section">
@@ -563,61 +537,48 @@ function ProductsPage() {
               />
             ) : (
               <>
-                <div className="products-table-shell">
-                  <table className="products-table">
-                    <thead>
-                      <tr>
-                        <th>Category</th>
-                        <th>Catalog Status</th>
-                        <th>Actions</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {paginatedCustomCategories.map((category) => (
-                        <tr key={category}>
-                          <td>{category}</td>
-                          <td className="products-table-muted">
-                            {isProductCategory(category)
-                              ? 'Used by products'
-                              : 'Custom filter only'}
-                          </td>
-                          <td>
-                            <div className="products-table-actions">
-                              <button
-                                type="button"
-                                className="products-table-edit-action"
-                                onClick={() =>
-                                  handleOpenEditCategory(category, {
-                                    name: category,
-                                    isCustom: true,
-                                    isProduct: isProductCategory(category),
-                                  })
-                                }
-                                aria-label={`Edit ${category} category`}
-                              >
-                                Edit
-                              </button>
-                              <button
-                                type="button"
-                                className="products-table-action"
-                                onClick={() =>
-                                  handleOpenRemoveCategory(category, {
-                                    name: category,
-                                    isCustom: true,
-                                    isProduct: isProductCategory(category),
-                                  })
-                                }
-                                aria-label={`Remove ${category} category`}
-                              >
-                                Remove
-                              </button>
-                            </div>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
+                <ul className="category-list">
+                  {paginatedCustomCategories.map((category) => (
+                    <li key={category} className="category-list-item">
+                      <div className="category-item-info">
+                        <span className="category-item-name">{category}</span>
+                        <span className="products-category-badge products-category-badge-local">
+                          {isProductCategory(category) ? 'Used by products' : 'Custom filter'}
+                        </span>
+                      </div>
+                      <div className="products-table-actions">
+                        <button
+                          type="button"
+                          className="products-table-edit-action"
+                          onClick={() =>
+                            handleOpenEditCategory(category, {
+                              name: category,
+                              isCustom: true,
+                              isProduct: isProductCategory(category),
+                            })
+                          }
+                          aria-label={`Edit ${category} category`}
+                        >
+                          Edit
+                        </button>
+                        <button
+                          type="button"
+                          className="products-table-action"
+                          onClick={() =>
+                            handleOpenRemoveCategory(category, {
+                              name: category,
+                              isCustom: true,
+                              isProduct: isProductCategory(category),
+                            })
+                          }
+                          aria-label={`Remove ${category} category`}
+                        >
+                          Remove
+                        </button>
+                      </div>
+                    </li>
+                  ))}
+                </ul>
 
                 <PaginationControls
                   currentPage={categoryPage}
@@ -654,66 +615,48 @@ function ProductsPage() {
               />
             ) : (
               <>
-                <div className="products-table-shell">
-                  <table className="products-table">
-                    <thead>
-                      <tr>
-                        <th>Category</th>
-                        <th>Usage</th>
-                        <th>Actions</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {paginatedVisibleCategories.map((category) => (
-                        <tr key={category.name}>
-                          <td>
-                            <div className="products-category-cell">
-                              <strong className="products-category-name">
-                                {category.name}
-                              </strong>
-                              <div className="products-category-badges">
-                                {category.isProduct ? (
-                                  <span className="products-category-badge products-category-badge-product">
-                                    Product
-                                  </span>
-                                ) : null}
-                                {category.isCustom ? (
-                                  <span className="products-category-badge products-category-badge-local">
-                                    Local
-                                  </span>
-                                ) : null}
-                              </div>
-                            </div>
-                          </td>
-                          <td className="products-table-muted">
-                            {getProductCategoryUsageCount(category.name)} product
-                            {getProductCategoryUsageCount(category.name) === 1 ? '' : 's'}
-                          </td>
-                          <td>
-                            <div className="products-table-actions">
-                              <button
-                                type="button"
-                                className="products-table-edit-action"
-                                onClick={() => handleOpenEditCategory(category.name, category)}
-                                aria-label={`Edit ${category.name} category`}
-                              >
-                                Edit
-                              </button>
-                              <button
-                                type="button"
-                                className="products-table-action"
-                                onClick={() => handleOpenRemoveCategory(category.name, category)}
-                                aria-label={`Remove ${category.name} category`}
-                              >
-                                Remove
-                              </button>
-                            </div>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
+                <ul className="category-list">
+                  {paginatedVisibleCategories.map((category) => (
+                    <li key={category.name} className="category-list-item">
+                      <div className="category-item-info">
+                        <span className="category-item-name">{category.name}</span>
+                        <div className="products-category-badges">
+                          {category.isProduct ? (
+                            <span className="products-category-badge products-category-badge-product">
+                              Product
+                            </span>
+                          ) : null}
+                          {category.isCustom ? (
+                            <span className="products-category-badge products-category-badge-local">
+                              Local
+                            </span>
+                          ) : null}
+                        </div>
+                        <span className="products-table-muted" style={{ marginLeft: '0.5rem', fontSize: '0.85rem' }}>
+                          ({getProductCategoryUsageCount(category.name)} item{getProductCategoryUsageCount(category.name) === 1 ? '' : 's'})
+                        </span>
+                      </div>
+                      <div className="products-table-actions">
+                        <button
+                          type="button"
+                          className="products-table-edit-action"
+                          onClick={() => handleOpenEditCategory(category.name, category)}
+                          aria-label={`Edit ${category.name} category`}
+                        >
+                          Edit
+                        </button>
+                        <button
+                          type="button"
+                          className="products-table-action"
+                          onClick={() => handleOpenRemoveCategory(category.name, category)}
+                          aria-label={`Remove ${category.name} category`}
+                        >
+                          Remove
+                        </button>
+                      </div>
+                    </li>
+                  ))}
+                </ul>
 
                 <PaginationControls
                   currentPage={visibleCategoryPage}
