@@ -199,7 +199,24 @@ Important:
 - this is required for the frontend behavior that blocks a second device from logging into the same account at the same time
 - the first device stays active; the newer login is rejected until the older session signs out or the lock goes stale
 
-## 10. Deploy the secure admin-create-user Edge Function
+## 10. Lock down legacy tables after auth hardening
+
+Run when `products_legacy` or `sale_items_legacy` still exist from the older schema transition:
+
+- [`frontend/supabase/sql/11_legacy_table_policy_lockdown.sql`](../../frontend/supabase/sql/11_legacy_table_policy_lockdown.sql)
+
+This script:
+
+- revokes remaining `anon` and `authenticated` table grants from `products_legacy` and `sale_items_legacy`
+- enables RLS on both legacy tables as a defense-in-depth fallback
+- removes the leftover demo-era legacy policies that would otherwise keep showing up in security review
+
+Important:
+
+- this step is recommended if the project went through the legacy-table rename path and those tables still exist
+- it is safe to skip only when those legacy tables are already gone
+
+## 11. Deploy the secure admin-create-user Edge Function
 
 The repo now includes:
 
