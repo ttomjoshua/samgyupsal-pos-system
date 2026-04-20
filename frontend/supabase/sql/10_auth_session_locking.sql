@@ -11,6 +11,8 @@ create table if not exists private.active_session_locks (
   heartbeat_at timestamptz not null default now()
 );
 
+alter table private.active_session_locks enable row level security;
+
 revoke all on private.active_session_locks from public;
 revoke all on private.active_session_locks from authenticated;
 
@@ -29,9 +31,9 @@ as $$
 $$;
 
 revoke all on function private.current_session_id() from public;
-grant execute on function private.current_session_id() to authenticated;
+revoke all on function private.current_session_id() from authenticated;
 
-create or replace function public.claim_session_lock()
+create or replace function private.claim_session_lock()
 returns boolean
 language plpgsql
 security definer
@@ -93,16 +95,16 @@ begin
 end;
 $$;
 
-create or replace function public.validate_session_lock()
+create or replace function private.validate_session_lock()
 returns boolean
 language sql
 security definer
 set search_path = public, private
 as $$
-  select public.claim_session_lock();
+  select private.claim_session_lock();
 $$;
 
-create or replace function public.release_session_lock()
+create or replace function private.release_session_lock()
 returns boolean
 language plpgsql
 security definer
@@ -122,6 +124,44 @@ begin
 
   return true;
 end;
+$$;
+
+revoke all on function private.claim_session_lock() from public;
+revoke all on function private.claim_session_lock() from authenticated;
+revoke all on function private.validate_session_lock() from public;
+revoke all on function private.validate_session_lock() from authenticated;
+revoke all on function private.release_session_lock() from public;
+revoke all on function private.release_session_lock() from authenticated;
+
+grant execute on function private.claim_session_lock() to authenticated;
+grant execute on function private.validate_session_lock() to authenticated;
+grant execute on function private.release_session_lock() to authenticated;
+
+create or replace function public.claim_session_lock()
+returns boolean
+language sql
+security invoker
+set search_path = public, private
+as $$
+  select private.claim_session_lock();
+$$;
+
+create or replace function public.validate_session_lock()
+returns boolean
+language sql
+security invoker
+set search_path = public, private
+as $$
+  select private.validate_session_lock();
+$$;
+
+create or replace function public.release_session_lock()
+returns boolean
+language sql
+security invoker
+set search_path = public, private
+as $$
+  select private.release_session_lock();
 $$;
 
 revoke all on function public.claim_session_lock() from public;
