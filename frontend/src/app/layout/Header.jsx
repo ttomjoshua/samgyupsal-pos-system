@@ -4,37 +4,30 @@ import useAuth from '../../features/auth/hooks/useAuth'
 const routeMeta = {
   '/app/dashboard': {
     title: 'Dashboard',
-    description: 'Operational summary and quick access to the main business screens.',
   },
   '/app/pos': {
     title: 'POS',
-    description: 'Live register workspace for branch checkout and order processing.',
   },
   '/app/inventory': {
     title: 'Inventory',
-    description: 'Stock control, replenishment, and expiry monitoring.',
   },
   '/app/reports': {
     title: 'Reports',
-    description: 'Sales performance, cashier activity, and restock visibility.',
   },
   '/app/products': {
     title: 'Products',
-    description: 'Catalog structure, categories, and branch-ready product visibility.',
   },
   '/app/users': {
     title: 'Users',
-    description: 'Branch directory, employee access, and account status control.',
   },
 }
 
-function Header() {
+function Header({ isSidebarOpen, onOpenSidebar, menuButtonRef }) {
   const navigate = useNavigate()
   const { pathname } = useLocation()
   const { logout, user } = useAuth()
   const meta = routeMeta[pathname] || {
     title: 'Samgyupsal POS',
-    description: 'Business operations workspace.',
   }
 
   const currentUser = {
@@ -50,15 +43,32 @@ function Header() {
 
   return (
     <header className="app-header">
+      <div className="app-header-primary">
+        <button
+          ref={menuButtonRef}
+          type="button"
+          className="sidebar-toggle"
+          onClick={onOpenSidebar}
+          aria-label="Open navigation menu"
+          aria-expanded={isSidebarOpen}
+          aria-controls="app-sidebar"
+        >
+          <span />
+          <span />
+          <span />
+        </button>
+
+        <div className="app-header-copy">
+          <h2>{meta.title}</h2>
+        </div>
+      </div>
+
       <div className="app-header-copy">
-        <p className="eyebrow">Workspace</p>
-        <h2>{meta.title}</h2>
-        <p className="supporting-text">{meta.description}</p>
+        <h2 className="app-header-title-desktop">{meta.title}</h2>
       </div>
 
       <div className="header-actions">
         <div className="user-label">
-          <span className="user-label-title">Signed in</span>
           <strong>{currentUser.name}</strong>
           <div className="user-label-meta">
             <span>{currentUser.role}</span>

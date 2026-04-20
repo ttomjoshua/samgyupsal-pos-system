@@ -7,6 +7,10 @@ function ProductGrid({ products, cart = [], setCart, onProductAdded }) {
   )
 
   const addToCart = (product) => {
+    if (product.isSellable === false) {
+      return
+    }
+
     const availableStock = Number(product.stockQuantity)
     const quantityAlreadyInCart =
       cartQuantityByProductId.get(String(product.id)) || 0
@@ -58,25 +62,27 @@ function ProductGrid({ products, cart = [], setCart, onProductAdded }) {
           ? Math.max(0, availableStock - quantityInCart)
           : null
         const isOutOfStock = remainingStock === 0
+        const isUnavailable = product.isSellable === false || isOutOfStock
+        const stockLabel = product.isSellable === false
+          ? product.availabilityReason || 'Unavailable'
+          : remainingStock == null
+            ? 'Stock pending'
+            : remainingStock === 0
+              ? 'Out of stock'
+              : `${remainingStock} left`
 
         return (
           <button
             key={product.id}
             type="button"
-            className={isOutOfStock ? 'product-card product-card-disabled' : 'product-card'}
+            className={isUnavailable ? 'product-card product-card-disabled' : 'product-card'}
             onClick={() => addToCart(product)}
-            disabled={isOutOfStock}
+            disabled={isUnavailable}
           >
             <span className="product-category">{product.category}</span>
             <strong>{product.name}</strong>
             <span className="product-price">{peso(product.price)}</span>
-            <span className="product-stock">
-              {remainingStock == null
-                ? 'Stock pending'
-                : remainingStock === 0
-                  ? 'Out of stock'
-                  : `${remainingStock} left`}
-            </span>
+            <span className="product-stock">{stockLabel}</span>
           </button>
         )
       })}

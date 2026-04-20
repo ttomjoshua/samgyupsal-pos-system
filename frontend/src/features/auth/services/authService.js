@@ -9,6 +9,12 @@ import {
   getSupabaseClient,
   isSupabaseAuthEnabled,
 } from '../../../shared/api/supabaseClient'
+import {
+  claimCurrentSessionLock,
+  clearCurrentSupabaseSession,
+  releaseCurrentSessionLock,
+  SESSION_CONFLICT_CODE,
+} from './sessionLockService'
 
 function createLoginError(message, cause = null) {
   const error = new Error(message)
@@ -32,6 +38,10 @@ function normalizeEmail(value) {
 }
 
 function normalizeSupabaseAuthError(error, fallbackMessage) {
+  if (error?.code === SESSION_CONFLICT_CODE) {
+    return error
+  }
+
   const rawMessage = String(error?.message || '').trim().toLowerCase()
 
   if (rawMessage.includes('invalid login credentials')) {
@@ -94,6 +104,7 @@ export async function loginUser(payload = {}) {
       }
 
       const authenticatedUser = await getAuthenticatedUserFromSession(data.session)
+      await claimCurrentSessionLock()
 
       return {
         session: data.session,
@@ -101,7 +112,7 @@ export async function loginUser(payload = {}) {
       }
     } catch (error) {
       try {
-        await supabase.auth.signOut()
+        await clearCurrentSupabaseSession()
       } catch (signOutError) {
         console.error('Unable to clean up Supabase session after login failure:', signOutError)
       }
@@ -175,12 +186,13 @@ export async function logoutUser() {
   }
 
   try {
-    const supabase = getSupabaseClient()
-    const { error } = await supabase.auth.signOut()
-
-    if (error) {
-      throw error
+    try {
+      await releaseCurrentSessionLock()
+    } catch (error) {
+      console.error('Unable to release the active session lock:', error)
     }
+
+    await clearCurrentSupabaseSession()
 
     return { ok: true }
   } catch (error) {

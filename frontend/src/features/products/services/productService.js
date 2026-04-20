@@ -7,6 +7,7 @@ import {
 } from '../../../shared/api/supabaseClient'
 import { products as mockProducts } from '../../../shared/mocks/mockData'
 import { getInventoryItems } from '../../inventory/services/inventoryService'
+import { deriveProductSellability } from '../../../shared/utils/productAvailability'
 
 function extractProductArray(payload) {
   if (Array.isArray(payload)) {
@@ -41,7 +42,7 @@ function normalizeCatalogProduct(product, index) {
     product.branch_id ??
     (branchName === 'Dollar' ? 2 : branchName === 'Sta. Lucia' ? 1 : null)
 
-  return {
+  const normalizedProduct = {
     id: productId ? String(productId) : null,
     branchId,
     branchName,
@@ -62,6 +63,13 @@ function normalizeCatalogProduct(product, index) {
         0,
     ),
     unit: product.unit_label || product.net_weight || '',
+    is_active: product.is_active ?? product.isActive ?? true,
+  }
+  const sellability = deriveProductSellability(normalizedProduct)
+
+  return {
+    ...normalizedProduct,
+    ...sellability,
   }
 }
 
@@ -77,7 +85,7 @@ function normalizeInventoryProduct(product, index) {
     product.branch_id ??
     (branchName === 'Dollar' ? 2 : branchName === 'Sta. Lucia' ? 1 : null)
 
-  return {
+  const normalizedProduct = {
     id: productId ? String(productId) : null,
     inventoryItemId: product.inventory_item_id ?? product.inventoryItemId ?? null,
     branchId,
@@ -99,6 +107,13 @@ function normalizeInventoryProduct(product, index) {
     ),
     unit: product.unit_label || product.net_weight || '',
     stockQuantity: Number(product.stock_quantity ?? 0),
+    is_active: product.is_active ?? product.isActive ?? true,
+  }
+  const sellability = deriveProductSellability(normalizedProduct)
+
+  return {
+    ...normalizedProduct,
+    ...sellability,
   }
 }
 
@@ -138,7 +153,6 @@ export async function getProducts(options = {}) {
     let query = supabase
       .from(supabaseViews.inventoryCatalog)
       .select('*')
-      .eq('is_active', true)
       .order('product_name', { ascending: true })
 
     if (options.branchId != null && String(options.branchId).trim() !== '') {
@@ -171,7 +185,6 @@ export async function getProductCatalog() {
     const { data, error } = await supabase
       .from(supabaseViews.productCatalog)
       .select('*')
-      .eq('is_active', true)
       .order('product_name', { ascending: true })
 
     if (error) {

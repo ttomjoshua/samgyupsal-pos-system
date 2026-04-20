@@ -1,5 +1,5 @@
 /* eslint-disable react-refresh/only-export-components */
-import { createContext, useEffect, useMemo, useState } from 'react'
+import { createContext, useEffect, useState } from 'react'
 import {
   getAuthenticatedUserFromSession,
   getCurrentSession,
@@ -15,6 +15,11 @@ import {
   getSavedUser,
   saveUser,
 } from '../../shared/utils/storage'
+import {
+  clearCurrentSupabaseSession,
+  SESSION_CONFLICT_CODE,
+  validateCurrentSessionLock,
+} from '../../features/auth/services/sessionLockService'
 
 export const AuthContext = createContext(null)
 
@@ -69,6 +74,12 @@ export function AuthProvider({ children }) {
   const [isAuthReady, setIsAuthReady] = useState(!isSupabaseAuthEnabled)
   const [authError, setAuthError] = useState('')
 
+  const clearAuthenticatedState = (message = '') => {
+    setUser(null)
+    clearSavedUser()
+    setAuthError(message)
+  }
+
   useEffect(() => {
     if (!isSupabaseAuthEnabled) {
       return undefined
@@ -89,6 +100,7 @@ export function AuthProvider({ children }) {
           return
         }
 
+        await validateCurrentSessionLock()
         const authenticatedUser = await getAuthenticatedUserFromSession(session)
 
         if (!isMounted) {
@@ -105,9 +117,15 @@ export function AuthProvider({ children }) {
           return
         }
 
-        setUser(null)
-        clearSavedUser()
-        setAuthError(
+        if (error?.code === SESSION_CONFLICT_CODE) {
+          try {
+            await clearCurrentSupabaseSession()
+          } catch (signOutError) {
+            console.error('Unable to clear the blocked Supabase session:', signOutError)
+          }
+        }
+
+        clearAuthenticatedState(
           error.response?.data?.message ||
             error.message ||
             'Unable to restore the current session.',
@@ -131,9 +149,7 @@ export function AuthProvider({ children }) {
           return
         }
 
-        setUser(null)
-        clearSavedUser()
-        setAuthError(
+        clearAuthenticatedState(
           error.response?.data?.message ||
             error.message ||
             'Unable to initialize Supabase authentication.',
@@ -160,6 +176,57 @@ export function AuthProvider({ children }) {
       unsubscribe()
     }
   }, [])
+
+  useEffect(() => {
+    if (!isSupabaseAuthEnabled || !user?.id) {
+      return undefined
+    }
+
+    let isMounted = true
+
+    const validateSession = async () => {
+      try {
+        const session = await getCurrentSession()
+
+        if (!isMounted || !session?.user) {
+          return
+        }
+
+        await validateCurrentSessionLock()
+      } catch (error) {
+        if (!isMounted) {
+          return
+        }
+
+        if (error?.code !== SESSION_CONFLICT_CODE) {
+          console.error('Unable to refresh the session lock heartbeat:', error)
+          return
+        }
+
+        try {
+          await clearCurrentSupabaseSession()
+        } catch (signOutError) {
+          console.error('Unable to clear the replaced Supabase session:', signOutError)
+        }
+
+        clearAuthenticatedState(
+          error.response?.data?.message ||
+            error.message ||
+            'This account is already signed in on another device.',
+        )
+        setIsAuthReady(true)
+      }
+    }
+
+    const heartbeatInterval = window.setInterval(() => {
+      void validateSession()
+    }, 60000)
+
+    return () => {
+      isMounted = false
+      window.clearInterval(heartbeatInterval)
+    }
+  }, [user?.id])
 
   const login = async (credentials) => {
     setIsAuthenticating(true)
@@ -198,29 +265,25 @@ export function AuthProvider({ children }) {
 
     try {
       await logoutUser()
-      setUser(null)
-      clearSavedUser()
+      clearAuthenticatedState('')
     } finally {
       setIsAuthenticating(false)
       setIsAuthReady(true)
     }
   }
 
-  const value = useMemo(
-    () => ({
-      user,
-      session: user ? { user } : null,
-      isAuthenticated: Boolean(user),
-      isAdmin: isAdminUser(user),
-      isEmployee: isEmployeeUser(user),
-      isAuthenticating,
-      isAuthReady,
-      authError,
-      login,
-      logout,
-    }),
-    [authError, isAuthenticating, isAuthReady, user],
-  )
+  const value = {
+    user,
+    session: user ? { user } : null,
+    isAuthenticated: Boolean(user),
+    isAdmin: isAdminUser(user),
+    isEmployee: isEmployeeUser(user),
+    isAuthenticating,
+    isAuthReady,
+    authError,
+    login,
+    logout,
+  }
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
 }

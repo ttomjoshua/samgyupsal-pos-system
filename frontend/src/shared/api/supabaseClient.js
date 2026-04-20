@@ -34,6 +34,15 @@ export const supabaseEdgeFunctions = {
     runtimeEnv.VITE_SUPABASE_ADMIN_CREATE_USER_FUNCTION || 'admin-create-user',
 }
 
+export const supabaseRpc = {
+  claimSessionLock:
+    runtimeEnv.VITE_SUPABASE_CLAIM_SESSION_LOCK_RPC || 'claim_session_lock',
+  validateSessionLock:
+    runtimeEnv.VITE_SUPABASE_VALIDATE_SESSION_LOCK_RPC || 'validate_session_lock',
+  releaseSessionLock:
+    runtimeEnv.VITE_SUPABASE_RELEASE_SESSION_LOCK_RPC || 'release_session_lock',
+}
+
 export const supabaseRuntime = {
   inventoryManagedOnSale:
     String(runtimeEnv.VITE_SUPABASE_SYNC_INVENTORY_ON_SALE || 'false')

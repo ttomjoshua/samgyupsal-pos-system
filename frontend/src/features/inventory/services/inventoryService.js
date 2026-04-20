@@ -418,10 +418,11 @@ export async function updateInventoryItem(itemId, values) {
   return updatedItem
 }
 
-export async function updateInventoryStock(itemId, quantityDelta) {
-  const numericDelta = Number(quantityDelta || 0)
+export async function updateInventoryStock(itemId, quantityValue, options = {}) {
+  const numericQuantity = Number(quantityValue || 0)
+  const mode = options.mode === 'adjust-stock' ? 'adjust-stock' : 'stock-in'
 
-  if (!Number.isFinite(numericDelta) || numericDelta === 0) {
+  if (!Number.isFinite(numericQuantity)) {
     throw new Error('Enter a valid stock quantity to continue.')
   }
 
@@ -436,10 +437,10 @@ export async function updateInventoryStock(itemId, quantityDelta) {
       throw new Error('The selected inventory item could not be found.')
     }
 
-    const nextStockQuantity = Math.max(
-      0,
-      Number(currentProduct.stock_quantity || 0) + numericDelta,
-    )
+    const nextStockQuantity =
+      mode === 'adjust-stock'
+        ? Math.max(0, numericQuantity)
+        : Math.max(0, Number(currentProduct.stock_quantity || 0) + numericQuantity)
 
     const { error } = await supabase
       .from(supabaseTables.products)
@@ -470,10 +471,10 @@ export async function updateInventoryStock(itemId, quantityDelta) {
 
   const updatedItem = normalizeInventoryItem({
     ...selectedItem,
-    stock_quantity: Math.max(
-      0,
-      Number(selectedItem.stock_quantity) + numericDelta,
-    ),
+    stock_quantity:
+      mode === 'adjust-stock'
+        ? Math.max(0, numericQuantity)
+        : Math.max(0, Number(selectedItem.stock_quantity) + numericQuantity),
   })
 
   persistInventoryItems(

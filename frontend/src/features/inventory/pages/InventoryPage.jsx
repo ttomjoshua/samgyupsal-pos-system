@@ -244,12 +244,12 @@ function InventoryPage() {
         inventoryItems,
         productDialogMode === 'edit' ? selectedItem?.id : null,
       )
-    ) {
-      setFormError(
-        'A product with the same category, name, and unit already exists in this branch. Use Stock In or Edit the existing record instead.',
-      )
-      return
-    }
+      ) {
+        setFormError(
+        'A product with the same category, name, and pack size already exists in this branch. Use Stock In or Edit the existing record instead.',
+        )
+        return
+      }
 
     try {
       if (productDialogMode === 'edit' && selectedItem) {
@@ -342,7 +342,9 @@ function InventoryPage() {
     const parsedAmount = validation.sanitizedAmount
 
     try {
-      const updatedItem = await updateInventoryStock(selectedItem.id, parsedAmount)
+      const updatedItem = await updateInventoryStock(selectedItem.id, parsedAmount, {
+        mode: quantityDialog,
+      })
 
       setInventoryItems((previousItems) =>
         previousItems.map((item) =>
@@ -358,7 +360,7 @@ function InventoryPage() {
         )
       } else {
         setFeedbackMessage(
-          `${selectedItem.product_name} stock was adjusted to ${updatedItem.stock_quantity}.`,
+          `${selectedItem.product_name} stock is now ${updatedItem.stock_quantity}.`,
         )
       }
 
@@ -422,7 +424,7 @@ function InventoryPage() {
           <p className="eyebrow">Inventory</p>
           <h1>Inventory</h1>
           <p className="supporting-text">
-            Control stock levels, expiry risk, and branch inventory actions from one workspace.
+            Manage stock, expiry dates, and branch inventory.
           </p>
         </div>
 
@@ -488,11 +490,11 @@ function InventoryPage() {
       ) : null}
 
       <div className="panel inventory-toolbar-panel">
-        <div className="inventory-toolbar-heading">
-          <div>
-            <p className="card-label">Inventory Controls</p>
-            <h2>Filter Current Branch View</h2>
-          </div>
+          <div className="inventory-toolbar-heading">
+            <div>
+              <p className="card-label">Inventory Controls</p>
+              <h2>Current Stock</h2>
+            </div>
 
           <p className="inventory-result-copy">
             {activeBranch ? `Branch: ${activeBranch.name} | ` : ''}
@@ -600,12 +602,12 @@ function InventoryPage() {
 
       <Modal
         isOpen={Boolean(productDialogMode)}
-        eyebrow="Quick Product Entry"
+        eyebrow="Product"
         title={productDialogMode === 'edit' ? 'Edit Product' : 'Add Product'}
         description={
           productDialogMode === 'edit'
-            ? 'Update the product details and refresh the branch inventory table immediately.'
-            : 'Create a branch-specific inventory record so the inventory list updates immediately.'
+            ? 'Update the product details for this branch.'
+            : 'Add a product to the selected branch.'
         }
         onClose={handleCloseProductDialog}
       >
@@ -668,7 +670,7 @@ function InventoryPage() {
           </label>
 
           <label className="inventory-field">
-            <span>Unit</span>
+            <span>Unit / Pack Size</span>
             <input
               type="text"
               name="unit"
@@ -739,11 +741,11 @@ function InventoryPage() {
           onSubmit={handleSubmitQuantityDialog}
         >
           <label className="inventory-field">
-            <span>
-              {quantityDialog === 'stock-in'
-                ? 'Quantity to Add'
-                : 'Adjustment Amount (+ or -)'}
-            </span>
+              <span>
+                {quantityDialog === 'stock-in'
+                  ? 'Quantity to Add'
+                  : 'New Stock Quantity'}
+              </span>
             <input
               type="number"
               step="1"
@@ -756,7 +758,7 @@ function InventoryPage() {
 
                 setQuantityValue(event.target.value)
               }}
-              placeholder={quantityDialog === 'stock-in' ? '5' : '-2'}
+              placeholder={quantityDialog === 'stock-in' ? '5' : '12'}
               aria-invalid={Boolean(quantityError)}
             />
           </label>

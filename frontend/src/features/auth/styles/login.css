@@ -70,6 +70,16 @@
   border-color: rgba(166, 63, 20, 0.35);
 }
 
+.login-password-toggle {
+  justify-self: start;
+  border: none;
+  padding: 0;
+  background: transparent;
+  color: var(--accent-dark);
+  font-weight: 700;
+  cursor: pointer;
+}
+
 .login-error {
   margin: 1rem 0 0;
   color: #9f2d2d;

@@ -299,7 +299,7 @@ function UsersPage() {
         <p className="eyebrow">Access Control</p>
         <h2>Users and Branch Access</h2>
         <p className="supporting-text">
-          Manage employee login access, branch assignment, and account status from one screen.
+          Manage employees, branches, and account status.
         </p>
       </div>
 
@@ -323,21 +323,21 @@ function UsersPage() {
         <article className="info-card">
           <p className="card-label">Branches</p>
           <strong>{branchOptions.length}</strong>
-          <p className="supporting-text">Available for employee assignment.</p>
+          <p className="supporting-text">Available branches.</p>
         </article>
 
         <article className="info-card">
           <p className="card-label">Employees</p>
           <strong>{employeeAccounts.length}</strong>
           <p className="supporting-text">
-            Employee accounts currently registered in the system.
+            Current employee accounts.
           </p>
         </article>
 
         <article className="info-card">
           <p className="card-label">Active Today</p>
           <strong>{activeEmployees.length}</strong>
-          <p className="supporting-text">Employee accounts ready for POS login.</p>
+          <p className="supporting-text">Active employee accounts.</p>
         </article>
       </div>
 
@@ -346,20 +346,20 @@ function UsersPage() {
           <p className="card-label">Employee Accounts</p>
           <h2>Access and Assignment</h2>
           <p className="supporting-text">
-            Create employee accounts, assign branches, and manage employee status.
+            Create employees, assign branches, and update status.
           </p>
 
           <div className="users-overview-grid">
             <article className="users-overview-card">
               <span className="card-label">Employee Directory</span>
               <strong>{employeeAccounts.length}</strong>
-              <p className="supporting-text">Accounts currently listed in the employee directory.</p>
+              <p className="supporting-text">Listed employees.</p>
             </article>
 
             <article className="users-overview-card">
               <span className="card-label">Active Today</span>
               <strong>{activeEmployees.length}</strong>
-              <p className="supporting-text">Employee accounts ready for sign-in and POS access.</p>
+              <p className="supporting-text">Ready to sign in.</p>
             </article>
           </div>
 
@@ -376,22 +376,22 @@ function UsersPage() {
 
         <div className="panel">
           <p className="card-label">Branch Directory</p>
-          <h2>Branches and Oversight</h2>
+          <h2>Branches</h2>
           <p className="supporting-text">
-            Open a dedicated branch workspace to add branches and review assignment coverage, contacts, and admin oversight.
+            Add branches and review staffing coverage.
           </p>
 
           <div className="users-overview-grid">
             <article className="users-overview-card">
               <span className="card-label">Branch Records</span>
               <strong>{branchOptions.length}</strong>
-              <p className="supporting-text">Available branch definitions ready for staff assignment.</p>
+              <p className="supporting-text">Saved branches.</p>
             </article>
 
             <article className="users-overview-card">
               <span className="card-label">Admin Accounts</span>
               <strong>{adminAccounts.length}</strong>
-              <p className="supporting-text">Accounts with full access to branch and employee controls.</p>
+              <p className="supporting-text">Admin users.</p>
             </article>
           </div>
 
@@ -484,7 +484,7 @@ function UsersPage() {
               : 'Create Employee Account'
         }
         description={
-          'Create employee accounts, assign branches, and manage employee status.'
+          'Enter the account details below.'
         }
         onClose={handleCloseEmployeeModal}
         width="860px"
@@ -552,15 +552,14 @@ function UsersPage() {
                 disabled={isDirectorySaving}
               />
               <div className="users-inline-note">
-                Use a temporary password the employee can change after first login.
+                Use a temporary password for first sign-in.
               </div>
             </label>
           ) : (
             <div className="users-field users-field-readonly users-field-wide">
               <span>Login Credentials</span>
               <div className="users-inline-note">
-                Email and password are managed separately. Use this form for name, username,
-                branch, and status updates.
+                Update name, username, branch, and status here.
               </div>
             </div>
           )}
@@ -628,7 +627,7 @@ function UsersPage() {
         isOpen={isBranchModalOpen}
         eyebrow="Branch Directory"
         title="Branches and Assignment"
-        description="Add branches and review branch oversight, contacts, and staffing coverage from one dedicated directory workspace."
+        description="Add branches and review contacts and staffing coverage."
         onClose={handleCloseBranchModal}
         width="940px"
       >

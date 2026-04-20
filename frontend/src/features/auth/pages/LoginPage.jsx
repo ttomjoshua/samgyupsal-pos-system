@@ -22,6 +22,7 @@ function LoginPage() {
   })
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+  const [isPasswordVisible, setIsPasswordVisible] = useState(false)
 
   const handleChange = (event) => {
     const { name, value } = event.target
@@ -97,13 +98,21 @@ function LoginPage() {
           )}
 
           <input
-            type="password"
+            type={isPasswordVisible ? 'text' : 'password'}
             name="password"
             placeholder="Password"
             value={formData.password}
             onChange={handleChange}
             aria-invalid={Boolean(error)}
           />
+
+          <button
+            type="button"
+            className="login-password-toggle"
+            onClick={() => setIsPasswordVisible((currentValue) => !currentValue)}
+          >
+            {isPasswordVisible ? 'Hide password' : 'Show password'}
+          </button>
 
           <button
             type="submit"

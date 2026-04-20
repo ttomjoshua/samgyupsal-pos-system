@@ -128,7 +128,7 @@ function DashboardPage() {
         <p className="eyebrow">Dashboard</p>
         <h2>Operations Snapshot</h2>
         <p className="supporting-text">
-          Review today&apos;s branch, staff, inventory, and sales picture at a glance.
+          Review branch, staff, inventory, and sales at a glance.
         </p>
       </div>
 
@@ -157,7 +157,7 @@ function DashboardPage() {
           <p className="card-label">Active Branches</p>
           <strong>{activeBranches}</strong>
           <p className="supporting-text">
-            {snapshot.branches.length} branch records in the directory
+            {snapshot.branches.length} saved branches
           </p>
         </article>
 
@@ -165,20 +165,20 @@ function DashboardPage() {
           <p className="card-label">Active Employees</p>
           <strong>{activeEmployees}</strong>
           <p className="supporting-text">
-            {employeeAccounts.length} employee account{employeeAccounts.length === 1 ? '' : 's'} available
+            {employeeAccounts.length} employee account{employeeAccounts.length === 1 ? '' : 's'}
           </p>
         </article>
 
         <article className="info-card">
           <p className="card-label">Catalog Items</p>
           <strong>{snapshot.inventoryItems.length}</strong>
-          <p className="supporting-text">Inventory rows currently visible</p>
+          <p className="supporting-text">Visible inventory rows</p>
         </article>
 
         <article className="info-card">
           <p className="card-label">Low-Stock Items</p>
           <strong>{summary.low_stock_count}</strong>
-          <p className="supporting-text">Products at or below reorder level</p>
+          <p className="supporting-text">Need attention</p>
         </article>
       </div>
 
@@ -186,19 +186,19 @@ function DashboardPage() {
         <article className="info-card">
           <p className="card-label">Total Sales</p>
           <strong>{peso(summary.total_sales)}</strong>
-          <p className="supporting-text">Recorded sales value in the current dataset</p>
+          <p className="supporting-text">Recorded sales value</p>
         </article>
 
         <article className="info-card">
           <p className="card-label">Transactions</p>
           <strong>{summary.transaction_count}</strong>
-          <p className="supporting-text">Completed checkout records</p>
+          <p className="supporting-text">Completed sales</p>
         </article>
 
         <article className="info-card">
           <p className="card-label">Items Sold</p>
           <strong>{summary.items_sold}</strong>
-          <p className="supporting-text">Units included in recorded sales</p>
+          <p className="supporting-text">Units sold</p>
         </article>
       </div>
 

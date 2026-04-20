@@ -82,12 +82,20 @@ export function validateCheckout({
       const availableStock = parseNumericInput(
         cartItem?.stockQuantity ?? cartItem?.stock_quantity,
       )
+      const unitPrice = parseNumericInput(
+        cartItem?.price ?? cartItem?.unit_price ?? cartItem?.unitPrice,
+      )
       const itemName =
         String(cartItem?.name || cartItem?.item_name || 'This item').trim() ||
         'This item'
 
       if (!Number.isInteger(quantity) || quantity <= 0) {
         errors.cart = 'Cart quantities must be whole numbers greater than zero.'
+        break
+      }
+
+      if (!Number.isFinite(unitPrice) || unitPrice <= 0) {
+        errors.cart = `${itemName} cannot be sold until it has a valid price.`
         break
       }
 
@@ -157,7 +165,7 @@ export function validateInventoryForm(formData = {}) {
   }
 
   if (!unit) {
-    errors.unit = 'Unit is required.'
+    errors.unit = 'Unit / pack size is required.'
   }
 
   if (!expiryDate) {
@@ -202,15 +210,17 @@ export function validateInventoryQuantityAction({
 
   if (!selectedItem) {
     errors.quantity = 'Select an inventory item first.'
-  } else if (!Number.isInteger(sanitizedAmount) || sanitizedAmount === 0) {
-    errors.quantity = 'Enter a whole number stock quantity to continue.'
+  } else if (!Number.isInteger(sanitizedAmount)) {
+    errors.quantity =
+      mode === 'adjust-stock'
+        ? 'Enter the final stock count as a whole number.'
+        : 'Enter a whole number stock quantity to continue.'
+  } else if (mode === 'stock-in' && sanitizedAmount === 0) {
+    errors.quantity = 'Stock in only accepts a positive quantity.'
   } else if (mode === 'stock-in' && sanitizedAmount < 0) {
     errors.quantity = 'Stock in only accepts a positive quantity.'
-  } else if (
-    mode === 'adjust-stock' &&
-    Number(selectedItem.stock_quantity) + sanitizedAmount < 0
-  ) {
-    errors.quantity = 'Adjusted stock cannot go below zero.'
+  } else if (mode === 'adjust-stock' && sanitizedAmount < 0) {
+    errors.quantity = 'Final stock cannot be negative.'
   }
 
   return {

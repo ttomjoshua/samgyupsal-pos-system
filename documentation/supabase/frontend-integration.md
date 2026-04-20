@@ -177,3 +177,9 @@ When `VITE_SUPABASE_AUTH_ENABLED=true` and Supabase is configured:
 - users without a valid `profiles` row will not be allowed through the app
 
 The Users page now reads and updates real Supabase `profiles`, and new employee Auth users can be created through the secured `admin-create-user` Edge Function after it is deployed. The one remaining manual bootstrap step is creating the first admin account.
+
+The auth-enabled frontend also expects the authenticated session-lock RPCs from [`frontend/supabase/sql/10_auth_session_locking.sql`](../../frontend/supabase/sql/10_auth_session_locking.sql). When that script is applied:
+
+- a second device is blocked from signing into the same employee account
+- the active device keeps the lock until logout or the 5-minute stale timeout expires
+- logout releases only the current browser session instead of ending every device session

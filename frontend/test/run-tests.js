@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict'
 import { resolveInventoryRecordIds } from '../src/shared/utils/inventoryRecords.js'
+import { deriveProductSellability } from '../src/shared/utils/productAvailability.js'
 import { getDefaultReportDateRange } from '../src/shared/utils/reporting.js'
 import {
   validateCheckout,
@@ -21,6 +22,7 @@ const tests = [
             name: 'Samgyupsal Set A',
             quantity: 3,
             stockQuantity: 2,
+            price: 100,
           },
         ],
       })
@@ -68,6 +70,46 @@ const tests = [
     },
   },
   {
+    name: 'validateInventoryQuantityAction allows zero as the final stock count',
+    run() {
+      const result = validateInventoryQuantityAction({
+        selectedItem: {
+          stock_quantity: 10,
+        },
+        quantityValue: '0',
+        mode: 'adjust-stock',
+      })
+
+      assert.equal(result.isValid, true)
+      assert.equal(result.sanitizedAmount, 0)
+    },
+  },
+  {
+    name: 'validateCheckout rejects non-positive unit prices',
+    run() {
+      const result = validateCheckout({
+        paymentMethod: 'cash',
+        amountReceived: 200,
+        totalAmount: 120,
+        subtotalAmount: 120,
+        cartItems: [
+          {
+            name: 'Soju Original',
+            quantity: 1,
+            stockQuantity: 5,
+            price: 0,
+          },
+        ],
+      })
+
+      assert.equal(result.isValid, false)
+      assert.equal(
+        result.errors.cart,
+        'Soju Original cannot be sold until it has a valid price.',
+      )
+    },
+  },
+  {
     name: 'getDefaultReportDateRange returns a rolling 14-day window',
     run() {
       const result = getDefaultReportDateRange(new Date('2026-04-17T09:30:00Z'))
@@ -90,6 +132,21 @@ const tests = [
       assert.deepEqual(result, {
         inventoryItemId: 41,
         productId: 12,
+      })
+    },
+  },
+  {
+    name: 'deriveProductSellability flags zero-priced products as unavailable',
+    run() {
+      const result = deriveProductSellability({
+        price: 0,
+        stockQuantity: 8,
+        is_active: true,
+      })
+
+      assert.deepEqual(result, {
+        isSellable: false,
+        availabilityReason: 'Price not set',
       })
     },
   },

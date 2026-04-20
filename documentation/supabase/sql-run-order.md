@@ -178,7 +178,28 @@ Important:
 - It is materially safer than the bootstrap policy file, but it still inherits one design tradeoff from the current frontend: employees can update product rows within their assigned branch because the browser is still performing stock deductions after checkout.
 - The next recommended security step is moving checkout and stock deduction into a trusted RPC or Edge Function so product writes no longer need to come from the browser at all.
 
-## 9. Deploy the secure admin-create-user Edge Function
+## 9. Add one-device session locking for authenticated users
+
+Run after the auth rollout and role-aware policy scripts:
+
+- [`frontend/supabase/sql/10_auth_session_locking.sql`](../../frontend/supabase/sql/10_auth_session_locking.sql)
+
+This script:
+
+- creates a private session-lock table keyed by auth user id
+- exposes authenticated RPC functions for:
+  - `claim_session_lock()`
+  - `validate_session_lock()`
+  - `release_session_lock()`
+- uses the Supabase JWT `session_id` claim as the active-device lock value
+- expires abandoned locks after 5 minutes without a heartbeat
+
+Important:
+
+- this is required for the frontend behavior that blocks a second device from logging into the same account at the same time
+- the first device stays active; the newer login is rejected until the older session signs out or the lock goes stale
+
+## 10. Deploy the secure admin-create-user Edge Function
 
 The repo now includes:
 

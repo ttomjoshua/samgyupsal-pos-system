@@ -27,7 +27,7 @@ function InventoryTable({
             <th>Product</th>
             <th>Category</th>
             <th>Stock</th>
-            <th>Unit</th>
+            <th>Unit / Pack Size</th>
             <th>Expiry</th>
             <th>Status</th>
             <th>Actions</th>

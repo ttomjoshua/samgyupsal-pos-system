@@ -9,7 +9,6 @@ import {
   removeProductCategory,
   renameProductCategory,
 } from '../services/productService'
-import { isSupabaseDataEnabled } from '../../../shared/api/supabaseClient'
 import {
   getStoredCategories,
   prepareCategoryName,
@@ -434,7 +433,7 @@ function ProductsPage() {
           <p className="eyebrow">Products</p>
           <h2>Catalog and Categories</h2>
           <p className="supporting-text">
-            Manage products, categories, and catalog organization.
+            Review products and category labels.
           </p>
         </div>
         <div className="page-header-actions">
@@ -460,26 +459,26 @@ function ProductsPage() {
       <div className="products-management-grid">
         <div className="panel">
           <p className="card-label">Category Management</p>
-          <h2>Category Governance</h2>
+          <h2>Categories</h2>
           <p className="supporting-text products-panel-copy">
-            Organize how products are grouped and filtered.
+            Keep categories organized for search and filtering.
           </p>
 
           <div className="products-overview-grid">
             <div className="products-overview-card">
               <span className="products-overview-label">Visible Categories</span>
               <strong>{availableCategories.length}</strong>
-              <span className="products-overview-meta">Available across the system</span>
+              <span className="products-overview-meta">Ready to use</span>
             </div>
             <div className="products-overview-card">
               <span className="products-overview-label">Product-backed</span>
               <strong>{productCategories.length}</strong>
-              <span className="products-overview-meta">Used by catalog products</span>
+              <span className="products-overview-meta">Used by products</span>
             </div>
             <div className="products-overview-card">
               <span className="products-overview-label">Locally Managed</span>
               <strong>{customCategories.length}</strong>
-              <span className="products-overview-meta">Manually added categories</span>
+              <span className="products-overview-meta">Added manually</span>
             </div>
           </div>
 
@@ -517,9 +516,7 @@ function ProductsPage() {
           <div className="category-section">
             <div className="category-section-header">
               <strong>Custom Categories</strong>
-              <span>
-                Manually added categories for additional product filtering.
-              </span>
+              <span>Extra categories added by the admin.</span>
             </div>
 
             {filteredCustomCategoryRows.length === 0 ? (
@@ -595,9 +592,7 @@ function ProductsPage() {
           <div className="category-section products-visibility-copy">
             <div className="category-section-header">
               <strong>All Categories</strong>
-              <span>
-                Categories visible to staff across the system.
-              </span>
+              <span>Categories currently visible in the catalog.</span>
             </div>
 
             {filteredVisibleCategoryRows.length === 0 ? (
@@ -673,35 +668,33 @@ function ProductsPage() {
 
         <div className="panel">
           <p className="card-label">Products</p>
-          <h2>Catalog Review Desk</h2>
+          <h2>Catalog Review</h2>
           <p className="supporting-text products-panel-copy">
-            Browse products by branch, category, and pricing.
+            Check pricing, branch coverage, and pack sizes.
           </p>
 
           <div className="products-overview-grid">
             <div className="products-overview-card">
               <span className="products-overview-label">Matching Products</span>
               <strong>{filteredProducts.length}</strong>
-              <span className="products-overview-meta">Based on current filters</span>
+              <span className="products-overview-meta">Current results</span>
             </div>
             <div className="products-overview-card">
               <span className="products-overview-label">Branches Covered</span>
               <strong>{visibleProductBranchCount}</strong>
-              <span className="products-overview-meta">In current view</span>
+              <span className="products-overview-meta">Shown now</span>
             </div>
             <div className="products-overview-card">
               <span className="products-overview-label">Categories in View</span>
               <strong>{visibleProductCategoryCount}</strong>
-              <span className="products-overview-meta">Displayed in results</span>
+              <span className="products-overview-meta">Shown now</span>
             </div>
           </div>
 
           <div className="products-toolbar">
             <div className="products-toolbar-copy">
               <strong>Search Products</strong>
-              <span>
-                Search by product name, category, branch, or unit.
-              </span>
+              <span>Search by product, category, branch, or pack size.</span>
             </div>
             <div className="products-search-shell">
               <label className="products-search-label" htmlFor="product-search">
@@ -711,7 +704,7 @@ function ProductsPage() {
                 id="product-search"
                 type="search"
                 className="products-search-input"
-                placeholder="Search product, category, branch, or unit"
+                placeholder="Search product, category, branch, or pack size"
                 value={productSearch}
                 onChange={(event) => setProductSearch(event.target.value)}
               />
@@ -744,7 +737,7 @@ function ProductsPage() {
                       <th>Product</th>
                       <th>Category</th>
                       <th>Branch</th>
-                      <th>Unit</th>
+                      <th>Unit / Pack Size</th>
                       <th>Price</th>
                     </tr>
                     </thead>
@@ -755,7 +748,7 @@ function ProductsPage() {
                             <div className="products-product-cell">
                               <strong>{item.name}</strong>
                               <span>
-                                {item.unit ? `Pack / unit: ${item.unit}` : 'No unit label provided'}
+                                {item.unit ? `Pack size: ${item.unit}` : 'Pack size not set'}
                               </span>
                             </div>
                           </td>
@@ -766,7 +759,16 @@ function ProductsPage() {
                             </span>
                           </td>
                           <td>{item.unit || 'N/A'}</td>
-                          <td>{peso(item.price)}</td>
+                          <td>
+                            <div className="products-price-cell">
+                              <strong>{peso(item.price)}</strong>
+                              {!item.isSellable && item.availabilityReason ? (
+                                <span className="products-price-flag">
+                                  {item.availabilityReason}
+                                </span>
+                              ) : null}
+                            </div>
+                          </td>
                         </tr>
                       ))}
                     </tbody>

@@ -47,9 +47,6 @@ function PosPage() {
   const [branchLoadError, setBranchLoadError] = useState('')
   const [clock, setClock] = useState(() => new Date())
   const [catalogProducts, setCatalogProducts] = useState([])
-  const [catalogSource, setCatalogSource] = useState(
-    'Loading products from the backend...',
-  )
   const [catalogError, setCatalogError] = useState('')
   const [isCatalogLoading, setIsCatalogLoading] = useState(true)
   const [activeCategory, setActiveCategory] = useState('All')
@@ -140,14 +137,10 @@ function PosPage() {
       try {
         const products = await getProducts({ branchId: activeBranchId })
         setCatalogProducts(products)
-        setCatalogSource(
-          `Products loaded for ${activeBranch?.name || 'the selected branch'}.`,
-        )
         setCatalogError('')
       } catch (error) {
         console.error('Failed to load POS products:', error)
         setCatalogProducts([])
-        setCatalogSource('Backend product catalog unavailable for this branch.')
         setCatalogError(
           error.response?.data?.message || 'Unable to load products.',
         )
@@ -158,7 +151,7 @@ function PosPage() {
 
     setIsCatalogLoading(true)
     loadCatalog()
-  }, [activeBranch?.name, activeBranchId])
+  }, [activeBranchId])
 
   const formattedDate = new Intl.DateTimeFormat('en-PH', {
     weekday: 'short',
@@ -286,10 +279,10 @@ function PosPage() {
     <section className="pos-page">
       <div className="pos-topbar">
         <div className="pos-title-block">
-          <p className="eyebrow">Primary Business Screen</p>
+          <p className="eyebrow">POS</p>
           <h1>Point of Sale</h1>
           <p className="supporting-text">
-            Complete checkout, confirm branch scope, and manage the current order from one workspace.
+            Ring up orders and finish checkout.
           </p>
         </div>
 
@@ -307,8 +300,8 @@ function PosPage() {
             </strong>
             <span className="meta-secondary">
               {user?.branchId
-                ? 'Assigned to your account'
-                : 'Select the active branch for checkout'}
+                ? 'Assigned branch'
+                : 'Select branch'}
             </span>
             {user?.branchId ? null : branchOptions.length > 0 ? (
               <label className="pos-inline-field">
@@ -332,13 +325,13 @@ function PosPage() {
             <span className="meta-label">Date and Time</span>
             <strong className="meta-primary meta-primary--clock">{formattedTime}</strong>
             <span className="meta-secondary">{formattedDate}</span>
-            <span className="meta-tertiary">Philippine Standard Time</span>
+            <span className="meta-tertiary">PST</span>
           </article>
 
           <article className="pos-meta-card">
             <span className="meta-label">Transaction No.</span>
             <strong className="meta-code">{transactionNumber}</strong>
-            <span className="meta-secondary">Current checkout reference</span>
+            <span className="meta-secondary">Current sale</span>
             <span className="meta-tertiary">Sequence {transactionSuffix}</span>
           </article>
         </div>
@@ -349,9 +342,8 @@ function PosPage() {
           <div className="pos-panel">
             <div className="panel-header">
               <div>
-                <p className="card-label">Product Grid</p>
-                <h2>Available items</h2>
-                <p className="supporting-text">{catalogSource}</p>
+                <p className="card-label">Products</p>
+                <h2>Available Items</h2>
               </div>
               <span className="panel-count">{filteredProducts.length} items</span>
             </div>
@@ -377,7 +369,7 @@ function PosPage() {
                 <input
                   type="text"
                   className="pos-search"
-                  placeholder="Search product, category, or unit"
+                  placeholder="Search product, category, or pack size"
                   value={searchTerm}
                   aria-label="Search available products"
                   onChange={(event) => setSearchTerm(event.target.value)}
@@ -493,7 +485,7 @@ function PosPage() {
         <aside className="cart-panel">
           <div className="panel-header">
             <div>
-              <p className="card-label">Cart Panel</p>
+              <p className="card-label">Cart</p>
               <h2>Current Order</h2>
             </div>
           </div>

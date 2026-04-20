@@ -30,8 +30,17 @@ function PaymentPanel({
   const [isReceiptOpen, setIsReceiptOpen] = useState(false)
   const [heldOrder, setHeldOrder] = useState(null)
 
+  const getUnitPrice = (item) => {
+    const unitPrice = Number(item?.price ?? item?.unit_price ?? item?.unitPrice ?? 0)
+    return Number.isFinite(unitPrice) ? unitPrice : 0
+  }
+
   const subtotal = useMemo(
-    () => cart.reduce((sum, item) => sum + item.price * item.quantity, 0),
+    () =>
+      cart.reduce(
+        (sum, item) => sum + getUnitPrice(item) * Number(item.quantity || 0),
+        0,
+      ),
     [cart],
   )
 
@@ -172,7 +181,7 @@ function PaymentPanel({
       items: cart.map((item) => ({
         product_id: item.id,
         quantity: item.quantity,
-        unit_price: Number(item.price),
+        unit_price: getUnitPrice(item),
       })),
     }
 
@@ -193,8 +202,8 @@ function PaymentPanel({
         id: item.id,
         name: item.name,
         quantity: item.quantity,
-        unitPrice: Number(item.price),
-        lineTotal: Number(item.price) * Number(item.quantity),
+        unitPrice: getUnitPrice(item),
+        lineTotal: getUnitPrice(item) * Number(item.quantity),
       })),
     }
 
@@ -208,7 +217,7 @@ function PaymentPanel({
           product_id: item.id,
           item_name: item.name,
           quantity: item.quantity,
-          unit_price: Number(item.price),
+          unit_price: getUnitPrice(item),
         })),
       })
       setCart([])
