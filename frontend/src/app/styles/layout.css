@@ -189,6 +189,44 @@
   min-width: 0;
 }
 
+.mobile-session {
+  display: none;
+}
+
+.mobile-session-toggle {
+  display: none;
+  align-items: center;
+  gap: 0.55rem;
+  border: 1px solid rgba(31, 49, 69, 0.12);
+  border-radius: 14px;
+  padding: 0.65rem 0.8rem;
+  background: rgba(255, 255, 255, 0.92);
+  color: #1f3145;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: var(--shadow-soft);
+}
+
+.mobile-session-toggle-avatar {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.8rem;
+  height: 1.8rem;
+  border-radius: 999px;
+  background: #1f3145;
+  color: #ffffff;
+  font-size: 0.82rem;
+}
+
+.mobile-session-toggle-label {
+  white-space: nowrap;
+}
+
+.mobile-session-panel {
+  display: none;
+}
+
 .app-header-copy {
   min-width: 0;
 }
@@ -324,6 +362,63 @@
     display: flex;
   }
 
+  .mobile-session {
+    display: flex;
+    position: relative;
+    margin-left: auto;
+  }
+
+  .mobile-session-toggle {
+    display: inline-flex;
+  }
+
+  .mobile-session-panel {
+    position: absolute;
+    top: calc(100% + 0.7rem);
+    right: 0;
+    display: grid;
+    gap: 0.95rem;
+    width: min(280px, calc(100vw - 2rem));
+    padding: 1rem;
+    border: 1px solid rgba(89, 67, 48, 0.08);
+    border-radius: 20px;
+    background: rgba(255, 255, 255, 0.98);
+    box-shadow: 0 20px 40px rgba(31, 49, 69, 0.16);
+    opacity: 0;
+    pointer-events: none;
+    transform: translateY(-8px);
+    transition:
+      opacity 0.18s ease,
+      transform 0.18s ease;
+  }
+
+  .mobile-session-panel-open {
+    opacity: 1;
+    pointer-events: auto;
+    transform: translateY(0);
+  }
+
+  .mobile-session-copy {
+    display: grid;
+    gap: 0.28rem;
+    color: #1f2937;
+  }
+
+  .mobile-session-copy strong {
+    font-size: 0.96rem;
+    color: #1e2833;
+  }
+
+  .mobile-session-copy span {
+    color: #6a7280;
+    font-size: 0.84rem;
+  }
+
+  .mobile-logout-button {
+    width: 100%;
+    justify-content: center;
+  }
+
   .sidebar-backdrop {
     display: block;
     position: fixed;
@@ -358,6 +453,15 @@
   .app-header-primary .app-header-copy h2 {
     font-size: 1.15rem;
   }
+
+  .sidebar-session {
+    position: sticky;
+    bottom: 0;
+    z-index: 1;
+    padding-bottom: calc(1rem + env(safe-area-inset-bottom, 0px));
+    background: rgba(20, 34, 49, 0.92);
+    backdrop-filter: blur(12px);
+  }
 }
 
 @media (max-width: 900px) {
@@ -373,5 +477,17 @@
 @media (max-width: 720px) {
   .sidebar {
     width: min(300px, calc(100vw - 1.2rem));
+  }
+
+  .mobile-session-toggle {
+    padding: 0.6rem 0.72rem;
+  }
+
+  .mobile-session-toggle-label {
+    display: none;
+  }
+
+  .mobile-session-panel {
+    width: min(260px, calc(100vw - 2rem));
   }
 }
