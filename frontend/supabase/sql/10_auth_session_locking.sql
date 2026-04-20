@@ -40,14 +40,15 @@ as $$
 declare
   current_user_id uuid := auth.uid();
   current_session_id uuid := private.current_session_id();
-  existing_lock private.active_session_locks%rowtype;
+  locked_session_id uuid;
+  locked_heartbeat_at timestamptz;
 begin
   if current_user_id is null or current_session_id is null then
     return false;
   end if;
 
-  select *
-  into existing_lock
+  select session_id, heartbeat_at
+  into locked_session_id, locked_heartbeat_at
   from private.active_session_locks
   where user_id = current_user_id
   for update;
@@ -69,7 +70,7 @@ begin
     return true;
   end if;
 
-  if existing_lock.session_id = current_session_id then
+  if locked_session_id = current_session_id then
     update private.active_session_locks
     set heartbeat_at = now()
     where user_id = current_user_id;
@@ -77,7 +78,7 @@ begin
     return true;
   end if;
 
-  if existing_lock.heartbeat_at < now() - interval '5 minutes' then
+  if locked_heartbeat_at < now() - interval '5 minutes' then
     update private.active_session_locks
     set
       session_id = current_session_id,

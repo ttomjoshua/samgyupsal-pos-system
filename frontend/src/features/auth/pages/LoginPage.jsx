@@ -1,9 +1,14 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import useAuth from '../hooks/useAuth'
 
 import { isSupabaseAuthEnabled } from '../../../shared/api/supabaseClient'
+import Modal from '../../../shared/components/ui/Modal'
 import { getDefaultAppPath } from '../../../shared/utils/permissions'
+import {
+  isSessionConflictError,
+  SESSION_CONFLICT_MESSAGE,
+} from '../services/sessionLockService'
 import {
   getFirstValidationError,
   validateLoginForm,
@@ -12,7 +17,7 @@ import '../styles/login.css'
 
 function LoginPage() {
   const navigate = useNavigate()
-  const { login } = useAuth()
+  const { authError, login } = useAuth()
 
   const usesSupabaseAuth = isSupabaseAuthEnabled
   const [formData, setFormData] = useState({
@@ -23,6 +28,13 @@ function LoginPage() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [isPasswordVisible, setIsPasswordVisible] = useState(false)
+  const [isSessionAlertOpen, setIsSessionAlertOpen] = useState(false)
+
+  useEffect(() => {
+    if (usesSupabaseAuth && authError === SESSION_CONFLICT_MESSAGE) {
+      setIsSessionAlertOpen(true)
+    }
+  }, [authError, usesSupabaseAuth])
 
   const handleChange = (event) => {
     const { name, value } = event.target
@@ -54,6 +66,10 @@ function LoginPage() {
       const authenticatedUser = await login(validation.sanitizedData)
       navigate(getDefaultAppPath(authenticatedUser), { replace: true })
     } catch (error) {
+      if (isSessionConflictError(error)) {
+        setIsSessionAlertOpen(true)
+      }
+
       setError(
         error.response?.data?.message ||
           (usesSupabaseAuth
@@ -125,6 +141,26 @@ function LoginPage() {
 
         {error ? <p className="login-error">{error}</p> : null}
       </form>
+
+      <Modal
+        isOpen={isSessionAlertOpen}
+        eyebrow="Sign-in Alert"
+        title="Account Already In Use"
+        description="This account is already active on another device."
+        onClose={() => setIsSessionAlertOpen(false)}
+        width="480px"
+      >
+        <div className="login-session-alert">
+          <p>{SESSION_CONFLICT_MESSAGE}</p>
+          <button
+            type="button"
+            className="primary-button"
+            onClick={() => setIsSessionAlertOpen(false)}
+          >
+            OK
+          </button>
+        </div>
+      </Modal>
     </div>
   )
 }
