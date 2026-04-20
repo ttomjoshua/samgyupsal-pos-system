@@ -3,11 +3,23 @@ import {
   getSupabaseClient,
   isSupabaseAuthEnabled,
   supabaseRpc,
-} from '../../../shared/api/supabaseClient'
+} from '../../../shared/api/supabaseClient.js'
 
 export const SESSION_CONFLICT_CODE = 'SESSION_LOCK_CONFLICT'
 export const SESSION_CONFLICT_MESSAGE =
   'This account is already signed in on another device. Sign out there first before trying again.'
+
+export function isSessionConflictMessage(message) {
+  const normalizedMessage = String(message || '')
+    .trim()
+    .toLowerCase()
+
+  return (
+    normalizedMessage.includes('already signed in on another device') ||
+    normalizedMessage.includes('already active on another device') ||
+    normalizedMessage.includes('account already in use')
+  )
+}
 
 function createSessionConflictError(cause = null) {
   const error = new Error(SESSION_CONFLICT_MESSAGE)
@@ -102,7 +114,7 @@ export async function clearCurrentSupabaseSession() {
 export function isSessionConflictError(error) {
   return (
     error?.code === SESSION_CONFLICT_CODE ||
-    error?.response?.data?.message === SESSION_CONFLICT_MESSAGE ||
-    error?.message === SESSION_CONFLICT_MESSAGE
+    isSessionConflictMessage(error?.response?.data?.message) ||
+    isSessionConflictMessage(error?.message)
   )
 }

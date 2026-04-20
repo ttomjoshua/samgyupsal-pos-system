@@ -192,12 +192,13 @@ This script:
   - `validate_session_lock()`
   - `release_session_lock()`
 - uses the Supabase JWT `session_id` claim as the active-device lock value
-- expires abandoned locks after 5 minutes without a heartbeat
+- cleans up orphaned locks whose prior `auth.sessions` row no longer exists
+- keeps a second device blocked while the first device still has a live Supabase auth session
 
 Important:
 
 - this is required for the frontend behavior that blocks a second device from logging into the same account at the same time
-- the first device stays active; the newer login is rejected until the older session signs out or the lock goes stale
+- the first device stays active; the newer login is rejected until the older session signs out or its Supabase auth session disappears
 
 ## 10. Lock down legacy tables after auth hardening
 

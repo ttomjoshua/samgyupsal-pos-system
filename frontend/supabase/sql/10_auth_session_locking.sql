@@ -13,6 +13,14 @@ create table if not exists private.active_session_locks (
 
 alter table private.active_session_locks enable row level security;
 
+delete from private.active_session_locks as session_lock
+where not exists (
+  select 1
+  from auth.sessions as auth_session
+  where auth_session.id = session_lock.session_id
+    and auth_session.user_id = session_lock.user_id
+);
+
 revoke all on private.active_session_locks from public;
 revoke all on private.active_session_locks from authenticated;
 
@@ -43,14 +51,14 @@ declare
   current_user_id uuid := auth.uid();
   current_session_id uuid := private.current_session_id();
   locked_session_id uuid;
-  locked_heartbeat_at timestamptz;
+  locked_session_exists boolean := false;
 begin
   if current_user_id is null or current_session_id is null then
     return false;
   end if;
 
-  select session_id, heartbeat_at
-  into locked_session_id, locked_heartbeat_at
+  select session_id
+  into locked_session_id
   from private.active_session_locks
   where user_id = current_user_id
   for update;
@@ -80,18 +88,26 @@ begin
     return true;
   end if;
 
-  if locked_heartbeat_at < now() - interval '5 minutes' then
-    update private.active_session_locks
-    set
-      session_id = current_session_id,
-      claimed_at = now(),
-      heartbeat_at = now()
-    where user_id = current_user_id;
+  select exists (
+    select 1
+    from auth.sessions
+    where id = locked_session_id
+      and user_id = current_user_id
+  )
+  into locked_session_exists;
 
-    return true;
+  if locked_session_exists then
+    return false;
   end if;
 
-  return false;
+  update private.active_session_locks
+  set
+    session_id = current_session_id,
+    claimed_at = now(),
+    heartbeat_at = now()
+  where user_id = current_user_id;
+
+  return true;
 end;
 $$;
 

@@ -3,6 +3,10 @@ import { resolveInventoryRecordIds } from '../src/shared/utils/inventoryRecords.
 import { deriveProductSellability } from '../src/shared/utils/productAvailability.js'
 import { getDefaultReportDateRange } from '../src/shared/utils/reporting.js'
 import {
+  isSessionConflictError,
+  isSessionConflictMessage,
+} from '../src/features/auth/services/sessionLockService.js'
+import {
   validateCheckout,
   validateInventoryForm,
   validateInventoryQuantityAction,
@@ -148,6 +152,28 @@ const tests = [
         isSellable: false,
         availabilityReason: 'Price not set',
       })
+    },
+  },
+  {
+    name: 'isSessionConflictMessage accepts equivalent mobile and desktop conflict wording',
+    run() {
+      assert.equal(
+        isSessionConflictMessage(
+          'This account is already active on another device.',
+        ),
+        true,
+      )
+    },
+  },
+  {
+    name: 'isSessionConflictError recognizes semantic session conflict errors',
+    run() {
+      assert.equal(
+        isSessionConflictError({
+          message: 'Account already in use on another device.',
+        }),
+        true,
+      )
     },
   },
 ]

@@ -17,7 +17,8 @@ import {
 } from '../../shared/utils/storage'
 import {
   clearCurrentSupabaseSession,
-  SESSION_CONFLICT_CODE,
+  SESSION_CONFLICT_MESSAGE,
+  isSessionConflictError,
   validateCurrentSessionLock,
 } from '../../features/auth/services/sessionLockService'
 
@@ -117,7 +118,7 @@ export function AuthProvider({ children }) {
           return
         }
 
-        if (error?.code === SESSION_CONFLICT_CODE) {
+        if (isSessionConflictError(error)) {
           try {
             await clearCurrentSupabaseSession()
           } catch (signOutError) {
@@ -126,9 +127,11 @@ export function AuthProvider({ children }) {
         }
 
         clearAuthenticatedState(
-          error.response?.data?.message ||
+          isSessionConflictError(error)
+            ? SESSION_CONFLICT_MESSAGE
+            : error.response?.data?.message ||
             error.message ||
-            'Unable to restore the current session.',
+              'Unable to restore the current session.',
         )
       } finally {
         if (isMounted) {
@@ -198,7 +201,7 @@ export function AuthProvider({ children }) {
           return
         }
 
-        if (error?.code !== SESSION_CONFLICT_CODE) {
+        if (!isSessionConflictError(error)) {
           console.error('Unable to refresh the session lock heartbeat:', error)
           return
         }
@@ -210,9 +213,7 @@ export function AuthProvider({ children }) {
         }
 
         clearAuthenticatedState(
-          error.response?.data?.message ||
-            error.message ||
-            'This account is already signed in on another device.',
+          SESSION_CONFLICT_MESSAGE,
         )
         setIsAuthReady(true)
       }

@@ -7,6 +7,7 @@ import Modal from '../../../shared/components/ui/Modal'
 import { getDefaultAppPath } from '../../../shared/utils/permissions'
 import {
   isSessionConflictError,
+  isSessionConflictMessage,
   SESSION_CONFLICT_MESSAGE,
 } from '../services/sessionLockService'
 import {
@@ -31,7 +32,7 @@ function LoginPage() {
   const [isSessionAlertOpen, setIsSessionAlertOpen] = useState(false)
 
   useEffect(() => {
-    if (usesSupabaseAuth && authError === SESSION_CONFLICT_MESSAGE) {
+    if (usesSupabaseAuth && isSessionConflictMessage(authError)) {
       setIsSessionAlertOpen(true)
     }
   }, [authError, usesSupabaseAuth])
