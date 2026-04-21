@@ -32,7 +32,7 @@ function ReceiptPreview({ receipt, onClose }) {
               <div>
                 <strong>{item.name}</strong>
                 <div className="supporting-text">
-                  {item.quantity} x {peso(item.unitPrice)}
+                  {item.isServiceFee ? 'Add-on service fee' : `${item.quantity} x ${peso(item.unitPrice)}`}
                 </div>
               </div>
               <span>{peso(item.lineTotal)}</span>
@@ -44,6 +44,10 @@ function ReceiptPreview({ receipt, onClose }) {
           <div className="receipt-line">
             <span>Subtotal</span>
             <strong>{peso(receipt.subtotal)}</strong>
+          </div>
+          <div className="receipt-line">
+            <span>Service Fees</span>
+            <strong>{peso(receipt.serviceFeeTotal)}</strong>
           </div>
           <div className="receipt-line">
             <span>Discount</span>

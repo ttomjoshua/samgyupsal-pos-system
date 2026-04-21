@@ -7,6 +7,10 @@ import {
   isSessionConflictMessage,
 } from '../src/features/auth/services/sessionLockService.js'
 import {
+  buildServiceFeeLineItems,
+  isServiceFeeLineItem,
+} from '../src/features/pos/utils/serviceFees.js'
+import {
   validateCheckout,
   validateInventoryForm,
   validateInventoryQuantityAction,
@@ -171,6 +175,32 @@ const tests = [
       assert.equal(
         isSessionConflictError({
           message: 'Account already in use on another device.',
+        }),
+        true,
+      )
+    },
+  },
+  {
+    name: 'buildServiceFeeLineItems creates checkout add-on rows with receipt-safe names',
+    run() {
+      const result = buildServiceFeeLineItems([
+        'self_service_cooking',
+        'microwave_usage',
+      ])
+
+      assert.equal(result.length, 2)
+      assert.equal(result[0].item_name, 'Service Fee - Self-Service Cooking')
+      assert.equal(result[0].line_total, 10)
+      assert.equal(result[1].item_name, 'Service Fee - Microwave Usage')
+      assert.equal(result[1].line_total, 5)
+    },
+  },
+  {
+    name: 'isServiceFeeLineItem recognizes stored service-fee sale lines',
+    run() {
+      assert.equal(
+        isServiceFeeLineItem({
+          item_name: 'Service Fee - Microwave Usage',
         }),
         true,
       )

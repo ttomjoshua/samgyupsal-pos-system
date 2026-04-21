@@ -3,6 +3,7 @@ import {
   topSellingItems,
 } from '../../../shared/mocks/mockData'
 import { getInventoryItems, isLowStock } from '../../inventory/services/inventoryService'
+import { isServiceFeeLineItem } from '../../pos/utils/serviceFees'
 import { getDefaultReportDateRange } from '../../../shared/utils/reporting.js'
 import {
   createSupabaseServiceError,
@@ -56,15 +57,38 @@ function isSaleWithinDateRange(sale, options = {}) {
   return true
 }
 
+function matchesSaleFilters(sale, options = {}) {
+  if (!isSaleWithinDateRange(sale, options)) {
+    return false
+  }
+
+  if (
+    options.cashierId != null &&
+    String(options.cashierId).trim() !== '' &&
+    String(sale.cashier_id || '').trim() !== String(options.cashierId).trim()
+  ) {
+    return false
+  }
+
+  if (
+    options.branchId != null &&
+    String(options.branchId).trim() !== '' &&
+    Number(sale.branch_id) !== Number(options.branchId)
+  ) {
+    return false
+  }
+
+  return true
+}
+
 function summarizeSales(sales) {
   return sales.reduce(
     (summary, sale) => {
       summary.totalSales += Number(sale.total_amount || 0)
       summary.transactionCount += 1
-      summary.itemsSold += (sale.items || []).reduce(
-        (count, item) => count + Number(item.quantity || 0),
-        0,
-      )
+      summary.itemsSold += (sale.items || [])
+        .filter((item) => !isServiceFeeLineItem(item))
+        .reduce((count, item) => count + Number(item.quantity || 0), 0)
       return summary
     },
     {
@@ -89,7 +113,9 @@ function buildTopItems(baseItems, sales) {
   )
 
   sales.forEach((sale) => {
-    ;(sale.items || []).forEach((item) => {
+    ;(sale.items || [])
+      .filter((item) => !isServiceFeeLineItem(item))
+      .forEach((item) => {
       const itemName = String(item.item_name || 'Unknown Item').trim() || 'Unknown Item'
       const itemKey = itemName.toLowerCase()
       const existingItem = itemMap.get(itemKey) || {
@@ -102,7 +128,7 @@ function buildTopItems(baseItems, sales) {
       existingItem.sold += Number(item.quantity || 0)
       existingItem.revenue += Number(item.line_total || 0)
       itemMap.set(itemKey, existingItem)
-    })
+      })
   })
 
   return Array.from(itemMap.values())
@@ -229,16 +255,16 @@ async function getSupabaseSalesHistory() {
 }
 
 export async function getReportSnapshot(options = {}) {
-  const inventoryResponse = await getInventoryItems()
+  const inventoryResponse = await getInventoryItems({
+    branchId: options.branchId,
+  })
   const inventorySnapshot = inventoryResponse.items || inventoryResponse
   const lowStockRows = buildLowStockRows(inventorySnapshot)
   const hasDateRange = Boolean(options.dateFrom || options.dateTo)
 
   if (isSupabaseDataEnabled) {
     const salesHistory = await getSupabaseSalesHistory()
-    const filteredSalesHistory = salesHistory.filter((sale) =>
-      isSaleWithinDateRange(sale, options),
-    )
+    const filteredSalesHistory = salesHistory.filter((sale) => matchesSaleFilters(sale, options))
     const saleSummary = summarizeSales(filteredSalesHistory)
 
     return {
@@ -255,9 +281,7 @@ export async function getReportSnapshot(options = {}) {
   }
 
   const storedSales = getStoredSalesHistory()
-  const filteredStoredSales = storedSales.filter((sale) =>
-    isSaleWithinDateRange(sale, options),
-  )
+  const filteredStoredSales = storedSales.filter((sale) => matchesSaleFilters(sale, options))
   const saleSummary = summarizeSales(filteredStoredSales)
   const useSeededFallback = !hasDateRange
   const fallbackTotalSales = useSeededFallback ? 312440 : 0

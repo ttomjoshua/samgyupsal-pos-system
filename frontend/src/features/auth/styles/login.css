@@ -70,14 +70,49 @@
   border-color: rgba(166, 63, 20, 0.35);
 }
 
-.login-password-toggle {
-  justify-self: start;
+.login-password-field {
+  position: relative;
+  display: block;
+}
+
+.login-password-field input {
+  padding-right: 3.8rem;
+}
+
+.login-password-visibility {
+  position: absolute;
+  top: 50%;
+  right: 0.7rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.6rem;
+  height: 2.6rem;
   border: none;
-  padding: 0;
+  border-radius: 12px;
   background: transparent;
-  color: var(--accent-dark);
-  font-weight: 700;
+  color: var(--text-soft);
   cursor: pointer;
+  transform: translateY(-50%);
+  transition:
+    color 0.18s ease,
+    background 0.18s ease,
+    box-shadow 0.18s ease;
+}
+
+.login-password-visibility svg {
+  width: 1.25rem;
+  height: 1.25rem;
+}
+
+.login-password-visibility:hover {
+  color: var(--accent-dark);
+  background: rgba(166, 63, 20, 0.08);
+  transform: translateY(-50%);
+}
+
+button.login-password-visibility:hover:not(:disabled) {
+  transform: translateY(-50%);
 }
 
 .login-error {

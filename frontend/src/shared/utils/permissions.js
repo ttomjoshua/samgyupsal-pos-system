@@ -11,36 +11,42 @@ export const APP_NAV_ITEMS = [
     key: 'dashboard',
     to: '/app/dashboard',
     label: 'Dashboard',
-    allowedRoles: [ROLE_ADMIN],
+    shortLabel: 'DB',
+    allowedRoles: [ROLE_ADMIN, ROLE_EMPLOYEE],
   },
   {
     key: 'pos',
     to: '/app/pos',
     label: 'POS',
+    shortLabel: 'POS',
     allowedRoles: [ROLE_ADMIN, ROLE_EMPLOYEE],
   },
   {
     key: 'inventory',
     to: '/app/inventory',
     label: 'Inventory',
-    allowedRoles: [ROLE_ADMIN],
+    shortLabel: 'INV',
+    allowedRoles: [ROLE_ADMIN, ROLE_EMPLOYEE],
   },
   {
     key: 'reports',
     to: '/app/reports',
     label: 'Reports',
+    shortLabel: 'RPT',
     allowedRoles: [ROLE_ADMIN],
   },
   {
     key: 'products',
     to: '/app/products',
     label: 'Products',
+    shortLabel: 'PRD',
     allowedRoles: [ROLE_ADMIN],
   },
   {
     key: 'users',
     to: '/app/users',
     label: 'Users',
+    shortLabel: 'USR',
     allowedRoles: [ROLE_ADMIN],
   },
 ]
@@ -83,6 +89,14 @@ export function isAdminUser(user) {
 
 export function isEmployeeUser(user) {
   return normalizeRoleKey(user) === ROLE_EMPLOYEE
+}
+
+export function canManageInventoryCatalog(user) {
+  return isAdminUser(user)
+}
+
+export function canAdjustInventoryStock(user) {
+  return isAdminUser(user) || isEmployeeUser(user)
 }
 
 export function canAccessAppSection(user, sectionKey) {

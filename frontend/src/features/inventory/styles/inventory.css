@@ -151,6 +151,15 @@
   font-weight: 700;
 }
 
+.inventory-category-control--locked {
+  gap: 0.55rem;
+}
+
+.inventory-category-control--locked strong {
+  color: #3d291d;
+  font-size: 0.95rem;
+}
+
 .inventory-category-control select {
   border: none;
   background: transparent;

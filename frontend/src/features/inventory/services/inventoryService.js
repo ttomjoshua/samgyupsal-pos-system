@@ -607,7 +607,11 @@ function findInventoryItemMatch(inventoryItem, soldItem) {
 }
 
 export async function applySaleToInventory(soldItems = [], options = {}) {
-  if (!Array.isArray(soldItems) || soldItems.length === 0) {
+  const inventoryTrackedItems = Array.isArray(soldItems)
+    ? soldItems.filter((soldItem) => soldItem?.is_service_fee !== true)
+    : []
+
+  if (inventoryTrackedItems.length === 0) {
     const inventoryResponse = await getInventoryItems(options)
     return inventoryResponse.items || inventoryResponse
   }
@@ -626,7 +630,7 @@ export async function applySaleToInventory(soldItems = [], options = {}) {
     const supabase = getSupabaseClient()
 
     await Promise.all(
-      soldItems.map(async (soldItem) => {
+      inventoryTrackedItems.map(async (soldItem) => {
         const productId =
           soldItem.product_id ?? soldItem.productId ?? soldItem.id ?? null
 
@@ -673,7 +677,7 @@ export async function applySaleToInventory(soldItems = [], options = {}) {
   const inventoryResponse = await getInventoryItems(options)
   const currentInventoryItems = inventoryResponse.items || inventoryResponse
   const nextInventoryItems = currentInventoryItems.map((inventoryItem) => {
-    const matchedSaleItem = soldItems.find((soldItem) =>
+    const matchedSaleItem = inventoryTrackedItems.find((soldItem) =>
       findInventoryItemMatch(inventoryItem, soldItem),
     )
 

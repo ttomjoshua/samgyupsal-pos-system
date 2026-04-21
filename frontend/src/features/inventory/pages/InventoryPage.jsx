@@ -7,6 +7,7 @@ import PaginationControls from '../../../shared/components/common/PaginationCont
 import Modal from '../../../shared/components/ui/Modal'
 import SelectMenu from '../../../shared/components/ui/SelectMenu'
 import { getBranches } from '../../branches/services/branchService'
+import useAuth from '../../auth/hooks/useAuth'
 import {
   createInventoryItem,
   getInventoryItems,
@@ -17,6 +18,11 @@ import {
   updateInventoryItem,
   updateInventoryStock,
 } from '../services/inventoryService'
+import {
+  canAdjustInventoryStock,
+  canManageInventoryCatalog,
+  isAdminUser,
+} from '../../../shared/utils/permissions'
 import {
   getFirstValidationError,
   validateInventoryForm,
@@ -37,12 +43,16 @@ const INITIAL_PRODUCT_FORM = {
 const INVENTORY_PAGE_SIZE = 10
 
 function InventoryPage() {
+  const { user } = useAuth()
+  const isAdminInventoryView = isAdminUser(user)
+  const canEditCatalog = canManageInventoryCatalog(user)
+  const canUpdateStock = canAdjustInventoryStock(user)
   const [branchOptions, setBranchOptions] = useState([])
   const [isBranchLoading, setIsBranchLoading] = useState(true)
   const [branchLoadError, setBranchLoadError] = useState('')
   const [inventoryItems, setInventoryItems] = useState([])
   const [isLoading, setIsLoading] = useState(true)
-  const [activeBranchId, setActiveBranchId] = useState('')
+  const [activeBranchId, setActiveBranchId] = useState(user?.branchId || '')
   const [activeFilter, setActiveFilter] = useState('all')
   const [activeCategory, setActiveCategory] = useState('all')
   const [productDialogMode, setProductDialogMode] = useState(null)
@@ -82,6 +92,10 @@ function InventoryPage() {
         setBranchOptions(branches)
         setBranchLoadError('')
         setActiveBranchId((currentBranchId) => {
+          if (user?.branchId) {
+            return user.branchId
+          }
+
           const hasCurrentBranch = branches.some(
             (branch) => Number(branch.id) === Number(currentBranchId),
           )
@@ -115,7 +129,7 @@ function InventoryPage() {
     return () => {
       isMounted = false
     }
-  }, [])
+  }, [user?.branchId])
 
   const loadInventory = useCallback(async (branchId) => {
     try {
@@ -183,6 +197,14 @@ function InventoryPage() {
   }, [currentPage, filteredItems])
 
   const handleOpenAddProduct = () => {
+    if (!canEditCatalog) {
+      setFeedbackTone('warning')
+      setFeedbackMessage(
+        'Employee accounts can update stock quantities only for their assigned branch.',
+      )
+      return
+    }
+
     setFormError('')
     setFeedbackMessage('')
     setFormData(INITIAL_PRODUCT_FORM)
@@ -197,6 +219,14 @@ function InventoryPage() {
   }
 
   const handleOpenEditProduct = (item) => {
+    if (!canEditCatalog) {
+      setFeedbackTone('warning')
+      setFeedbackMessage(
+        'Employee accounts cannot edit product details. Use Stock In or Adjust Stock instead.',
+      )
+      return
+    }
+
     setFormError('')
     setFeedbackMessage('')
     setSelectedItem(item)
@@ -227,6 +257,11 @@ function InventoryPage() {
 
   const handleSaveProduct = async (event) => {
     event.preventDefault()
+
+    if (!canEditCatalog) {
+      setFormError('Only administrator accounts can add or edit product records.')
+      return
+    }
 
     const validation = validateInventoryForm(formData)
 
@@ -312,6 +347,14 @@ function InventoryPage() {
   }
 
   const handleOpenRemoveDialog = (item) => {
+    if (!canEditCatalog) {
+      setFeedbackTone('warning')
+      setFeedbackMessage(
+        'Employee accounts cannot remove products from inventory.',
+      )
+      return
+    }
+
     setFeedbackMessage('')
     setRemoveError('')
     setSelectedItem(item)
@@ -380,6 +423,11 @@ function InventoryPage() {
       return
     }
 
+    if (!canEditCatalog) {
+      setRemoveError('Only administrator accounts can remove product records.')
+      return
+    }
+
     try {
       setIsRemoving(true)
       const removedItem = await removeInventoryItem(removeDialogItem.id)
@@ -424,20 +472,24 @@ function InventoryPage() {
           <p className="eyebrow">Inventory</p>
           <h1>Inventory</h1>
           <p className="supporting-text">
-            Manage stock, expiry dates, and branch inventory.
+            {isAdminInventoryView
+              ? 'Manage stock, expiry dates, and branch inventory.'
+              : 'Update stock quantities for your assigned branch and monitor low-stock items.'}
           </p>
         </div>
 
         <div className="inventory-meta-grid">
-          <article className="inventory-meta-card">
-            <span className="meta-label">Active Branch</span>
-            <strong className="meta-primary">
-              {activeBranch?.name || 'Branch pending'}
-            </strong>
-            <span className="meta-secondary">
-              Selected branch for stock management.
-            </span>
-          </article>
+            <article className="inventory-meta-card">
+              <span className="meta-label">Active Branch</span>
+              <strong className="meta-primary">
+                {activeBranch?.name || 'Branch pending'}
+              </strong>
+              <span className="meta-secondary">
+                {user?.branchId
+                  ? 'Assigned branch for your account.'
+                  : 'Selected branch for stock management.'}
+              </span>
+            </article>
 
           <article className="inventory-meta-card">
             <span className="meta-label">Visible Products</span>
@@ -447,23 +499,33 @@ function InventoryPage() {
             </span>
           </article>
 
-          <article className="inventory-meta-card inventory-meta-card--action">
-            <span className="meta-label">Catalog Action</span>
-            <strong className="meta-primary">Add Product</strong>
-            <span className="meta-secondary">
-              Add a new product to this branch.
-            </span>
-            <button
-              type="button"
-              className="inventory-primary-action"
-              onClick={handleOpenAddProduct}
-              disabled={!activeBranchId}
-            >
-              Add Product
-            </button>
-          </article>
+            {isAdminInventoryView ? (
+              <article className="inventory-meta-card inventory-meta-card--action">
+                <span className="meta-label">Catalog Action</span>
+                <strong className="meta-primary">Add Product</strong>
+                <span className="meta-secondary">
+                  Add a new product to this branch.
+                </span>
+                <button
+                  type="button"
+                  className="inventory-primary-action"
+                  onClick={handleOpenAddProduct}
+                  disabled={!activeBranchId}
+                >
+                  Add Product
+                </button>
+              </article>
+            ) : (
+              <article className="inventory-meta-card">
+                <span className="meta-label">Stock Permission</span>
+                <strong className="meta-primary">Stock Only</strong>
+                <span className="meta-secondary">
+                  Employee accounts can use Stock In and Adjust Stock for their assigned branch.
+                </span>
+              </article>
+            )}
+          </div>
         </div>
-      </div>
 
       {loadError ? (
         <NoticeBanner
@@ -505,18 +567,25 @@ function InventoryPage() {
 
         <div className="inventory-toolbar">
           <div className="inventory-filter-group">
-            <label className="inventory-category-control">
-              <span>Branch</span>
-              <SelectMenu
-              name="activeBranch"
-              value={activeBranchId}
-              onChange={(event) => setActiveBranchId(Number(event.target.value))}
-              options={branchOptions.map((branch) => ({
-                value: branch.id,
-                label: branch.name
-              }))}
-            />
-            </label>
+            {user?.branchId ? (
+              <div className="inventory-category-control inventory-category-control--locked">
+                <span>Branch</span>
+                <strong>{activeBranch?.name || user?.branchName || 'Assigned branch'}</strong>
+              </div>
+            ) : (
+              <label className="inventory-category-control">
+                <span>Branch</span>
+                <SelectMenu
+                  name="activeBranch"
+                  value={activeBranchId}
+                  onChange={(event) => setActiveBranchId(Number(event.target.value))}
+                  options={branchOptions.map((branch) => ({
+                    value: branch.id,
+                    label: branch.name,
+                  }))}
+                />
+              </label>
+            )}
 
             <button
               type="button"
@@ -581,6 +650,8 @@ function InventoryPage() {
         <>
           <InventoryTable
             items={paginatedItems}
+            canEditCatalog={canEditCatalog}
+            canUpdateStock={canUpdateStock}
             onStockIn={(item) => handleOpenQuantityDialog('stock-in', item)}
             onEdit={handleOpenEditProduct}
             onAdjustStock={(item) => handleOpenQuantityDialog('adjust-stock', item)}

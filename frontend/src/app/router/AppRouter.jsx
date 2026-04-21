@@ -3,7 +3,11 @@ import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
 import Loader from '../../shared/components/common/Loader'
 import useAuth from '../../features/auth/hooks/useAuth'
 import ProtectedRoute from './ProtectedRoute'
-import { getDefaultAppPath, ROLE_ADMIN } from '../../shared/utils/permissions'
+import {
+  getDefaultAppPath,
+  ROLE_ADMIN,
+  ROLE_EMPLOYEE,
+} from '../../shared/utils/permissions'
 
 const MainLayout = lazy(() => import('../layout/MainLayout'))
 const DashboardPage = lazy(() => import('../../features/dashboard/pages/DashboardPage'))
@@ -55,7 +59,7 @@ function AppRouter() {
           <Route
             path="dashboard"
             element={
-              <ProtectedRoute allowedRoles={[ROLE_ADMIN]}>
+              <ProtectedRoute allowedRoles={[ROLE_ADMIN, ROLE_EMPLOYEE]}>
                 {renderLazyPage(<DashboardPage />, 'Loading dashboard...')}
               </ProtectedRoute>
             }
@@ -67,7 +71,7 @@ function AppRouter() {
           <Route
             path="inventory"
             element={
-              <ProtectedRoute allowedRoles={[ROLE_ADMIN]}>
+              <ProtectedRoute allowedRoles={[ROLE_ADMIN, ROLE_EMPLOYEE]}>
                 {renderLazyPage(<InventoryPage />, 'Loading inventory...')}
               </ProtectedRoute>
             }

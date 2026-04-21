@@ -5,6 +5,8 @@ import { shortDate } from '../../../shared/utils/formatters'
 
 function InventoryTable({
   items,
+  canEditCatalog = true,
+  canUpdateStock = true,
   onStockIn,
   onEdit,
   onAdjustStock,
@@ -49,34 +51,42 @@ function InventoryTable({
                 </td>
                 <td>
                   <div className="inventory-actions">
-                    <button
-                      type="button"
-                      className="table-action-button"
-                      onClick={() => onStockIn?.(item)}
-                    >
-                      Stock In
-                    </button>
-                    <button
-                      type="button"
-                      className="table-action-button"
-                      onClick={() => onEdit?.(item)}
-                    >
-                      Edit
-                    </button>
-                    <button
-                      type="button"
-                      className="table-action-button"
-                      onClick={() => onAdjustStock?.(item)}
-                    >
-                      Adjust Stock
-                    </button>
-                    <button
-                      type="button"
-                      className="table-action-button table-action-button-danger"
-                      onClick={() => onRemove?.(item)}
-                    >
-                      Remove
-                    </button>
+                    {canUpdateStock ? (
+                      <button
+                        type="button"
+                        className="table-action-button"
+                        onClick={() => onStockIn?.(item)}
+                      >
+                        Stock In
+                      </button>
+                    ) : null}
+                    {canEditCatalog ? (
+                      <button
+                        type="button"
+                        className="table-action-button"
+                        onClick={() => onEdit?.(item)}
+                      >
+                        Edit
+                      </button>
+                    ) : null}
+                    {canUpdateStock ? (
+                      <button
+                        type="button"
+                        className="table-action-button"
+                        onClick={() => onAdjustStock?.(item)}
+                      >
+                        Adjust Stock
+                      </button>
+                    ) : null}
+                    {canEditCatalog ? (
+                      <button
+                        type="button"
+                        className="table-action-button table-action-button-danger"
+                        onClick={() => onRemove?.(item)}
+                      >
+                        Remove
+                      </button>
+                    ) : null}
                   </div>
                 </td>
               </tr>

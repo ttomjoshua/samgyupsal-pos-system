@@ -4,7 +4,14 @@ import Modal from '../../../shared/components/ui/Modal'
 import SelectMenu from '../../../shared/components/ui/SelectMenu'
 import ReceiptPreview from './ReceiptPreview'
 import useAuth from '../../auth/hooks/useAuth'
-import { createSale, paymentMethods } from '../services/salesService'
+import {
+  buildServiceFeeLineItems,
+  serviceFeeOptions,
+} from '../utils/serviceFees'
+import {
+  createSale,
+  paymentMethods,
+} from '../services/salesService'
 import { peso } from '../../../shared/utils/formatters'
 import {
   getFirstValidationError,
@@ -23,6 +30,7 @@ function PaymentPanel({
   const [discount, setDiscount] = useState(0)
   const [paymentMethod, setPaymentMethod] = useState('cash')
   const [cashReceived, setCashReceived] = useState('')
+  const [selectedServiceFees, setSelectedServiceFees] = useState([])
   const [message, setMessage] = useState('')
   const [messageTone, setMessageTone] = useState('info')
   const [submitting, setSubmitting] = useState(false)
@@ -43,15 +51,28 @@ function PaymentPanel({
       ),
     [cart],
   )
+  const selectedFeeLineItems = useMemo(
+    () => buildServiceFeeLineItems(selectedServiceFees),
+    [selectedServiceFees],
+  )
+  const serviceFeeTotal = useMemo(
+    () =>
+      selectedFeeLineItems.reduce(
+        (sum, item) => sum + Number(item.line_total || 0),
+        0,
+      ),
+    [selectedFeeLineItems],
+  )
 
   const numericDiscount = Number(discount || 0)
-  const total = Math.max(0, subtotal - numericDiscount)
+  const total = Math.max(0, subtotal + serviceFeeTotal - numericDiscount)
   const change = Number(cashReceived || 0) - total
 
   const resetPanel = () => {
     setDiscount(0)
     setPaymentMethod('cash')
     setCashReceived('')
+    setSelectedServiceFees([])
   }
 
   const clearStatusMessage = () => {
@@ -97,6 +118,7 @@ function PaymentPanel({
       discount,
       heldAt: new Date().toISOString(),
       paymentMethod,
+      selectedServiceFees: [...selectedServiceFees],
     }
 
     setHeldOrder(heldOrderSnapshot)
@@ -133,6 +155,7 @@ function PaymentPanel({
     setDiscount(heldOrder.discount)
     setPaymentMethod(heldOrder.paymentMethod)
     setCashReceived(heldOrder.cashReceived)
+    setSelectedServiceFees([...(heldOrder.selectedServiceFees || [])])
     setHeldOrder(null)
     setMessage('Held order restored.')
     setMessageTone('success')
@@ -146,6 +169,15 @@ function PaymentPanel({
     setHeldOrder(null)
     setMessage('Held order cleared.')
     setMessageTone('info')
+  }
+
+  const handleToggleServiceFee = (feeValue) => {
+    clearStatusMessage()
+    setSelectedServiceFees((currentValue) =>
+      currentValue.includes(feeValue)
+        ? currentValue.filter((value) => value !== feeValue)
+        : [...currentValue, feeValue],
+    )
   }
 
   const handleCheckout = async () => {
@@ -170,6 +202,17 @@ function PaymentPanel({
       return
     }
 
+    const saleLineItems = [
+      ...cart.map((item) => ({
+        product_id: item.id,
+        quantity: item.quantity,
+        unit_price: getUnitPrice(item),
+        item_name: item.name,
+        line_total: getUnitPrice(item) * Number(item.quantity || 0),
+      })),
+      ...selectedFeeLineItems,
+    ]
+
     const payload = {
       cashier_id: user?.id,
       payment_method: paymentMethod,
@@ -178,10 +221,10 @@ function PaymentPanel({
       total_amount: total,
       cash_received: Number(cashReceived || 0),
       change_amount: paymentMethod === 'cash' ? change : 0,
-      items: cart.map((item) => ({
-        product_id: item.id,
+      items: saleLineItems.map((item) => ({
+        product_id: item.product_id,
         quantity: item.quantity,
-        unit_price: getUnitPrice(item),
+        unit_price: item.unit_price,
       })),
     }
 
@@ -194,16 +237,18 @@ function PaymentPanel({
         paymentMethods.find((method) => method.value === paymentMethod)?.label ||
         'Cash',
       subtotal,
+      serviceFeeTotal,
       discount: numericDiscount,
       total,
       cashReceived: Number(cashReceived || 0),
       change: paymentMethod === 'cash' ? Math.max(0, change) : 0,
-      items: cart.map((item) => ({
-        id: item.id,
-        name: item.name,
+      items: saleLineItems.map((item, index) => ({
+        id: item.product_id ?? `service-fee-${index + 1}`,
+        name: item.item_name,
         quantity: item.quantity,
-        unitPrice: getUnitPrice(item),
-        lineTotal: getUnitPrice(item) * Number(item.quantity),
+        unitPrice: item.unit_price,
+        lineTotal: item.line_total,
+        isServiceFee: item.is_service_fee === true,
       })),
     }
 
@@ -213,12 +258,7 @@ function PaymentPanel({
         cashierName: user?.name,
         branchId: branchId ?? user?.branchId,
         branchName: branchName || user?.branchName,
-        items: cart.map((item) => ({
-          product_id: item.id,
-          item_name: item.name,
-          quantity: item.quantity,
-          unit_price: getUnitPrice(item),
-        })),
+        items: saleLineItems,
       })
       setCart([])
       resetPanel()
@@ -227,7 +267,11 @@ function PaymentPanel({
       setMessageTone('success')
       onOrderComplete?.('checkout', {
         inventorySynced: result.inventorySynced,
-        soldItems: payload.items,
+        soldItems: cart.map((item) => ({
+          product_id: item.id,
+          quantity: item.quantity,
+          unit_price: getUnitPrice(item),
+        })),
       })
     } catch (error) {
       setMessage(error.response?.data?.message || 'Checkout failed.')
@@ -285,9 +329,44 @@ function PaymentPanel({
         />
       </label>
 
+      <div className="summary-field service-fee-fieldset">
+        <span>Checkout Add-ons</span>
+        <div className="service-fee-list">
+          {serviceFeeOptions.map((feeOption) => {
+            const isSelected = selectedServiceFees.includes(feeOption.value)
+
+            return (
+              <label
+                key={feeOption.value}
+                className={
+                  isSelected
+                    ? 'service-fee-option service-fee-option-selected'
+                    : 'service-fee-option'
+                }
+              >
+                <input
+                  type="checkbox"
+                  checked={isSelected}
+                  onChange={() => handleToggleServiceFee(feeOption.value)}
+                />
+                <div className="service-fee-copy">
+                  <strong>{feeOption.label}</strong>
+                  <span>{feeOption.note}</span>
+                </div>
+                <strong className="service-fee-amount">{peso(feeOption.amount)}</strong>
+              </label>
+            )
+          })}
+        </div>
+      </div>
+
       <div className="summary-row">
         <span>Subtotal</span>
         <strong>{peso(subtotal)}</strong>
+      </div>
+      <div className="summary-row">
+        <span>Service Fees</span>
+        <strong>{peso(serviceFeeTotal)}</strong>
       </div>
       <div className="summary-row">
         <span>Discount</span>

@@ -1,15 +1,21 @@
-import api from '../../../shared/api/apiClient'
+import api from '../../../shared/api/apiClient.js'
 import {
   applySaleToInventory,
-} from '../../inventory/services/inventoryService'
+} from '../../inventory/services/inventoryService.js'
 import {
   createSupabaseServiceError,
   getSupabaseClient,
   isSupabaseDataEnabled,
   supabaseRuntime,
   supabaseTables,
-} from '../../../shared/api/supabaseClient'
-import { getStoredSalesHistory, saveStoredSalesHistory } from '../../../shared/utils/storage'
+} from '../../../shared/api/supabaseClient.js'
+import { getStoredSalesHistory, saveStoredSalesHistory } from '../../../shared/utils/storage.js'
+import {
+  SERVICE_FEE_PREFIX,
+  buildServiceFeeLineItems,
+  isServiceFeeLineItem,
+  serviceFeeOptions,
+} from '../utils/serviceFees.js'
 
 export const discountOptions = [
   { value: 'none', label: 'None', rate: 0 },
@@ -17,17 +23,26 @@ export const discountOptions = [
 ]
 
 export const paymentMethods = [{ value: 'cash', label: 'Cash' }]
+export {
+  SERVICE_FEE_PREFIX,
+  buildServiceFeeLineItems,
+  isServiceFeeLineItem,
+  serviceFeeOptions,
+}
 
 function buildLocalSaleRecord(payload, meta = {}) {
   const submittedAt = new Date().toISOString()
   const normalizedItems = Array.isArray(meta.items)
     ? meta.items.map((item, index) => ({
         id: `${payload.cashier_id || 'cashier'}-${submittedAt}-${index + 1}`,
-        product_id: item.product_id,
+        product_id: item.product_id ?? null,
         item_name: item.item_name || 'Unknown Item',
         quantity: Number(item.quantity || 0),
         unit_price: Number(item.unit_price || 0),
-        line_total: Number(item.quantity || 0) * Number(item.unit_price || 0),
+        line_total:
+          Number(item.line_total || 0) ||
+          Number(item.quantity || 0) * Number(item.unit_price || 0),
+        is_service_fee: Boolean(item.is_service_fee),
       }))
     : []
 
