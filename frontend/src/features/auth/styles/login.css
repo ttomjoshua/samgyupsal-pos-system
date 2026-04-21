@@ -122,12 +122,11 @@ button.login-password-visibility:hover:not(:disabled) {
 }
 
 .login-session-alert {
-  display: grid;
-  gap: 1rem;
+  display: flex;
+  justify-content: flex-end;
+  padding-top: 0.25rem;
 }
 
-.login-session-alert p {
-  margin: 0;
-  color: var(--text-soft);
-  line-height: 1.65;
+.login-session-alert .primary-button {
+  min-width: 148px;
 }

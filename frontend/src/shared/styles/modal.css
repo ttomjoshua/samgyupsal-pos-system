@@ -12,22 +12,24 @@
 .modal-panel {
   width: 100%;
   background: #ffffff;
-  border-radius: 16px;
-  box-shadow: 0 20px 50px rgba(2, 6, 23, 0.22);
+  border: 1px solid rgba(89, 67, 48, 0.12);
+  border-radius: 24px;
+  box-shadow: 0 24px 60px rgba(2, 6, 23, 0.18);
   overflow: hidden;
 }
 
 .modal-header {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: space-between;
   gap: 1rem;
-  padding: 18px 20px;
+  padding: 22px 24px 18px;
   border-bottom: 1px solid #e5e7eb;
 }
 
 .modal-header h2 {
   margin: 0;
+  color: var(--text-strong);
 }
 
 .modal-header-copy {
@@ -43,28 +45,45 @@
 }
 
 .modal-body {
-  padding: 20px;
+  padding: 20px 24px 24px;
   max-height: 78vh;
   overflow-y: auto;
 }
 
 .modal-close-btn {
-  border: none;
-  background: #ef4444;
-  color: #ffffff;
-  padding: 8px 12px;
-  border-radius: 10px;
-  font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.5rem;
+  height: 2.5rem;
+  flex-shrink: 0;
+  border: 1px solid rgba(89, 67, 48, 0.12);
+  background: rgba(248, 244, 238, 0.9);
+  color: var(--text-soft);
+  padding: 0;
+  border-radius: 12px;
   cursor: pointer;
+  box-shadow: none;
+}
+
+.modal-close-btn svg {
+  width: 1rem;
+  height: 1rem;
+}
+
+.modal-close-btn:hover:not(:disabled),
+.modal-close-btn:focus-visible {
+  transform: none;
+  background: #ffffff;
+  color: var(--text-strong);
+  border-color: rgba(31, 49, 69, 0.16);
+  box-shadow: 0 10px 22px rgba(15, 23, 42, 0.08);
 }
 
 @media (max-width: 900px) {
-  .modal-header {
-    flex-direction: column;
-    align-items: flex-start;
-  }
-
-  .modal-close-btn {
-    width: 100%;
+  .modal-header,
+  .modal-body {
+    padding-left: 18px;
+    padding-right: 18px;
   }
 }

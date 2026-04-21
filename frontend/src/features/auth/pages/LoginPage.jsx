@@ -9,7 +9,6 @@ import { getDefaultAppPath } from '../../../shared/utils/permissions'
 import {
   isSessionConflictError,
   isSessionConflictMessage,
-  SESSION_CONFLICT_MESSAGE,
 } from '../services/sessionLockService'
 import {
   getFirstValidationError,
@@ -199,20 +198,19 @@ function LoginPage() {
 
       <Modal
         isOpen={isSessionAlertOpen}
-        eyebrow="Sign-in Alert"
-        title="Account Already In Use"
-        description="This account is already active on another device."
+        title="Account already in use"
+        description="This sign-in can't continue because the account is active on another device. Ask the current user to sign out, then try again."
         onClose={() => setIsSessionAlertOpen(false)}
-        width="480px"
+        closeLabel="Close sign-in alert"
+        width="440px"
       >
         <div className="login-session-alert">
-          <p>{SESSION_CONFLICT_MESSAGE}</p>
           <button
             type="button"
             className="primary-button"
             onClick={() => setIsSessionAlertOpen(false)}
           >
-            OK
+            Understood
           </button>
         </div>
       </Modal>
