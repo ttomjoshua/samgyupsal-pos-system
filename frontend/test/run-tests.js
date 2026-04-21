@@ -181,6 +181,30 @@ const tests = [
     },
   },
   {
+    name: 'isSessionConflictError recognizes nested Supabase RPC conflict messages',
+    run() {
+      assert.equal(
+        isSessionConflictError({
+          details: 'Active session already exists for this account.',
+        }),
+        true,
+      )
+    },
+  },
+  {
+    name: 'isSessionConflictError recognizes wrapped conflict causes',
+    run() {
+      assert.equal(
+        isSessionConflictError({
+          cause: {
+            message: 'This account is already signed in elsewhere.',
+          },
+        }),
+        true,
+      )
+    },
+  },
+  {
     name: 'buildServiceFeeLineItems creates checkout add-on rows with receipt-safe names',
     run() {
       const result = buildServiceFeeLineItems([

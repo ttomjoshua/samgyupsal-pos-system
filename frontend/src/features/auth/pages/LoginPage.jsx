@@ -69,12 +69,15 @@ function LoginPage() {
   const [error, setError] = useState('')
   const [isPasswordVisible, setIsPasswordVisible] = useState(false)
   const [isSessionAlertOpen, setIsSessionAlertOpen] = useState(false)
+  const sessionConflictMessage = (
+    isSessionConflictMessage(error) ? error : authError
+  )
 
   useEffect(() => {
-    if (usesSupabaseAuth && isSessionConflictMessage(authError)) {
+    if (usesSupabaseAuth && isSessionConflictMessage(sessionConflictMessage)) {
       setIsSessionAlertOpen(true)
     }
-  }, [authError, usesSupabaseAuth])
+  }, [sessionConflictMessage, usesSupabaseAuth])
 
   const handleChange = (event) => {
     const { name, value } = event.target
@@ -179,7 +182,13 @@ function LoginPage() {
           </button>
         </div>
 
-        {error ? (
+        {isSessionConflictMessage(sessionConflictMessage) ? (
+          <NoticeBanner
+            variant="error"
+            title="Account already in use"
+            message={sessionConflictMessage}
+          />
+        ) : error ? (
           <NoticeBanner
             variant="error"
             title="Sign-in issue"

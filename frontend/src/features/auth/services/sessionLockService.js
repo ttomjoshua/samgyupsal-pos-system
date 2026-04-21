@@ -9,15 +9,33 @@ export const SESSION_CONFLICT_CODE = 'SESSION_LOCK_CONFLICT'
 export const SESSION_CONFLICT_MESSAGE =
   'This account is already signed in on another device. Sign out there first before trying again.'
 
-export function isSessionConflictMessage(message) {
-  const normalizedMessage = String(message || '')
+const SESSION_CONFLICT_PATTERNS = [
+  'already signed in on another device',
+  'already active on another device',
+  'already logged in on another device',
+  'already signed in elsewhere',
+  'already active elsewhere',
+  'account already in use',
+  'account is already in use',
+  'session lock conflict',
+  'active session already exists',
+]
+
+function normalizeMessage(value) {
+  return String(value || '')
     .trim()
     .toLowerCase()
+}
 
-  return (
-    normalizedMessage.includes('already signed in on another device') ||
-    normalizedMessage.includes('already active on another device') ||
-    normalizedMessage.includes('account already in use')
+export function isSessionConflictMessage(message) {
+  const normalizedMessage = normalizeMessage(message)
+
+  if (!normalizedMessage) {
+    return false
+  }
+
+  return SESSION_CONFLICT_PATTERNS.some((pattern) =>
+    normalizedMessage.includes(pattern)
   )
 }
 
@@ -37,6 +55,19 @@ function createSessionConflictError(cause = null) {
   return error
 }
 
+function collectSessionLockErrorMessages(error) {
+  return [
+    error?.message,
+    error?.details,
+    error?.hint,
+    error?.response?.data?.message,
+    error?.response?.data?.error,
+    error?.cause?.message,
+    error?.cause?.details,
+    error?.cause?.hint,
+  ].filter(Boolean)
+}
+
 async function invokeSessionLockRpc(rpcName) {
   if (!isSupabaseAuthEnabled) {
     return true
@@ -46,6 +77,10 @@ async function invokeSessionLockRpc(rpcName) {
   const { data, error } = await supabase.rpc(rpcName)
 
   if (error) {
+    if (isSessionConflictError(error)) {
+      throw createSessionConflictError(error)
+    }
+
     throw createSupabaseServiceError(
       error,
       'Unable to verify the current login session.',
@@ -114,7 +149,8 @@ export async function clearCurrentSupabaseSession() {
 export function isSessionConflictError(error) {
   return (
     error?.code === SESSION_CONFLICT_CODE ||
-    isSessionConflictMessage(error?.response?.data?.message) ||
-    isSessionConflictMessage(error?.message)
+    collectSessionLockErrorMessages(error).some((message) =>
+      isSessionConflictMessage(message)
+    )
   )
 }

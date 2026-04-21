@@ -19,6 +19,7 @@ import {
   clearCurrentSupabaseSession,
   SESSION_CONFLICT_MESSAGE,
   isSessionConflictError,
+  isSessionConflictMessage,
   validateCurrentSessionLock,
 } from '../../features/auth/services/sessionLockService'
 
@@ -97,7 +98,9 @@ export function AuthProvider({ children }) {
 
           setUser(null)
           clearSavedUser()
-          setAuthError('')
+          setAuthError((currentError) =>
+            isSessionConflictMessage(currentError) ? currentError : ''
+          )
           return
         }
 
