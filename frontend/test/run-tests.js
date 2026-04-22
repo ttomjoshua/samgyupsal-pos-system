@@ -22,6 +22,7 @@ import {
   validateCheckout,
   validateInventoryForm,
   validateInventoryQuantityAction,
+  validateRegistrationForm,
 } from '../src/shared/utils/validation.js'
 
 const tests = [
@@ -65,6 +66,43 @@ const tests = [
 
       assert.equal(result.isValid, false)
       assert.equal(result.errors.stock, 'Stock quantity must be a whole number.')
+    },
+  },
+  {
+    name: 'validateRegistrationForm requires matching passwords',
+    run() {
+      const result = validateRegistrationForm({
+        fullName: 'Patricia Ramos',
+        email: 'owner@samgyupsal.com',
+        username: 'samgyup.admin',
+        password: 'strongpass1',
+        confirmPassword: 'strongpass2',
+      })
+
+      assert.equal(result.isValid, false)
+      assert.equal(result.errors.confirmPassword, 'Passwords do not match.')
+    },
+  },
+  {
+    name: 'validateRegistrationForm sanitizes administrator sign-up data',
+    run() {
+      const result = validateRegistrationForm({
+        fullName: '  Patricia   Ramos  ',
+        email: ' OWNER@SAMGYUPSAL.COM ',
+        username: ' Samgyup.Admin ',
+        password: 'strongpass1',
+        confirmPassword: 'strongpass1',
+      })
+
+      assert.equal(result.isValid, true)
+      assert.deepEqual(result.sanitizedData, {
+        fullName: 'Patricia Ramos',
+        name: 'Patricia Ramos',
+        email: 'owner@samgyupsal.com',
+        username: 'samgyup.admin',
+        password: 'strongpass1',
+        confirmPassword: 'strongpass1',
+      })
     },
   },
   {

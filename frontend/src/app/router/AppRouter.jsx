@@ -3,6 +3,7 @@ import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
 import Loader from '../../shared/components/common/Loader'
 import useAuth from '../../features/auth/hooks/useAuth'
 import ProtectedRoute from './ProtectedRoute'
+import PublicRoute from './PublicRoute'
 import {
   getDefaultAppPath,
   ROLE_ADMIN,
@@ -10,9 +11,11 @@ import {
 } from '../../shared/utils/permissions'
 
 const MainLayout = lazy(() => import('../layout/MainLayout'))
+const LandingPage = lazy(() => import('../../features/public/pages/LandingPage'))
 const DashboardPage = lazy(() => import('../../features/dashboard/pages/DashboardPage'))
 const InventoryPage = lazy(() => import('../../features/inventory/pages/InventoryPage'))
 const LoginPage = lazy(() => import('../../features/auth/pages/LoginPage'))
+const SignUpPage = lazy(() => import('../../features/auth/pages/SignUpPage'))
 const NotFoundPage = lazy(() => import('../pages/NotFoundPage'))
 const PosPage = lazy(() => import('../../features/pos/pages/PosPage'))
 const ProductsPage = lazy(() => import('../../features/products/pages/ProductsPage'))
@@ -28,7 +31,7 @@ function renderLazyPage(element, message) {
 }
 
 function AppRouter() {
-  const { isAuthenticated, isAuthReady, user } = useAuth()
+  const { user } = useAuth()
   const defaultAppPath = getDefaultAppPath(user)
 
   return (
@@ -37,16 +40,29 @@ function AppRouter() {
         <Route
           path="/"
           element={
-            !isAuthReady ? (
-              <Loader message="Restoring your session..." />
-            ) : isAuthenticated ? (
-              <Navigate to={defaultAppPath} replace />
-            ) : (
-              renderLazyPage(<LoginPage />, 'Loading sign-in...')
-            )
+            <PublicRoute>
+              {renderLazyPage(<LandingPage />, 'Loading home page...')}
+            </PublicRoute>
           }
         />
-        <Route path="/login" element={<Navigate to="/" replace />} />
+        <Route path="/home" element={<Navigate to="/" replace />} />
+        <Route
+          path="/login"
+          element={
+            <PublicRoute>
+              {renderLazyPage(<LoginPage />, 'Loading sign-in...')}
+            </PublicRoute>
+          }
+        />
+        <Route
+          path="/signup"
+          element={
+            <PublicRoute>
+              {renderLazyPage(<SignUpPage />, 'Loading registration...')}
+            </PublicRoute>
+          }
+        />
+        <Route path="/register" element={<Navigate to="/signup" replace />} />
         <Route
           path="/app"
           element={
