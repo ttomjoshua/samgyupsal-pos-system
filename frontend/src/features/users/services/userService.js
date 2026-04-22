@@ -39,7 +39,6 @@ const DEFAULT_BRANCHES = [
 const DEFAULT_ACCOUNTS = [
   {
     id: 1,
-    email: 'admin@samgyupsal.local',
     username: 'admin',
     password: 'admin123',
     name: 'Admin User',
@@ -49,7 +48,6 @@ const DEFAULT_ACCOUNTS = [
   },
   {
     id: 2,
-    email: 'cashier.main@samgyupsal.local',
     username: 'cashier.main',
     password: 'cashier123',
     name: 'Sta. Lucia Branch Cashier',
@@ -59,7 +57,6 @@ const DEFAULT_ACCOUNTS = [
   },
   {
     id: 3,
-    email: 'cashier.dollar@samgyupsal.local',
     username: 'cashier.north',
     password: 'cashier123',
     name: 'Dollar Branch Cashier',
@@ -94,12 +91,6 @@ function normalizeBranchCode(value) {
     .trim()
     .replace(/\s+/g, ' ')
     .toUpperCase()
-}
-
-function normalizeMockEmail(value) {
-  return String(value || '')
-    .trim()
-    .toLowerCase()
 }
 
 function normalizeBranchId(value, branches = DEFAULT_BRANCHES) {
@@ -252,7 +243,6 @@ export function normalizeMockUser(user) {
 
   return {
     id: user.id,
-    email: normalizeMockEmail(user.email),
     username: user.username || '',
     name: String(user.name || '').trim() || 'Unnamed User',
     roleKey,
@@ -373,49 +363,6 @@ function validateEmployeePayload(payload, branches, accounts, currentAccountId =
   }
 }
 
-function validateAdminPayload(payload, accounts) {
-  const name = String(payload.name || payload.fullName || '').trim()
-  const email = normalizeMockEmail(payload.email)
-  const username = normalizeUsername(payload.username)
-  const password = String(payload.password || '').trim()
-
-  if (!name || !email || !username) {
-    throw new Error('Full name, email, and username are required.')
-  }
-
-  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-    throw new Error('Enter a valid email address before creating this account.')
-  }
-
-  if (password.length < 8) {
-    throw new Error('Password must be at least 8 characters long.')
-  }
-
-  const usernameExists = accounts.some(
-    (account) => normalizeUsername(account.username) === username,
-  )
-
-  if (usernameExists) {
-    throw new Error('That username already exists. Choose a different one.')
-  }
-
-  const emailExists = accounts.some(
-    (account) => normalizeMockEmail(account.email) === email,
-  )
-
-  if (emailExists) {
-    throw new Error('That email address is already in use. Choose a different one.')
-  }
-
-  return {
-    name,
-    email,
-    username,
-    password,
-    status: 'active',
-  }
-}
-
 export function createEmployeeAccount(payload) {
   const branches = ensureMockBranches()
   const accounts = ensureMockAccounts()
@@ -428,27 +375,6 @@ export function createEmployeeAccount(payload) {
     password: validatedPayload.password.trim(),
     roleKey: ROLE_EMPLOYEE,
     branchId: validatedPayload.branchId,
-    status: validatedPayload.status,
-  }
-
-  const nextAccounts = [...accounts, nextAccount]
-  saveStoredMockAccounts(nextAccounts)
-
-  return normalizeMockUser(nextAccount)
-}
-
-export function createAdminAccount(payload) {
-  const accounts = ensureMockAccounts()
-  const validatedPayload = validateAdminPayload(payload, accounts)
-
-  const nextAccount = {
-    id: getNextAccountId(accounts),
-    email: validatedPayload.email,
-    username: validatedPayload.username,
-    password: validatedPayload.password,
-    name: validatedPayload.name,
-    roleKey: ROLE_ADMIN,
-    branchId: null,
     status: validatedPayload.status,
   }
 
@@ -554,12 +480,6 @@ export function setEmployeeAccountStatus(accountId, status) {
 export function findAccountByUsername(username) {
   return ensureMockAccounts().find(
     (account) => normalizeUsername(account.username) === normalizeUsername(username),
-  )
-}
-
-export function findAccountByEmail(email) {
-  return ensureMockAccounts().find(
-    (account) => normalizeMockEmail(account.email) === normalizeMockEmail(email),
   )
 }
 

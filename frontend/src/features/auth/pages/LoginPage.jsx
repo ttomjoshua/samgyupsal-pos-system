@@ -1,53 +1,64 @@
 import { useEffect, useState } from 'react'
-import { Link, useLocation, useNavigate } from 'react-router-dom'
+import { useNavigate } from 'react-router-dom'
 import useAuth from '../hooks/useAuth'
 
 import { isSupabaseAuthEnabled } from '../../../shared/api/supabaseClient'
 import NoticeBanner from '../../../shared/components/common/NoticeBanner'
 import Modal from '../../../shared/components/ui/Modal'
 import { getDefaultAppPath } from '../../../shared/utils/permissions'
-import { getDemoLoginAccounts } from '../../users/services/userService'
 import {
   isSessionConflictError,
   isSessionConflictMessage,
 } from '../services/sessionLockService'
-import { validateLoginForm } from '../../../shared/utils/validation'
-import AuthShowcasePanel from '../components/AuthShowcasePanel'
-import PasswordVisibilityIcon from '../components/PasswordVisibilityIcon'
-import '../styles/auth.css'
+import {
+  getFirstValidationError,
+  validateLoginForm,
+} from '../../../shared/utils/validation'
 import '../styles/login.css'
 
-const LOGIN_HIGHLIGHTS = [
-  {
-    title: 'Resume daily operations quickly',
-    description:
-      'Go straight back to checkout, stock monitoring, and dashboard visibility without a cluttered sign-in flow.',
-  },
-  {
-    title: 'Built around branch work',
-    description:
-      'The same workspace supports cashier execution, inventory awareness, and manager-level oversight.',
-  },
-  {
-    title: 'Role-based routing stays intact',
-    description:
-      'Administrators and employees continue into the sections that match the current system architecture.',
-  },
-]
+function PasswordVisibilityIcon({ isVisible }) {
+  if (isVisible) {
+    return (
+      <svg viewBox="0 0 24 24" aria-hidden="true">
+        <path
+          d="M4 4l16 16M9.9 9.9A3 3 0 0012 15a2.99 2.99 0 002.1-.9M6.7 6.7C4.5 8.2 3 10.3 2 12c2.2 3.9 5.8 6 10 6 1.9 0 3.6-.4 5.1-1.2m1.9-1.5c1.3-1 2.3-2.2 3-3.3-2.2-3.9-5.8-6-10-6-.8 0-1.5.1-2.2.2"
+          fill="none"
+          stroke="currentColor"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          strokeWidth="1.8"
+        />
+      </svg>
+    )
+  }
 
-const LOGIN_SNAPSHOT = [
-  { label: 'Dashboard', value: 'Sales, stock, and branch visibility' },
-  { label: 'Inventory', value: 'Low-stock and expiry tracking' },
-  { label: 'POS', value: 'Checkout, payments, and receipt flow' },
-]
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true">
+      <path
+        d="M2 12c2.2-3.9 5.8-6 10-6s7.8 2.1 10 6c-2.2 3.9-5.8 6-10 6S4.2 15.9 2 12z"
+        fill="none"
+        stroke="currentColor"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth="1.8"
+      />
+      <circle
+        cx="12"
+        cy="12"
+        r="3"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.8"
+      />
+    </svg>
+  )
+}
 
 function LoginPage() {
   const navigate = useNavigate()
-  const location = useLocation()
   const { authError, login } = useAuth()
 
   const usesSupabaseAuth = isSupabaseAuthEnabled
-  const demoAccounts = usesSupabaseAuth ? [] : getDemoLoginAccounts()
   const [formData, setFormData] = useState({
     email: '',
     username: '',
@@ -57,7 +68,6 @@ function LoginPage() {
   const [error, setError] = useState('')
   const [isPasswordVisible, setIsPasswordVisible] = useState(false)
   const [isSessionAlertOpen, setIsSessionAlertOpen] = useState(false)
-  const [registrationNotice, setRegistrationNotice] = useState('')
   const sessionConflictMessage = (
     isSessionConflictMessage(error) ? error : authError
   )
@@ -67,36 +77,6 @@ function LoginPage() {
       setIsSessionAlertOpen(true)
     }
   }, [sessionConflictMessage, usesSupabaseAuth])
-
-  useEffect(() => {
-    const routeState = location.state
-
-    if (!routeState || typeof routeState !== 'object') {
-      return
-    }
-
-    const notice = typeof routeState.notice === 'string' ? routeState.notice : ''
-    const registeredEmail =
-      typeof routeState.registeredEmail === 'string'
-        ? routeState.registeredEmail
-        : ''
-    const registeredUsername =
-      typeof routeState.registeredUsername === 'string'
-        ? routeState.registeredUsername
-        : ''
-
-    if (!notice && !registeredEmail && !registeredUsername) {
-      return
-    }
-
-    setRegistrationNotice(notice)
-    setFormData((previousData) => ({
-      ...previousData,
-      email: previousData.email || registeredEmail,
-      username: previousData.username || registeredUsername,
-    }))
-    navigate(location.pathname, { replace: true, state: null })
-  }, [location.pathname, location.state, navigate])
 
   const handleChange = (event) => {
     const { name, value } = event.target
@@ -118,7 +98,7 @@ function LoginPage() {
     const validation = validateLoginForm(formData, { useEmail: usesSupabaseAuth })
 
     if (!validation.isValid) {
-      setError(Object.values(validation.errors)[0] || 'Enter your credentials.')
+      setError(getFirstValidationError(validation.errors))
       return
     }
 
@@ -127,13 +107,13 @@ function LoginPage() {
     try {
       const authenticatedUser = await login(validation.sanitizedData)
       navigate(getDefaultAppPath(authenticatedUser), { replace: true })
-    } catch (submissionError) {
-      if (isSessionConflictError(submissionError)) {
+    } catch (error) {
+      if (isSessionConflictError(error)) {
         setIsSessionAlertOpen(true)
       }
 
       setError(
-        submissionError.response?.data?.message ||
+        error.response?.data?.message ||
           (usesSupabaseAuth
             ? 'Unable to sign in with this email and password.'
             : 'Incorrect username or password. Please try again.'),
@@ -144,128 +124,77 @@ function LoginPage() {
   }
 
   return (
-    <div className="auth-page">
-      <div className="auth-shell">
-        <form className="login-card auth-form-card" onSubmit={handleSubmit}>
-          <div className="auth-form-header">
-            <div className="auth-top-links">
-              <Link to="/">Back to home</Link>
-              <Link to="/signup">Create account</Link>
-            </div>
+    <div className="login-wrapper">
+      <form className="login-card" onSubmit={handleSubmit}>
+        <p className="eyebrow">Welcome back</p>
+        <h1>SamgYUPSAL Korean Food</h1>
+        <p className="login-subtitle">
+          Point-of-Sale and Inventory Monitoring System
+        </p>
 
-            <p className="eyebrow">Secure Sign In</p>
-            <h2>Sign in to your workspace</h2>
-            <p className="auth-form-subtitle">
-              Access checkout, inventory monitoring, reporting, and branch
-              operations from the same product workspace.
-            </p>
-          </div>
-
-          {registrationNotice ? (
-            <NoticeBanner
-              variant="success"
-              title="Account ready"
-              message={registrationNotice}
+        <div className="login-form">
+          {usesSupabaseAuth ? (
+            <input
+              type="email"
+              name="email"
+              placeholder="Email address"
+              value={formData.email}
+              onChange={handleChange}
+              aria-invalid={Boolean(error)}
             />
-          ) : null}
-
-          {!usesSupabaseAuth && demoAccounts.length > 0 ? (
-            <section className="login-demo">
-              <div className="login-demo-header">
-                <strong>Demo accounts</strong>
-                <span>Use the local accounts below or create a new admin on sign-up.</span>
-              </div>
-
-              <div className="login-demo-grid">
-                {demoAccounts.map((account) => (
-                  <article key={account.username} className="login-demo-card">
-                    <strong>{account.username}</strong>
-                    <span>{account.password}</span>
-                    <p>
-                      {account.role} · {account.branchName}
-                    </p>
-                  </article>
-                ))}
-              </div>
-            </section>
-          ) : null}
-
-          <div className="auth-form-stack">
-            <label className="auth-field">
-              <span>{usesSupabaseAuth ? 'Email Address' : 'Username'}</span>
-              <input
-                type={usesSupabaseAuth ? 'email' : 'text'}
-                name={usesSupabaseAuth ? 'email' : 'username'}
-                placeholder={usesSupabaseAuth ? 'owner@samgyupsal.com' : 'samgyup.admin'}
-                value={usesSupabaseAuth ? formData.email : formData.username}
-                onChange={handleChange}
-                aria-invalid={Boolean(error)}
-                disabled={loading}
-              />
-            </label>
-
-            <label className="auth-field">
-              <span>Password</span>
-              <div className="login-password-field auth-password-field">
-                <input
-                  type={isPasswordVisible ? 'text' : 'password'}
-                  name="password"
-                  placeholder="Enter your password"
-                  value={formData.password}
-                  onChange={handleChange}
-                  aria-invalid={Boolean(error)}
-                  disabled={loading}
-                />
-                <button
-                  type="button"
-                  className="login-password-visibility"
-                  onClick={() => setIsPasswordVisible((currentValue) => !currentValue)}
-                  aria-label={isPasswordVisible ? 'Hide password' : 'Show password'}
-                  disabled={loading}
-                >
-                  <PasswordVisibilityIcon isVisible={isPasswordVisible} />
-                </button>
-              </div>
-            </label>
-          </div>
-
-          {isSessionConflictMessage(sessionConflictMessage) ? (
-            <NoticeBanner
-              variant="error"
-              title="Account already in use"
-              message={sessionConflictMessage}
+          ) : (
+            <input
+              type="text"
+              name="username"
+              placeholder="Username"
+              value={formData.username}
+              onChange={handleChange}
+              aria-invalid={Boolean(error)}
             />
-          ) : error ? (
-            <NoticeBanner
-              variant="error"
-              title="Sign-in issue"
-              message={error}
+          )}
+
+          <label className="login-password-field">
+            <input
+              type={isPasswordVisible ? 'text' : 'password'}
+              name="password"
+              placeholder="Password"
+              value={formData.password}
+              onChange={handleChange}
+              aria-invalid={Boolean(error)}
             />
-          ) : null}
+            <button
+              type="button"
+              className="login-password-visibility"
+              onClick={() => setIsPasswordVisible((currentValue) => !currentValue)}
+              aria-label={isPasswordVisible ? 'Hide password' : 'Show password'}
+            >
+              <PasswordVisibilityIcon isVisible={isPasswordVisible} />
+            </button>
+          </label>
 
           <button
             type="submit"
-            className="primary-button auth-submit-button"
+            className="primary-button"
             disabled={loading}
           >
-            {loading ? 'Signing in...' : 'Log In'}
+            {loading ? 'Signing in...' : 'Login'}
           </button>
+        </div>
 
-          <p className="auth-form-footnote">
-            Need administrator access? <Link to="/signup">Create an account.</Link>
-          </p>
-        </form>
-
-        <AuthShowcasePanel
-          eyebrow="Operations Access"
-          title="The same system your cashier, inventory, and branch teams rely on."
-          description="Sign-in should feel focused and trustworthy. The workspace you enter is built around service flow, stock visibility, and day-to-day branch control."
-          highlights={LOGIN_HIGHLIGHTS}
-          snapshotTitle="After sign-in"
-          snapshotItems={LOGIN_SNAPSHOT}
-          note="Session conflict protection remains active for accounts already in use on another device."
-        />
-      </div>
+        {isSessionConflictMessage(sessionConflictMessage) ? (
+          <NoticeBanner
+            variant="error"
+            title="Account already in use"
+            message={sessionConflictMessage}
+          />
+        ) : error ? (
+          <NoticeBanner
+            variant="error"
+            title="Sign-in issue"
+            message={error}
+          />
+        ) : null}
+      </form>
 
       <Modal
         isOpen={isSessionAlertOpen}

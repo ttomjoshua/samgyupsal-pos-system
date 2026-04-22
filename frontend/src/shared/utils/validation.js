@@ -56,56 +56,6 @@ export function validateLoginForm(formData = {}, options = {}) {
   }
 }
 
-export function validateRegistrationForm(formData = {}) {
-  const fullName = collapseWhitespace(formData.fullName || formData.name)
-  const email = collapseWhitespace(formData.email).toLowerCase()
-  const username = collapseWhitespace(formData.username).toLowerCase()
-  const password = String(formData.password || '')
-  const confirmPassword = String(formData.confirmPassword || '')
-  const errors = {}
-
-  if (!fullName) {
-    errors.fullName = 'Full name is required.'
-  }
-
-  if (!email) {
-    errors.email = 'Email is required.'
-  } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-    errors.email = 'Enter a valid email address.'
-  }
-
-  if (!username) {
-    errors.username = 'Username is required.'
-  } else if (username.length < 3) {
-    errors.username = 'Username must be at least 3 characters long.'
-  }
-
-  if (!password.trim()) {
-    errors.password = 'Password is required.'
-  } else if (password.trim().length < 8) {
-    errors.password = 'Password must be at least 8 characters long.'
-  }
-
-  if (!confirmPassword.trim()) {
-    errors.confirmPassword = 'Confirm your password.'
-  } else if (password !== confirmPassword) {
-    errors.confirmPassword = 'Passwords do not match.'
-  }
-
-  return {
-    isValid: Object.keys(errors).length === 0,
-    errors,
-    sanitizedData: {
-      fullName,
-      name: fullName,
-      email,
-      username,
-      password: password.trim(),
-      confirmPassword: confirmPassword.trim(),
-    },
-  }
-}
-
 export function validateCheckout({
   paymentMethod,
   amountReceived,
