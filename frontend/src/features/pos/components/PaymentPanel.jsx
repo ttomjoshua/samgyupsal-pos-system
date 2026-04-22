@@ -9,6 +9,11 @@ import {
   serviceFeeOptions,
 } from '../utils/serviceFees'
 import {
+  calculateDiscountAmount,
+  DEFAULT_DISCOUNT_TYPE,
+  discountOptions,
+} from '../utils/discounts'
+import {
   createSale,
   paymentMethods,
 } from '../services/salesService'
@@ -27,7 +32,7 @@ function PaymentPanel({
   branchName = '',
 }) {
   const { user } = useAuth()
-  const [discount, setDiscount] = useState(0)
+  const [discountType, setDiscountType] = useState(DEFAULT_DISCOUNT_TYPE)
   const [paymentMethod, setPaymentMethod] = useState('cash')
   const [cashReceived, setCashReceived] = useState('')
   const [selectedServiceFees, setSelectedServiceFees] = useState([])
@@ -64,12 +69,15 @@ function PaymentPanel({
     [selectedFeeLineItems],
   )
 
-  const numericDiscount = Number(discount || 0)
+  const numericDiscount = useMemo(
+    () => calculateDiscountAmount(subtotal, discountType),
+    [subtotal, discountType],
+  )
   const total = Math.max(0, subtotal + serviceFeeTotal - numericDiscount)
   const change = Number(cashReceived || 0) - total
 
   const resetPanel = () => {
-    setDiscount(0)
+    setDiscountType(DEFAULT_DISCOUNT_TYPE)
     setPaymentMethod('cash')
     setCashReceived('')
     setSelectedServiceFees([])
@@ -115,7 +123,7 @@ function PaymentPanel({
       branchName: branchName || user?.branchName || 'All Branches',
       cashReceived,
       cart: cart.map((item) => ({ ...item })),
-      discount,
+      discountType,
       heldAt: new Date().toISOString(),
       paymentMethod,
       selectedServiceFees: [...selectedServiceFees],
@@ -152,7 +160,7 @@ function PaymentPanel({
     }
 
     setCart(heldOrder.cart.map((item) => ({ ...item })))
-    setDiscount(heldOrder.discount)
+    setDiscountType(heldOrder.discountType || DEFAULT_DISCOUNT_TYPE)
     setPaymentMethod(heldOrder.paymentMethod)
     setCashReceived(heldOrder.cashReceived)
     setSelectedServiceFees([...(heldOrder.selectedServiceFees || [])])
@@ -285,23 +293,24 @@ function PaymentPanel({
     <div className="cart-summary">
       <div className="form-row">
         <label className="summary-field">
-          <span>Discount (PHP)</span>
-          <input
-            type="number"
-            min="0"
-            step="0.01"
-            value={discount}
+          <span>Discount Type</span>
+          <SelectMenu
+            className="summary-select-menu"
+            value={discountType}
             onChange={(event) => {
               clearStatusMessage()
-              setDiscount(event.target.value)
+              setDiscountType(event.target.value)
             }}
+            placeholder="Select discount type"
             aria-invalid={Boolean(message)}
+            options={discountOptions}
           />
         </label>
 
         <label className="summary-field">
           <span>Payment Method</span>
           <SelectMenu
+            className="summary-select-menu"
             value={paymentMethod}
             onChange={(event) => {
               clearStatusMessage()

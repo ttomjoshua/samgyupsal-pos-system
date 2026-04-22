@@ -17,11 +17,6 @@ import {
   serviceFeeOptions,
 } from '../utils/serviceFees.js'
 
-export const discountOptions = [
-  { value: 'none', label: 'None', rate: 0 },
-  { value: 'pwd', label: 'PWD (20%)', rate: 0.2 },
-]
-
 export const paymentMethods = [{ value: 'cash', label: 'Cash' }]
 export {
   SERVICE_FEE_PREFIX,
