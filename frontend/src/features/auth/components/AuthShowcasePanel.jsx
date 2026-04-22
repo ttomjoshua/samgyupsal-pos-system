@@ -5,11 +5,13 @@ function AuthShowcasePanel({
   title,
   description,
   highlights = [],
+  snapshotTitle = '',
+  snapshotItems = [],
   note = '',
 }) {
   return (
     <aside className="auth-showcase-panel">
-      <PublicBrand />
+      <PublicBrand compact showDescription={false} />
 
       <div className="auth-showcase-copy">
         <p className="eyebrow">{eyebrow}</p>
@@ -25,6 +27,20 @@ function AuthShowcasePanel({
           </article>
         ))}
       </div>
+
+      {snapshotItems.length > 0 ? (
+        <section className="auth-showcase-snapshot">
+          {snapshotTitle ? <span>{snapshotTitle}</span> : null}
+          <div className="auth-showcase-snapshot-grid">
+            {snapshotItems.map((item) => (
+              <article key={`${item.label}-${item.value}`}>
+                <strong>{item.label}</strong>
+                <p>{item.value}</p>
+              </article>
+            ))}
+          </div>
+        </section>
+      ) : null}
 
       {note ? <p className="auth-showcase-note">{note}</p> : null}
     </aside>

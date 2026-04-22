@@ -17,20 +17,26 @@ import '../styles/login.css'
 
 const SIGN_UP_HIGHLIGHTS = [
   {
-    title: 'Administrator-first access',
+    title: 'Start with the right account',
     description:
-      'Start with the account that can manage products, branches, reports, and employee access.',
+      'The administrator account is the clean entry point for branch setup, product control, reports, and user management.',
   },
   {
-    title: 'Branch setup follows naturally',
+    title: 'Keep setup friction low',
     description:
-      'Once inside the system, you can add branches and assign employee accounts from the built-in user tools.',
+      'The form stays compact and readable so the first product interaction feels deliberate, not bloated.',
   },
   {
-    title: 'Aligned with the live product',
+    title: 'Aligned with the real architecture',
     description:
-      'This registration flow is shaped around the existing POS, inventory, reporting, and access-control architecture.',
+      'Branch assignments and employee setup still happen inside the protected workspace where the current system manages them.',
   },
+]
+
+const SIGN_UP_SNAPSHOT = [
+  { label: 'Branches', value: 'Set up active store locations' },
+  { label: 'Users', value: 'Assign employees and status' },
+  { label: 'Products', value: 'Manage categories and items' },
 ]
 
 const INITIAL_FORM = {
@@ -112,14 +118,6 @@ function SignUpPage() {
   return (
     <div className="auth-page">
       <div className="auth-shell">
-        <AuthShowcasePanel
-          eyebrow="Get Started"
-          title="Open your Samgyupsal POS workspace with a proper administrator account."
-          description="This sign-up flow is built to feel native to the product. Create your admin access first, then continue with branch setup, employee management, inventory, and checkout inside the main app."
-          highlights={SIGN_UP_HIGHLIGHTS}
-          note="Branch assignments and employee accounts are configured after sign-in because the current system manages them inside the protected workspace."
-        />
-
         <form className="login-card auth-form-card" onSubmit={handleSubmit}>
           <div className="auth-form-header">
             <div className="auth-top-links">
@@ -127,17 +125,17 @@ function SignUpPage() {
               <Link to="/login">Log in instead</Link>
             </div>
 
-            <p className="eyebrow">Registration</p>
-            <h2>Create your administrator account</h2>
+            <p className="eyebrow">Administrator Sign-Up</p>
+            <h2>Create your workspace access</h2>
             <p className="auth-form-subtitle">
-              Start with the account that can oversee dashboard activity,
-              products, branches, employee access, and reporting.
+              Start with the administrator account that can manage branches,
+              products, reports, users, and the wider operational setup.
             </p>
           </div>
 
           <NoticeBanner
             variant="info"
-            title={usesSupabaseAuth ? 'Backend support still required' : 'Demo sign-up is available'}
+            title={usesSupabaseAuth ? 'Backend support still required' : 'Demo sign-up is active'}
             message={supportMessage}
           />
 
@@ -212,6 +210,9 @@ function SignUpPage() {
                   <PasswordVisibilityIcon isVisible={isPasswordVisible} />
                 </button>
               </div>
+              <span className="auth-field-note">
+                Use a strong password with at least 8 characters.
+              </span>
               {fieldErrors.password ? (
                 <span className="auth-field-error">{fieldErrors.password}</span>
               ) : null}
@@ -236,7 +237,9 @@ function SignUpPage() {
                     setIsConfirmPasswordVisible((currentValue) => !currentValue)
                   }
                   aria-label={
-                    isConfirmPasswordVisible ? 'Hide confirm password' : 'Show confirm password'
+                    isConfirmPasswordVisible
+                      ? 'Hide confirm password'
+                      : 'Show confirm password'
                   }
                   disabled={loading}
                 >
@@ -259,7 +262,11 @@ function SignUpPage() {
             />
           ) : null}
 
-          <button type="submit" className="primary-button" disabled={loading}>
+          <button
+            type="submit"
+            className="primary-button auth-submit-button"
+            disabled={loading}
+          >
             {loading ? 'Creating account...' : 'Create administrator account'}
           </button>
 
@@ -267,6 +274,16 @@ function SignUpPage() {
             Already have access? <Link to="/login">Log in here.</Link>
           </p>
         </form>
+
+        <AuthShowcasePanel
+          eyebrow="Workspace Setup"
+          title="Open the account that leads branch, product, and reporting control."
+          description="The sign-up experience now feels calmer and more intentional while still matching the product’s current access model and operational structure."
+          highlights={SIGN_UP_HIGHLIGHTS}
+          snapshotTitle="After sign-up"
+          snapshotItems={SIGN_UP_SNAPSHOT}
+          note="Branch assignments and employee onboarding continue inside the authenticated workspace, where the rest of the system already manages them."
+        />
       </div>
     </div>
   )

@@ -19,20 +19,26 @@ import '../styles/login.css'
 
 const LOGIN_HIGHLIGHTS = [
   {
-    title: 'Dashboard visibility',
+    title: 'Resume daily operations quickly',
     description:
-      'Continue into live branch activity, best-seller trends, low-stock watchlists, and operational summaries.',
+      'Go straight back to checkout, stock monitoring, and dashboard visibility without a cluttered sign-in flow.',
   },
   {
-    title: 'Connected daily workflow',
+    title: 'Built around branch work',
     description:
-      'Move between checkout, inventory, products, reports, and account tools without breaking the product flow.',
+      'The same workspace supports cashier execution, inventory awareness, and manager-level oversight.',
   },
   {
-    title: 'Role-based access',
+    title: 'Role-based routing stays intact',
     description:
-      'Administrator and employee accounts stay aligned with the permissions and branch rules already defined in the app.',
+      'Administrators and employees continue into the sections that match the current system architecture.',
   },
+]
+
+const LOGIN_SNAPSHOT = [
+  { label: 'Dashboard', value: 'Sales, stock, and branch visibility' },
+  { label: 'Inventory', value: 'Low-stock and expiry tracking' },
+  { label: 'POS', value: 'Checkout, payments, and receipt flow' },
 ]
 
 function LoginPage() {
@@ -140,14 +146,6 @@ function LoginPage() {
   return (
     <div className="auth-page">
       <div className="auth-shell">
-        <AuthShowcasePanel
-          eyebrow="Welcome Back"
-          title="Return to the Samgyupsal POS workspace without losing operational context."
-          description="Sign in to continue with dashboard monitoring, branch inventory, checkout operations, product management, and account oversight from the same connected system."
-          highlights={LOGIN_HIGHLIGHTS}
-          note="The login flow keeps the current session conflict protection and role-aware routing intact."
-        />
-
         <form className="login-card auth-form-card" onSubmit={handleSubmit}>
           <div className="auth-form-header">
             <div className="auth-top-links">
@@ -155,10 +153,11 @@ function LoginPage() {
               <Link to="/signup">Create account</Link>
             </div>
 
-            <p className="eyebrow">Welcome back</p>
-            <h2>Sign in to SamgYUPSAL Korean Food</h2>
-            <p className="login-subtitle">
-              Point-of-Sale and Inventory Monitoring System
+            <p className="eyebrow">Secure Sign In</p>
+            <h2>Sign in to your workspace</h2>
+            <p className="auth-form-subtitle">
+              Access checkout, inventory monitoring, reporting, and branch
+              operations from the same product workspace.
             </p>
           </div>
 
@@ -171,71 +170,63 @@ function LoginPage() {
           ) : null}
 
           {!usesSupabaseAuth && demoAccounts.length > 0 ? (
-            <div className="login-demo">
-              <p className="login-demo-title">Demo access is available</p>
-              {demoAccounts.map((account) => (
-                <p key={account.username}>
-                  <strong>{account.username}</strong> / {account.password}
-                  <span className="login-demo-branch">
-                    {' '}
-                    {account.role} - {account.branchName}
-                  </span>
-                </p>
-              ))}
-              <p className="login-demo-footnote">
-                Administrator sign-up also works in demo mode and creates a local
-                account for this browser.
-              </p>
-            </div>
+            <section className="login-demo">
+              <div className="login-demo-header">
+                <strong>Demo accounts</strong>
+                <span>Use the local accounts below or create a new admin on sign-up.</span>
+              </div>
+
+              <div className="login-demo-grid">
+                {demoAccounts.map((account) => (
+                  <article key={account.username} className="login-demo-card">
+                    <strong>{account.username}</strong>
+                    <span>{account.password}</span>
+                    <p>
+                      {account.role} · {account.branchName}
+                    </p>
+                  </article>
+                ))}
+              </div>
+            </section>
           ) : null}
 
-          <div className="login-form">
-            {usesSupabaseAuth ? (
+          <div className="auth-form-stack">
+            <label className="auth-field">
+              <span>{usesSupabaseAuth ? 'Email Address' : 'Username'}</span>
               <input
-                type="email"
-                name="email"
-                placeholder="Email address"
-                value={formData.email}
+                type={usesSupabaseAuth ? 'email' : 'text'}
+                name={usesSupabaseAuth ? 'email' : 'username'}
+                placeholder={usesSupabaseAuth ? 'owner@samgyupsal.com' : 'samgyup.admin'}
+                value={usesSupabaseAuth ? formData.email : formData.username}
                 onChange={handleChange}
                 aria-invalid={Boolean(error)}
+                disabled={loading}
               />
-            ) : (
-              <input
-                type="text"
-                name="username"
-                placeholder="Username"
-                value={formData.username}
-                onChange={handleChange}
-                aria-invalid={Boolean(error)}
-              />
-            )}
-
-            <label className="login-password-field">
-              <input
-                type={isPasswordVisible ? 'text' : 'password'}
-                name="password"
-                placeholder="Password"
-                value={formData.password}
-                onChange={handleChange}
-                aria-invalid={Boolean(error)}
-              />
-              <button
-                type="button"
-                className="login-password-visibility"
-                onClick={() => setIsPasswordVisible((currentValue) => !currentValue)}
-                aria-label={isPasswordVisible ? 'Hide password' : 'Show password'}
-              >
-                <PasswordVisibilityIcon isVisible={isPasswordVisible} />
-              </button>
             </label>
 
-            <button
-              type="submit"
-              className="primary-button"
-              disabled={loading}
-            >
-              {loading ? 'Signing in...' : 'Login'}
-            </button>
+            <label className="auth-field">
+              <span>Password</span>
+              <div className="login-password-field auth-password-field">
+                <input
+                  type={isPasswordVisible ? 'text' : 'password'}
+                  name="password"
+                  placeholder="Enter your password"
+                  value={formData.password}
+                  onChange={handleChange}
+                  aria-invalid={Boolean(error)}
+                  disabled={loading}
+                />
+                <button
+                  type="button"
+                  className="login-password-visibility"
+                  onClick={() => setIsPasswordVisible((currentValue) => !currentValue)}
+                  aria-label={isPasswordVisible ? 'Hide password' : 'Show password'}
+                  disabled={loading}
+                >
+                  <PasswordVisibilityIcon isVisible={isPasswordVisible} />
+                </button>
+              </div>
+            </label>
           </div>
 
           {isSessionConflictMessage(sessionConflictMessage) ? (
@@ -252,11 +243,28 @@ function LoginPage() {
             />
           ) : null}
 
+          <button
+            type="submit"
+            className="primary-button auth-submit-button"
+            disabled={loading}
+          >
+            {loading ? 'Signing in...' : 'Log In'}
+          </button>
+
           <p className="auth-form-footnote">
-            Need a new administrator account?{' '}
-            <Link to="/signup">Start with sign-up.</Link>
+            Need administrator access? <Link to="/signup">Create an account.</Link>
           </p>
         </form>
+
+        <AuthShowcasePanel
+          eyebrow="Operations Access"
+          title="The same system your cashier, inventory, and branch teams rely on."
+          description="Sign-in should feel focused and trustworthy. The workspace you enter is built around service flow, stock visibility, and day-to-day branch control."
+          highlights={LOGIN_HIGHLIGHTS}
+          snapshotTitle="After sign-in"
+          snapshotItems={LOGIN_SNAPSHOT}
+          note="Session conflict protection remains active for accounts already in use on another device."
+        />
       </div>
 
       <Modal
