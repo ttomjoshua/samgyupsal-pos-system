@@ -7,7 +7,7 @@ const routeMeta = {
     title: 'Dashboard',
   },
   '/app/pos': {
-    title: 'POS',
+    title: 'Sales',
   },
   '/app/inventory': {
     title: 'Inventory',

@@ -454,7 +454,7 @@ function PaymentPanel({
       <Modal
         isOpen={isReceiptOpen}
         title="Receipt Preview"
-        eyebrow="POS Receipt"
+        eyebrow="Sales Receipt"
         description="Preview the latest completed sale without changing the current checkout flow."
         onClose={() => setIsReceiptOpen(false)}
         width="520px"

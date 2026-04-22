@@ -1,5 +1,4 @@
 import { useEffect, useMemo, useState } from 'react'
-import { Link } from 'react-router-dom'
 import EmptyState from '../../../shared/components/common/EmptyState'
 import Loader from '../../../shared/components/common/Loader'
 import NoticeBanner from '../../../shared/components/common/NoticeBanner'
@@ -12,20 +11,10 @@ import { getMockUsers } from '../../users/services/userService'
 import { peso } from '../../../shared/utils/formatters'
 import {
   ROLE_EMPLOYEE,
-  getVisibleNavItems,
   isAdminUser,
 } from '../../../shared/utils/permissions'
 import useAuth from '../../auth/hooks/useAuth'
 import '../styles/dashboard.css'
-
-const MODULE_DESCRIPTIONS = {
-  dashboard: 'Review the latest branch, staff, and stock summary.',
-  pos: 'Process sales and complete cashier checkout.',
-  inventory: 'Update branch stock and review inventory alerts.',
-  reports: 'Track totals, transactions, and low-stock watchlists.',
-  products: 'Maintain categories and review the active product catalog.',
-  users: 'Manage branches, employee accounts, and access status.',
-}
 
 function getTodayRange() {
   const today = new Date().toISOString().slice(0, 10)
@@ -39,7 +28,6 @@ function getTodayRange() {
 function DashboardPage() {
   const { user } = useAuth()
   const isAdmin = isAdminUser(user)
-  const visibleSections = getVisibleNavItems(user)
   const [snapshot, setSnapshot] = useState({
     isLoading: true,
     hasPartialError: false,
@@ -119,11 +107,6 @@ function DashboardPage() {
     [snapshot.accounts],
   )
 
-  const quickAccessSections = useMemo(
-    () => visibleSections.filter((section) => section.key !== 'dashboard'),
-    [visibleSections],
-  )
-
   const activeBranches = useMemo(
     () =>
       snapshot.branches.filter((branch) => branch.status !== 'inactive').length,
@@ -153,6 +136,14 @@ function DashboardPage() {
   }).format(new Date())
   const assignedBranchName =
     user?.branchName || snapshot.branches[0]?.name || 'Assigned branch'
+  const lowStockMessage =
+    lowStockRows.length === 0
+      ? 'No urgent stock alerts'
+      : `${lowStockRows.length} item${lowStockRows.length === 1 ? '' : 's'} need restock attention`
+  const transactionStatusLabel =
+    summary.transaction_count === 0
+      ? 'No completed sales yet'
+      : `${summary.transaction_count} transaction${summary.transaction_count === 1 ? '' : 's'} recorded today`
 
   if (snapshot.isLoading) {
     return <Loader message="Loading dashboard..." />
@@ -270,30 +261,29 @@ function DashboardPage() {
           </div>
 
           <div className="panel">
-            <p className="card-label">Quick Access</p>
-            <h3 className="dashboard-panel-title">Open a Working Screen</h3>
+            <p className="card-label">Top Sellers</p>
+            <h3 className="dashboard-panel-title">Best Sellers Today</h3>
 
-            {quickAccessSections.length === 0 ? (
+            {topItemsPreview.length === 0 ? (
               <EmptyState
-                title="No extra modules available"
-                description="Additional screens will appear here when this account has access to them."
+                title="No sales recorded yet"
+                description="Best-selling items will appear here after the first completed sale for today."
               />
             ) : (
-              <div className="dashboard-actions">
-                {quickAccessSections.map((section) => (
-                  <Link key={section.key} to={section.to} className="dashboard-action-link">
-                    <div className="dashboard-action-copy">
-                      <strong>{section.label}</strong>
-                      <span>
-                        {MODULE_DESCRIPTIONS[section.key] || 'Open this workspace section.'}
-                      </span>
+              <ul className="dashboard-list">
+                {topItemsPreview.map((item) => (
+                  <li key={item.id} className="dashboard-list-item">
+                    <div className="dashboard-list-copy">
+                      <strong>{item.item}</strong>
+                      <span>{item.sold} unit{Number(item.sold) === 1 ? '' : 's'} sold</span>
                     </div>
-                    <span className="dashboard-action-arrow" aria-hidden="true">
-                      {'->'}
-                    </span>
-                  </Link>
+                    <div className="dashboard-list-meta">
+                      <strong>{item.revenue}</strong>
+                      <span>Revenue today</span>
+                    </div>
+                  </li>
                 ))}
-              </div>
+              </ul>
             )}
           </div>
         </div>
@@ -308,7 +298,7 @@ function DashboardPage() {
           <p className="eyebrow">Dashboard</p>
           <h2>Today&apos;s Sales Snapshot</h2>
           <p className="supporting-text">
-            Track your completed checkouts, assigned branch inventory, and quick actions for {todayLabel}.
+            Track your completed sales and assigned branch inventory for {todayLabel}.
           </p>
         </div>
       </div>
@@ -317,7 +307,7 @@ function DashboardPage() {
         <NoticeBanner
           variant="warning"
           title="Partial data loaded"
-          message="Some dashboard details could not be restored. Your checkout tools are still available."
+          message="Some dashboard details could not be restored. Your sales workspace is still available."
         />
       ) : lowStockRows.length > 0 ? (
         <NoticeBanner
@@ -396,31 +386,43 @@ function DashboardPage() {
         </div>
 
         <div className="panel">
-          <p className="card-label">Quick Access</p>
-          <h3 className="dashboard-panel-title">Open a Working Screen</h3>
+          <p className="card-label">Shift Overview</p>
+          <h3 className="dashboard-panel-title">Assigned Scope</h3>
 
-          {quickAccessSections.length === 0 ? (
-            <EmptyState
-              title="No extra modules available"
-              description="Additional screens will appear here when this account has access to them."
-            />
-          ) : (
-            <div className="dashboard-actions">
-              {quickAccessSections.map((section) => (
-                <Link key={section.key} to={section.to} className="dashboard-action-link">
-                  <div className="dashboard-action-copy">
-                    <strong>{section.label}</strong>
-                    <span>
-                      {MODULE_DESCRIPTIONS[section.key] || 'Open this workspace section.'}
-                    </span>
-                  </div>
-                  <span className="dashboard-action-arrow" aria-hidden="true">
-                    {'->'}
-                  </span>
-                </Link>
-              ))}
-            </div>
-          )}
+          <ul className="dashboard-list">
+            <li className="dashboard-list-item">
+              <div className="dashboard-list-copy">
+                <strong>{assignedBranchName}</strong>
+                <span>Assigned branch</span>
+              </div>
+              <div className="dashboard-list-meta">
+                <strong>{todayLabel}</strong>
+                <span>Working date</span>
+              </div>
+            </li>
+
+            <li className="dashboard-list-item">
+              <div className="dashboard-list-copy">
+                <strong>{snapshot.inventoryItems.length}</strong>
+                <span>Visible inventory rows</span>
+              </div>
+              <div className="dashboard-list-meta">
+                <strong>{summary.items_sold}</strong>
+                <span>Units sold today</span>
+              </div>
+            </li>
+
+            <li className="dashboard-list-item">
+              <div className="dashboard-list-copy">
+                <strong>{lowStockMessage}</strong>
+                <span>Restock status</span>
+              </div>
+              <div className="dashboard-list-meta">
+                <strong>{transactionStatusLabel}</strong>
+                <span>Sales status</span>
+              </div>
+            </li>
+          </ul>
         </div>
       </div>
 

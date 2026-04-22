@@ -11,6 +11,11 @@ import {
   isServiceFeeLineItem,
 } from '../src/features/pos/utils/serviceFees.js'
 import {
+  INVENTORY_FILTER_EXPIRY_DATE,
+  INVENTORY_FILTER_LOW_STOCK,
+  resolveInventoryFilterResults,
+} from '../src/features/inventory/utils/inventoryFilters.js'
+import {
   validateCheckout,
   validateInventoryForm,
   validateInventoryQuantityAction,
@@ -227,6 +232,130 @@ const tests = [
           item_name: 'Service Fee - Microwave Usage',
         }),
         true,
+      )
+    },
+  },
+  {
+    name: 'resolveInventoryFilterResults keeps branch, status, and category filters aligned',
+    run() {
+      const result = resolveInventoryFilterResults({
+        items: [
+          {
+            id: 1,
+            branch_id: 1,
+            category_name: 'Frozen',
+            product_name: 'Pork Belly',
+            stock_quantity: 4,
+            reorder_level: 10,
+            expiry_date: '2026-05-01',
+          },
+          {
+            id: 2,
+            branch_id: 1,
+            category_name: 'Frozen',
+            product_name: 'Beef Bulgogi',
+            stock_quantity: 18,
+            reorder_level: 10,
+            expiry_date: '2026-05-03',
+          },
+          {
+            id: 3,
+            branch_id: 2,
+            category_name: 'Retail',
+            product_name: 'Kimchi',
+            stock_quantity: 3,
+            reorder_level: 10,
+            expiry_date: '2026-04-28',
+          },
+        ],
+        branchId: '1',
+        status: INVENTORY_FILTER_LOW_STOCK,
+        category: 'Frozen',
+      })
+
+      assert.equal(result.branchItems.length, 2)
+      assert.equal(result.filteredItems.length, 1)
+      assert.equal(result.filteredItems[0].product_name, 'Pork Belly')
+    },
+  },
+  {
+    name: 'resolveInventoryFilterResults sorts expiry-date items and clears invalid categories',
+    run() {
+      const result = resolveInventoryFilterResults({
+        items: [
+          {
+            id: 1,
+            branch_id: 2,
+            category_name: 'Beverages',
+            product_name: 'Iced Tea',
+            stock_quantity: 12,
+            reorder_level: 10,
+            expiry_date: '2026-05-04',
+          },
+          {
+            id: 2,
+            branch_id: 2,
+            category_name: 'Retail',
+            product_name: 'Kimchi',
+            stock_quantity: 8,
+            reorder_level: 10,
+            expiry_date: '2026-04-27',
+          },
+          {
+            id: 3,
+            branch_id: 2,
+            category_name: 'Retail',
+            product_name: 'Lettuce',
+            stock_quantity: 20,
+            reorder_level: 10,
+            expiry_date: '',
+          },
+        ],
+        branchId: '2',
+        status: INVENTORY_FILTER_EXPIRY_DATE,
+        category: 'Frozen',
+      })
+
+      assert.equal(result.resolvedCategory, 'all')
+      assert.deepEqual(
+        result.filteredItems.map((item) => item.product_name),
+        ['Kimchi', 'Iced Tea'],
+      )
+      assert.deepEqual(result.categoryOptions, ['Beverages', 'Retail'])
+    },
+  },
+  {
+    name: 'resolveInventoryFilterResults matches categories using normalized text',
+    run() {
+      const result = resolveInventoryFilterResults({
+        items: [
+          {
+            id: 1,
+            branch_id: 1,
+            category_name: 'Chocolate ',
+            product_name: 'Choco Bar',
+            stock_quantity: 12,
+            reorder_level: 10,
+            expiry_date: '',
+          },
+          {
+            id: 2,
+            branch_id: 1,
+            category_name: 'Coffee',
+            product_name: 'Iced Coffee',
+            stock_quantity: 14,
+            reorder_level: 10,
+            expiry_date: '',
+          },
+        ],
+        branchId: '1',
+        category: 'Chocolate',
+      })
+
+      assert.equal(result.resolvedCategory, 'Chocolate')
+      assert.deepEqual(
+        result.filteredItems.map((item) => item.product_name),
+        ['Choco Bar'],
       )
     },
   },

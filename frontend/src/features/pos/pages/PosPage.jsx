@@ -97,7 +97,7 @@ function PosPage() {
           return branches[0]?.id || ''
         })
       } catch (error) {
-        console.error('Failed to load branch options for POS:', error)
+        console.error('Failed to load sales branch options:', error)
 
         if (!isMounted) {
           return
@@ -139,7 +139,7 @@ function PosPage() {
         setCatalogProducts(products)
         setCatalogError('')
       } catch (error) {
-        console.error('Failed to load POS products:', error)
+        console.error('Failed to load sales products:', error)
         setCatalogProducts([])
         setCatalogError(
           error.response?.data?.message || 'Unable to load products.',
@@ -268,27 +268,27 @@ function PosPage() {
 
   if (!isBranchLoading && !activeBranchId && !user?.branchId) {
     return (
-      <EmptyState
-        title="No branch scope available"
-        description="Add at least one branch before loading the POS screen."
-      />
-    )
+        <EmptyState
+          title="No branch scope available"
+          description="Add at least one branch before loading the sales workspace."
+        />
+      )
   }
 
   return (
     <section className="pos-page">
       <div className="pos-topbar">
         <div className="pos-title-block">
-          <p className="eyebrow">POS</p>
-          <h1>Point of Sale</h1>
+          <p className="eyebrow">Sales</p>
+          <h1>Sales Desk</h1>
           <p className="supporting-text">
-            Ring up orders and finish checkout.
+            Process customer orders and complete checkout.
           </p>
         </div>
 
         <div className="pos-meta-grid">
           <article className="pos-meta-card">
-            <span className="meta-label">Cashier</span>
+            <span className="meta-label">Staff Member</span>
             <strong className="meta-primary">{user?.name || 'Admin User'}</strong>
             <span className="meta-secondary">{cashierRoleLabel}</span>
           </article>
@@ -311,7 +311,7 @@ function PosPage() {
                   value={activeBranchId}
                   onChange={(event) => setActiveBranchId(Number(event.target.value))}
                   id="active-pos-branch-select"
-                  placeholder="Select active POS branch"
+                  placeholder="Select active sales branch"
                   options={branchOptions.map((branch) => ({
                     value: branch.id,
                     label: branch.name
@@ -471,7 +471,7 @@ function PosPage() {
             </div>
 
             {isCatalogLoading ? (
-              <Loader message="Loading POS catalog..." />
+              <Loader message="Loading sales catalog..." />
             ) : (
               <ProductGrid
                 cart={cartItems}

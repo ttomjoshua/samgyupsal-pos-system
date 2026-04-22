@@ -66,7 +66,11 @@ function AppRouter() {
           />
           <Route
             path="pos"
-            element={renderLazyPage(<PosPage />, 'Loading point of sale...')}
+            element={
+              <ProtectedRoute allowedRoles={[ROLE_EMPLOYEE]}>
+                {renderLazyPage(<PosPage />, 'Loading sales workspace...')}
+              </ProtectedRoute>
+            }
           />
           <Route
             path="inventory"

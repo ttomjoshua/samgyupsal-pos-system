@@ -264,7 +264,7 @@ function ProductsPage() {
     setNewCategoryName('')
     setCategoryMessageTone('success')
     setCategoryMessage(
-      `"${normalizedCategory}" added. It will appear in the POS category filters.`,
+      `"${normalizedCategory}" added. It will appear in the sales category filters.`,
     )
   }
 

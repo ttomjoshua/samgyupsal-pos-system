@@ -40,21 +40,18 @@
 }
 
 .dashboard-list-copy,
-.dashboard-list-meta,
-.dashboard-action-copy {
+.dashboard-list-meta {
   display: grid;
   gap: 0.2rem;
 }
 
 .dashboard-list-copy strong,
-.dashboard-list-meta strong,
-.dashboard-action-copy strong {
+.dashboard-list-meta strong {
   color: #2a1e17;
 }
 
 .dashboard-list-copy span,
-.dashboard-list-meta span,
-.dashboard-action-copy span {
+.dashboard-list-meta span {
   color: var(--text-soft);
   font-size: 0.92rem;
 }
@@ -63,41 +60,9 @@
   text-align: right;
 }
 
-.dashboard-actions {
-  display: grid;
-  gap: 0.75rem;
-}
-
 .dashboard-metric-branch {
   font-size: clamp(1.2rem, 2vw, 1.55rem);
   line-height: 1.2;
-}
-
-.dashboard-action-link {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 1rem;
-  border: 1px solid rgba(166, 63, 20, 0.12);
-  border-radius: 18px;
-  padding: 0.95rem 1rem;
-  background: rgba(255, 255, 255, 0.92);
-  transition:
-    transform 0.16s ease,
-    border-color 0.16s ease,
-    box-shadow 0.16s ease;
-}
-
-.dashboard-action-link:hover {
-  transform: translateY(-1px);
-  border-color: rgba(166, 63, 20, 0.24);
-  box-shadow: 0 12px 24px rgba(92, 53, 23, 0.1);
-}
-
-.dashboard-action-arrow {
-  color: var(--accent);
-  font-size: 1.2rem;
-  font-weight: 700;
 }
 
 @media (max-width: 1100px) {
@@ -115,8 +80,7 @@
     grid-template-columns: 1fr;
   }
 
-  .dashboard-list-item,
-  .dashboard-action-link {
+  .dashboard-list-item {
     flex-direction: column;
   }
 

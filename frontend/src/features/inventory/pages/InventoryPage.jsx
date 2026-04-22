@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import Loader from '../../../shared/components/common/Loader'
 import EmptyState from '../../../shared/components/common/EmptyState'
 import InventoryTable from '../components/InventoryTable'
@@ -12,12 +12,18 @@ import {
   createInventoryItem,
   getInventoryItems,
   hasInventoryCatalogConflict,
-  isLowStock,
-  isNearExpiry,
   removeInventoryItem,
   updateInventoryItem,
   updateInventoryStock,
 } from '../services/inventoryService'
+import {
+  INVENTORY_FILTER_ALL,
+  INVENTORY_FILTER_EXPIRY_DATE,
+  INVENTORY_FILTER_LOW_STOCK,
+  filterInventoryItemsByBranch,
+  getInventoryCategoryOptions,
+  resolveInventoryFilterResults,
+} from '../utils/inventoryFilters'
 import {
   canAdjustInventoryStock,
   canManageInventoryCatalog,
@@ -44,6 +50,8 @@ const INVENTORY_PAGE_SIZE = 10
 
 function InventoryPage() {
   const { user } = useAuth()
+  const inventoryRequestRef = useRef(0)
+  const inventoryLoadScopeRef = useRef('')
   const isAdminInventoryView = isAdminUser(user)
   const canEditCatalog = canManageInventoryCatalog(user)
   const canUpdateStock = canAdjustInventoryStock(user)
@@ -52,9 +60,11 @@ function InventoryPage() {
   const [branchLoadError, setBranchLoadError] = useState('')
   const [inventoryItems, setInventoryItems] = useState([])
   const [isLoading, setIsLoading] = useState(true)
-  const [activeBranchId, setActiveBranchId] = useState(user?.branchId || '')
-  const [activeFilter, setActiveFilter] = useState('all')
-  const [activeCategory, setActiveCategory] = useState('all')
+  const [activeBranchId, setActiveBranchId] = useState(
+    user?.branchId != null ? String(user.branchId) : '',
+  )
+  const [activeFilter, setActiveFilter] = useState(INVENTORY_FILTER_ALL)
+  const [activeCategory, setActiveCategory] = useState(INVENTORY_FILTER_ALL)
   const [productDialogMode, setProductDialogMode] = useState(null)
   const [selectedItem, setSelectedItem] = useState(null)
   const [formData, setFormData] = useState(INITIAL_PRODUCT_FORM)
@@ -72,7 +82,7 @@ function InventoryPage() {
 
   const activeBranch = useMemo(
     () =>
-      branchOptions.find((branch) => Number(branch.id) === Number(activeBranchId)) ||
+      branchOptions.find((branch) => String(branch.id) === String(activeBranchId)) ||
       null,
     [activeBranchId, branchOptions],
   )
@@ -93,18 +103,18 @@ function InventoryPage() {
         setBranchLoadError('')
         setActiveBranchId((currentBranchId) => {
           if (user?.branchId) {
-            return user.branchId
+            return String(user.branchId)
           }
 
           const hasCurrentBranch = branches.some(
-            (branch) => Number(branch.id) === Number(currentBranchId),
+            (branch) => String(branch.id) === String(currentBranchId),
           )
 
           if (hasCurrentBranch) {
             return currentBranchId
           }
 
-          return branches[0]?.id || ''
+          return branches[0]?.id != null ? String(branches[0].id) : ''
         })
       } catch (error) {
         console.error('Failed to load inventory branches:', error)
@@ -131,12 +141,27 @@ function InventoryPage() {
     }
   }, [user?.branchId])
 
-  const loadInventory = useCallback(async (branchId) => {
+  const loadInventory = useCallback(async () => {
+    const requestId = inventoryRequestRef.current + 1
+    inventoryRequestRef.current = requestId
+
     try {
-      const data = await getInventoryItems({ branchId })
+      const inventoryScope = isAdminInventoryView
+        ? {}
+        : { branchId: user?.branchId ?? null }
+      const data = await getInventoryItems(inventoryScope)
+
+      if (requestId !== inventoryRequestRef.current) {
+        return
+      }
+
       setInventoryItems(data.items || data)
       setLoadError('')
     } catch (error) {
+      if (requestId !== inventoryRequestRef.current) {
+        return
+      }
+
       console.error('Failed to load inventory records:', error)
       setInventoryItems([])
       setLoadError(
@@ -144,37 +169,64 @@ function InventoryPage() {
           'Inventory records could not be loaded right now.',
       )
     } finally {
-      setIsLoading(false)
+      if (requestId === inventoryRequestRef.current) {
+        setIsLoading(false)
+      }
     }
-  }, [])
+  }, [isAdminInventoryView, user?.branchId])
 
   useEffect(() => {
     if (!activeBranchId) {
       return
     }
 
-    setIsLoading(true)
-    void loadInventory(activeBranchId)
-  }, [activeBranchId, loadInventory])
+    const loadScopeKey = isAdminInventoryView
+      ? 'admin'
+      : `employee:${String(user?.branchId ?? '')}`
 
-  const categorySuggestions = useMemo(
-    () => [...new Set(inventoryItems.map((item) => item.category_name).filter(Boolean))],
-    [inventoryItems],
+    if (inventoryLoadScopeRef.current === loadScopeKey) {
+      return
+    }
+
+    inventoryLoadScopeRef.current = loadScopeKey
+    setIsLoading(true)
+    void loadInventory()
+  }, [activeBranchId, isAdminInventoryView, loadInventory, user?.branchId])
+
+  const branchItems = useMemo(() => {
+    if (!isAdminInventoryView) {
+      return inventoryItems
+    }
+
+    return filterInventoryItemsByBranch(inventoryItems, activeBranchId)
+  }, [activeBranchId, inventoryItems, isAdminInventoryView])
+
+  const branchCategorySuggestions = useMemo(
+    () => getInventoryCategoryOptions(branchItems),
+    [branchItems],
   )
 
-  const filteredItems = inventoryItems.filter((item) => {
-    const matchesStatusFilter =
-      activeFilter === 'all'
-        ? true
-        : activeFilter === 'low-stock'
-          ? isLowStock(item)
-          : isNearExpiry(item)
+  const statusFilterResults = useMemo(
+    () => resolveInventoryFilterResults({
+      items: inventoryItems,
+      branchId: isAdminInventoryView ? activeBranchId : '',
+      status: activeFilter,
+      category: activeCategory,
+    }),
+    [activeBranchId, activeCategory, activeFilter, inventoryItems, isAdminInventoryView],
+  )
 
-    const matchesCategory =
-      activeCategory === 'all' || item.category_name === activeCategory
+  useEffect(() => {
+    if (
+      activeCategory !== INVENTORY_FILTER_ALL &&
+      activeCategory !== statusFilterResults.resolvedCategory
+    ) {
+      setActiveCategory(INVENTORY_FILTER_ALL)
+    }
+  }, [activeCategory, statusFilterResults.resolvedCategory])
 
-    return matchesStatusFilter && matchesCategory
-  })
+  const effectiveActiveCategory = statusFilterResults.resolvedCategory
+  const filteredItems = statusFilterResults.filteredItems
 
   const totalPages = Math.max(
     1,
@@ -184,6 +236,11 @@ function InventoryPage() {
   useEffect(() => {
     setCurrentPage(1)
   }, [activeBranchId, activeCategory, activeFilter])
+
+  const totalBranchItems = branchItems.length
+  const filterCategoryOptions = statusFilterResults.categoryOptions
+  const selectedBranchId =
+    activeBranchId === '' ? null : Number(activeBranchId)
 
   useEffect(() => {
     if (currentPage > totalPages) {
@@ -274,7 +331,7 @@ function InventoryPage() {
       hasInventoryCatalogConflict(
         {
           ...validation.sanitizedData,
-          branch_id: activeBranchId,
+          branch_id: selectedBranchId,
         },
         inventoryItems,
         productDialogMode === 'edit' ? selectedItem?.id : null,
@@ -290,7 +347,7 @@ function InventoryPage() {
       if (productDialogMode === 'edit' && selectedItem) {
         const updatedItem = await updateInventoryItem(selectedItem.id, {
           ...validation.sanitizedData,
-          branch_id: activeBranchId,
+          branch_id: selectedBranchId,
         })
 
         setInventoryItems((previousItems) =>
@@ -304,7 +361,7 @@ function InventoryPage() {
         const createdItem = await createInventoryItem(
           {
             ...validation.sanitizedData,
-            branch_id: activeBranchId,
+            branch_id: selectedBranchId,
           },
           inventoryItems,
         )
@@ -324,7 +381,7 @@ function InventoryPage() {
       return
     }
 
-    setActiveFilter('all')
+    setActiveFilter(INVENTORY_FILTER_ALL)
     setFormError('')
     setFormData(INITIAL_PRODUCT_FORM)
     setSelectedItem(null)
@@ -560,7 +617,9 @@ function InventoryPage() {
 
           <p className="inventory-result-copy">
             {activeBranch ? `Branch: ${activeBranch.name} | ` : ''}
-            Showing <strong>{filteredItems.length}</strong> product
+            Showing <strong>{filteredItems.length}</strong>
+            {totalBranchItems !== filteredItems.length ? ` of ${totalBranchItems}` : ''}
+            {' '}product
             {filteredItems.length === 1 ? '' : 's'}
           </p>
         </div>
@@ -578,9 +637,10 @@ function InventoryPage() {
                 <SelectMenu
                   name="activeBranch"
                   value={activeBranchId}
-                  onChange={(event) => setActiveBranchId(Number(event.target.value))}
+                  onChange={(event) => setActiveBranchId(String(event.target.value))}
+                  disabled={isLoading}
                   options={branchOptions.map((branch) => ({
-                    value: branch.id,
+                    value: String(branch.id),
                     label: branch.name,
                   }))}
                 />
@@ -590,50 +650,54 @@ function InventoryPage() {
             <button
               type="button"
               className={
-                activeFilter === 'all'
+                activeFilter === INVENTORY_FILTER_ALL
                   ? 'inventory-filter active'
                   : 'inventory-filter'
               }
-              onClick={() => setActiveFilter('all')}
+              onClick={() => setActiveFilter(INVENTORY_FILTER_ALL)}
+              disabled={isLoading}
             >
               All Items
             </button>
             <button
               type="button"
               className={
-                activeFilter === 'low-stock'
+                activeFilter === INVENTORY_FILTER_LOW_STOCK
                   ? 'inventory-filter active'
                   : 'inventory-filter'
               }
-              onClick={() => setActiveFilter('low-stock')}
+              onClick={() => setActiveFilter(INVENTORY_FILTER_LOW_STOCK)}
+              disabled={isLoading}
             >
               Low Stock
             </button>
             <button
               type="button"
               className={
-                activeFilter === 'near-expiry'
+                activeFilter === INVENTORY_FILTER_EXPIRY_DATE
                   ? 'inventory-filter active'
                   : 'inventory-filter'
               }
-              onClick={() => setActiveFilter('near-expiry')}
+              onClick={() => setActiveFilter(INVENTORY_FILTER_EXPIRY_DATE)}
+              disabled={isLoading}
             >
-              Near Expiry
+              Expiry Dates
             </button>
             <label className="inventory-category-control">
               <span>Category</span>
               <SelectMenu
-              name="activeCategory"
-              value={activeCategory}
-              onChange={(event) => setActiveCategory(event.target.value)}
-              options={[
-                { value: 'all', label: 'All Categories' },
-                ...categorySuggestions.map((category) => ({
-                  value: category,
-                  label: category
-                }))
-              ]}
-            />
+                name="activeCategory"
+                value={effectiveActiveCategory}
+                onChange={(event) => setActiveCategory(event.target.value)}
+                disabled={isLoading || filterCategoryOptions.length === 0}
+                options={[
+                  { value: INVENTORY_FILTER_ALL, label: 'All Categories' },
+                  ...filterCategoryOptions.map((category) => ({
+                    value: category,
+                    label: category,
+                  })),
+                ]}
+              />
             </label>
           </div>
         </div>
@@ -705,7 +769,7 @@ function InventoryPage() {
               placeholder="Select a category"
               options={[
                 { value: '', label: 'Select a category' },
-                ...categorySuggestions.map((category) => ({
+                ...branchCategorySuggestions.map((category) => ({
                   value: category,
                   label: category
                 }))
