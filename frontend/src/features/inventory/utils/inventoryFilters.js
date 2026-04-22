@@ -98,11 +98,11 @@ export function resolveInventoryFilterResults({
   category = INVENTORY_FILTER_ALL,
 } = {}) {
   const branchItems = filterInventoryItemsByBranch(items, branchId)
+  const categoryOptions = getInventoryCategoryOptions(branchItems)
   const statusItems = sortInventoryItems(
     filterInventoryItemsByStatus(branchItems, status),
     status,
   )
-  const categoryOptions = getInventoryCategoryOptions(statusItems)
   const resolvedCategory =
     categoryOptions.find(
       (option) => normalizeFilterText(option) === normalizeFilterText(category),
