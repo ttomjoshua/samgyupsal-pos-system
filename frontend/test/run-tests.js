@@ -15,6 +15,7 @@ import {
   INVENTORY_FILTER_EXPIRY_DATE,
   INVENTORY_FILTER_LOW_STOCK,
   getInventoryCategoryOptions,
+  getInventoryCategoryValue,
   resolveInventoryFilterResults,
 } from '../src/features/inventory/utils/inventoryFilters.js'
 import {
@@ -404,6 +405,41 @@ const tests = [
       assert.deepEqual(
         result.filteredItems.map((item) => item.product_name),
         ['House Sauce'],
+      )
+    },
+  },
+  {
+    name: 'inventory category fallback uses legacy category when category_name is blank',
+    run() {
+      const item = {
+        category_name: '',
+        category: 'Samgyup meat',
+      }
+
+      assert.equal(getInventoryCategoryValue(item), 'Samgyup meat')
+
+      const result = resolveInventoryFilterResults({
+        items: [
+          {
+            id: 1,
+            branch_id: 1,
+            category_name: '',
+            category: 'Samgyup meat',
+            product_name: 'Pork Belly',
+            stock_quantity: 5,
+            reorder_level: 10,
+            expiry_date: '',
+          },
+        ],
+        branchId: '1',
+        category: 'Samgyup meat',
+      })
+
+      assert.deepEqual(result.categoryOptions, ['Samgyup meat'])
+      assert.equal(result.resolvedCategory, 'Samgyup meat')
+      assert.deepEqual(
+        result.filteredItems.map((inventoryItem) => inventoryItem.product_name),
+        ['Pork Belly'],
       )
     },
   },

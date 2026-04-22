@@ -13,6 +13,10 @@ export function getInventoryCategoryLabel(value) {
   return String(value || '').trim() || INVENTORY_CATEGORY_UNCATEGORIZED
 }
 
+export function getInventoryCategoryValue(item = {}) {
+  return String(item?.category_name || item?.category || '').trim()
+}
+
 export function isInventoryItemLowStock(item) {
   return Number(item?.stock_quantity) <= Number(item?.reorder_level)
 }
@@ -79,7 +83,7 @@ export function sortInventoryItems(items = [], status = INVENTORY_FILTER_ALL) {
 export function getInventoryCategoryOptions(items = []) {
   return [...new Set(
     items
-      .map((item) => getInventoryCategoryLabel(item?.category_name ?? item?.category)),
+      .map((item) => getInventoryCategoryLabel(getInventoryCategoryValue(item))),
   )].sort((leftValue, rightValue) => leftValue.localeCompare(rightValue))
 }
 
@@ -92,9 +96,8 @@ export function filterInventoryItemsByCategory(items = [], category = 'all') {
 
   return items.filter(
     (item) =>
-      normalizeFilterText(
-        getInventoryCategoryLabel(item?.category_name ?? item?.category),
-      ) === normalizedCategory,
+      normalizeFilterText(getInventoryCategoryLabel(getInventoryCategoryValue(item))) ===
+      normalizedCategory,
   )
 }
 
