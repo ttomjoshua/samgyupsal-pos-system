@@ -7,6 +7,7 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: 0.75rem;
   width: 100%;
   padding: 0.85rem 0.95rem;
   border: 1px solid var(--border);
@@ -38,9 +39,12 @@
 }
 
 .select-menu-value {
+  flex: 1 1 auto;
+  min-width: 0;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  text-align: left;
 }
 
 .select-menu-placeholder {
@@ -49,7 +53,8 @@
 }
 
 .select-menu-icon {
-  margin-left: 0.5rem;
+  flex-shrink: 0;
+  margin-left: 0;
   color: var(--text-soft);
   transition: transform 0.2s ease;
 }

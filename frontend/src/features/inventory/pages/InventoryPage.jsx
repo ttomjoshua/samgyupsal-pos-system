@@ -683,7 +683,7 @@ function InventoryPage() {
             >
               Expiry Dates
             </button>
-            <label className="inventory-category-control">
+            <label className="inventory-category-control inventory-category-control--category-filter">
               <span>Category</span>
               <SelectMenu
                 name="activeCategory"

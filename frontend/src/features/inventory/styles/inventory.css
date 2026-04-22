@@ -151,6 +151,24 @@
   font-weight: 700;
 }
 
+.inventory-category-control--category-filter {
+  flex: 0 1 30rem;
+  width: min(100%, 30rem);
+}
+
+.inventory-category-control--category-filter > span {
+  flex-shrink: 0;
+}
+
+.inventory-category-control--category-filter .select-menu-container {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.inventory-category-control--category-filter .select-menu-trigger {
+  min-width: 0;
+}
+
 .inventory-category-control--locked {
   gap: 0.55rem;
 }
@@ -273,6 +291,11 @@
 
 @media (max-width: 900px) {
   .inventory-primary-action {
+    width: 100%;
+  }
+
+  .inventory-category-control--category-filter {
+    flex-basis: 100%;
     width: 100%;
   }
 
