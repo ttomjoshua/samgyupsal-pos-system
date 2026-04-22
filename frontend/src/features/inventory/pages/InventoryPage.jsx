@@ -20,8 +20,6 @@ import {
   INVENTORY_FILTER_ALL,
   INVENTORY_FILTER_EXPIRY_DATE,
   INVENTORY_FILTER_LOW_STOCK,
-  filterInventoryItemsByBranch,
-  getInventoryCategoryOptions,
   resolveInventoryFilterResults,
 } from '../utils/inventoryFilters'
 import {
@@ -193,20 +191,7 @@ function InventoryPage() {
     void loadInventory()
   }, [activeBranchId, isAdminInventoryView, loadInventory, user?.branchId])
 
-  const branchItems = useMemo(() => {
-    if (!isAdminInventoryView) {
-      return inventoryItems
-    }
-
-    return filterInventoryItemsByBranch(inventoryItems, activeBranchId)
-  }, [activeBranchId, inventoryItems, isAdminInventoryView])
-
-  const branchCategorySuggestions = useMemo(
-    () => getInventoryCategoryOptions(branchItems),
-    [branchItems],
-  )
-
-  const statusFilterResults = useMemo(
+  const inventoryFilterResults = useMemo(
     () => resolveInventoryFilterResults({
       items: inventoryItems,
       branchId: isAdminInventoryView ? activeBranchId : '',
@@ -217,16 +202,13 @@ function InventoryPage() {
   )
 
   useEffect(() => {
-    if (
-      activeCategory !== INVENTORY_FILTER_ALL &&
-      activeCategory !== statusFilterResults.resolvedCategory
-    ) {
-      setActiveCategory(INVENTORY_FILTER_ALL)
+    if (activeCategory !== inventoryFilterResults.resolvedCategory) {
+      setActiveCategory(inventoryFilterResults.resolvedCategory)
     }
-  }, [activeCategory, statusFilterResults.resolvedCategory])
+  }, [activeCategory, inventoryFilterResults.resolvedCategory])
 
-  const effectiveActiveCategory = statusFilterResults.resolvedCategory
-  const filteredItems = statusFilterResults.filteredItems
+  const effectiveActiveCategory = inventoryFilterResults.resolvedCategory
+  const filteredItems = inventoryFilterResults.filteredItems
 
   const totalPages = Math.max(
     1,
@@ -237,8 +219,9 @@ function InventoryPage() {
     setCurrentPage(1)
   }, [activeBranchId, activeCategory, activeFilter])
 
-  const totalBranchItems = branchItems.length
-  const filterCategoryOptions = statusFilterResults.categoryOptions
+  const totalBranchItems = inventoryFilterResults.branchItems.length
+  const filterCategoryOptions = inventoryFilterResults.categoryOptions
+  const branchCategorySuggestions = inventoryFilterResults.categoryOptions
   const selectedBranchId =
     activeBranchId === '' ? null : Number(activeBranchId)
 

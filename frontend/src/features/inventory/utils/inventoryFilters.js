@@ -1,11 +1,16 @@
 export const INVENTORY_FILTER_ALL = 'all'
 export const INVENTORY_FILTER_LOW_STOCK = 'low-stock'
 export const INVENTORY_FILTER_EXPIRY_DATE = 'expiry-date'
+export const INVENTORY_CATEGORY_UNCATEGORIZED = 'Uncategorized'
 
 function normalizeFilterText(value) {
   return String(value || '')
     .trim()
     .toLowerCase()
+}
+
+export function getInventoryCategoryLabel(value) {
+  return String(value || '').trim() || INVENTORY_CATEGORY_UNCATEGORIZED
 }
 
 export function isInventoryItemLowStock(item) {
@@ -74,8 +79,7 @@ export function sortInventoryItems(items = [], status = INVENTORY_FILTER_ALL) {
 export function getInventoryCategoryOptions(items = []) {
   return [...new Set(
     items
-      .map((item) => String(item?.category_name || '').trim())
-      .filter(Boolean),
+      .map((item) => getInventoryCategoryLabel(item?.category_name ?? item?.category)),
   )].sort((leftValue, rightValue) => leftValue.localeCompare(rightValue))
 }
 
@@ -87,7 +91,10 @@ export function filterInventoryItemsByCategory(items = [], category = 'all') {
   }
 
   return items.filter(
-    (item) => normalizeFilterText(item?.category_name) === normalizedCategory,
+    (item) =>
+      normalizeFilterText(
+        getInventoryCategoryLabel(item?.category_name ?? item?.category),
+      ) === normalizedCategory,
   )
 }
 
@@ -99,20 +106,20 @@ export function resolveInventoryFilterResults({
 } = {}) {
   const branchItems = filterInventoryItemsByBranch(items, branchId)
   const categoryOptions = getInventoryCategoryOptions(branchItems)
-  const statusItems = sortInventoryItems(
-    filterInventoryItemsByStatus(branchItems, status),
-    status,
-  )
   const resolvedCategory =
     categoryOptions.find(
       (option) => normalizeFilterText(option) === normalizeFilterText(category),
     ) || INVENTORY_FILTER_ALL
+  const categoryItems = filterInventoryItemsByCategory(branchItems, resolvedCategory)
+  const statusItems = sortInventoryItems(
+    filterInventoryItemsByStatus(categoryItems, status),
+    status,
+  )
 
   return {
     branchItems,
-    statusItems,
     categoryOptions,
     resolvedCategory,
-    filteredItems: filterInventoryItemsByCategory(statusItems, resolvedCategory),
+    filteredItems: statusItems,
   }
 }

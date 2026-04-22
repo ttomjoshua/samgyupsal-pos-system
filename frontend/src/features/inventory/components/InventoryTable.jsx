@@ -2,6 +2,7 @@ import EmptyState from '../../../shared/components/common/EmptyState'
 import StatusBadge from '../../../shared/components/common/StatusBadge'
 import { getInventoryStatus } from '../services/inventoryService'
 import { shortDate } from '../../../shared/utils/formatters'
+import { getInventoryCategoryLabel } from '../utils/inventoryFilters'
 
 function InventoryTable({
   items,
@@ -42,7 +43,7 @@ function InventoryTable({
             return (
               <tr key={item.id}>
                 <td>{item.product_name}</td>
-                <td>{item.category_name}</td>
+                <td>{getInventoryCategoryLabel(item.category_name)}</td>
                 <td>{item.stock_quantity}</td>
                 <td>{item.unit}</td>
                 <td>{shortDate(item.expiry_date)}</td>

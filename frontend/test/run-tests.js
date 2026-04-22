@@ -11,8 +11,10 @@ import {
   isServiceFeeLineItem,
 } from '../src/features/pos/utils/serviceFees.js'
 import {
+  INVENTORY_CATEGORY_UNCATEGORIZED,
   INVENTORY_FILTER_EXPIRY_DATE,
   INVENTORY_FILTER_LOW_STOCK,
+  getInventoryCategoryOptions,
   resolveInventoryFilterResults,
 } from '../src/features/inventory/utils/inventoryFilters.js'
 import {
@@ -322,6 +324,87 @@ const tests = [
         ['Kimchi', 'Iced Tea'],
       )
       assert.deepEqual(result.categoryOptions, ['Beverages', 'Retail'])
+    },
+  },
+  {
+    name: 'resolveInventoryFilterResults keeps branch-wide categories available under status filters',
+    run() {
+      const result = resolveInventoryFilterResults({
+        items: [
+          {
+            id: 1,
+            branch_id: 1,
+            category_name: 'Frozen',
+            product_name: 'Pork Belly',
+            stock_quantity: 20,
+            reorder_level: 10,
+            expiry_date: '',
+          },
+          {
+            id: 2,
+            branch_id: 1,
+            category_name: 'Retail',
+            product_name: 'Kimchi',
+            stock_quantity: 8,
+            reorder_level: 10,
+            expiry_date: '2026-05-04',
+          },
+        ],
+        branchId: '1',
+        status: INVENTORY_FILTER_EXPIRY_DATE,
+        category: 'Frozen',
+      })
+
+      assert.equal(result.resolvedCategory, 'Frozen')
+      assert.deepEqual(result.categoryOptions, ['Frozen', 'Retail'])
+      assert.equal(result.filteredItems.length, 0)
+    },
+  },
+  {
+    name: 'getInventoryCategoryOptions includes uncategorized records for filtering',
+    run() {
+      const result = getInventoryCategoryOptions([
+        { category_name: '' },
+        { category_name: 'Beverages' },
+        { category_name: null },
+      ])
+
+      assert.deepEqual(result, ['Beverages', INVENTORY_CATEGORY_UNCATEGORIZED])
+    },
+  },
+  {
+    name: 'resolveInventoryFilterResults matches uncategorized items through category filtering',
+    run() {
+      const result = resolveInventoryFilterResults({
+        items: [
+          {
+            id: 1,
+            branch_id: 1,
+            category_name: '',
+            product_name: 'House Sauce',
+            stock_quantity: 4,
+            reorder_level: 10,
+            expiry_date: '',
+          },
+          {
+            id: 2,
+            branch_id: 1,
+            category_name: 'Retail',
+            product_name: 'Kimchi',
+            stock_quantity: 6,
+            reorder_level: 10,
+            expiry_date: '',
+          },
+        ],
+        branchId: '1',
+        category: INVENTORY_CATEGORY_UNCATEGORIZED,
+      })
+
+      assert.equal(result.resolvedCategory, INVENTORY_CATEGORY_UNCATEGORIZED)
+      assert.deepEqual(
+        result.filteredItems.map((item) => item.product_name),
+        ['House Sauce'],
+      )
     },
   },
   {
