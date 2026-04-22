@@ -201,17 +201,92 @@
 
 .inventory-table {
   width: 100%;
-  min-width: 960px;
+  min-width: 1120px;
   border-collapse: collapse;
+  table-layout: fixed;
+}
+
+.inventory-table-shell {
+  scrollbar-gutter: stable both-edges;
+}
+
+.inventory-table-col--product {
+  width: 25%;
+}
+
+.inventory-table-col--category {
+  width: 14%;
+}
+
+.inventory-table-col--stock {
+  width: 8%;
+}
+
+.inventory-table-col--unit {
+  width: 15%;
+}
+
+.inventory-table-col--expiry {
+  width: 8%;
+}
+
+.inventory-table-col--status {
+  width: 10%;
+}
+
+.inventory-table-col--actions {
+  width: 20%;
+}
+
+.inventory-table th,
+.inventory-table td {
+  vertical-align: middle;
+}
+
+.inventory-table-column {
+  min-width: 0;
+}
+
+.inventory-table-text {
+  display: block;
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.inventory-table-text--numeric {
+  font-variant-numeric: tabular-nums;
+}
+
+.inventory-table-text--placeholder {
+  color: var(--text-soft);
+}
+
+.inventory-status-cell {
+  display: flex;
+  align-items: center;
+  min-height: 44px;
+}
+
+.inventory-status-cell .status-badge {
+  min-width: 6.75rem;
+  max-width: 100%;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
 }
 
 .inventory-actions {
-  display: flex;
-  flex-wrap: wrap;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 0.5rem;
+  align-items: stretch;
 }
 
 .table-action-button {
+  width: 100%;
+  min-height: 44px;
   border: 1px solid rgba(166, 63, 20, 0.14);
   border-radius: 12px;
   padding: 0.6rem 0.8rem;
@@ -219,6 +294,9 @@
   color: #5f422d;
   font-weight: 600;
   cursor: pointer;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .table-action-button:hover {
