@@ -637,6 +637,7 @@ export function buildReceiptPreviewData(sale = {}) {
     total: normalizedSale.total_amount,
     cashReceived: normalizedSale.cash_received,
     change: normalizedSale.change_amount,
+    notes: normalizedSale.notes,
     items: normalizedSale.items.map((item, index) => ({
       id: item.id ?? `${normalizedSale.id || 'sale'}-${index + 1}`,
       name: item.item_name,

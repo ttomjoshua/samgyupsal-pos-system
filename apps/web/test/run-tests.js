@@ -11,6 +11,10 @@ import {
   isServiceFeeLineItem,
 } from '../src/features/pos/utils/serviceFees.js'
 import {
+  buildReceiptDocumentHtml,
+  getReceiptFilename,
+} from '../src/features/pos/utils/receiptActions.js'
+import {
   buildReceiptPreviewData,
   filterSalesRecords,
   getSaleReference,
@@ -388,7 +392,43 @@ const tests = [
       assert.equal(result.transactionNumber, 'TRX-000007')
       assert.equal(result.serviceFeeTotal, 5)
       assert.equal(result.discountTypeLabel, 'PWD')
+      assert.equal(result.notes, '')
       assert.equal(result.items.length, 2)
+    },
+  },
+  {
+    name: 'buildReceiptDocumentHtml creates a printable receipt document from preview data',
+    run() {
+      const receipt = buildReceiptPreviewData({
+        id: 18,
+        transaction_number: 'TRX-20260423-018',
+        cashier_name: 'Cashier One',
+        branch_name: 'Dollar',
+        payment_method: 'cash',
+        subtotal: 320,
+        discount: 20,
+        total_amount: 300,
+        cash_received: 500,
+        change_amount: 200,
+        notes: 'Customer requested official printout.',
+        submitted_at: '2026-04-23T12:45:00.000Z',
+        items: [
+          {
+            item_name: 'Samgyupsal Set',
+            quantity: 2,
+            unit_price: 160,
+            line_total: 320,
+          },
+        ],
+      })
+
+      const documentMarkup = buildReceiptDocumentHtml(receipt)
+
+      assert.equal(getReceiptFilename(receipt), 'trx-20260423-018.html')
+      assert.match(documentMarkup, /Sales Receipt/)
+      assert.match(documentMarkup, /TRX-20260423-018/)
+      assert.match(documentMarkup, /Customer requested official printout\./)
+      assert.match(documentMarkup, /Samgyupsal Set/)
     },
   },
   {

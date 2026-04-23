@@ -10,6 +10,8 @@ function Modal({
   children,
   width = '720px',
   closeLabel = 'Close dialog',
+  panelClassName = '',
+  bodyClassName = '',
 }) {
   const titleId = useId()
   const descriptionId = useId()
@@ -25,7 +27,7 @@ function Modal({
       onClick={onClose}
     >
       <div
-        className="modal-panel"
+        className={panelClassName ? `modal-panel ${panelClassName}` : 'modal-panel'}
         style={{ maxWidth: width }}
         role="dialog"
         aria-modal="true"
@@ -66,7 +68,9 @@ function Modal({
           </button>
         </div>
 
-        <div className="modal-body">{children}</div>
+        <div className={bodyClassName ? `modal-body ${bodyClassName}` : 'modal-body'}>
+          {children}
+        </div>
       </div>
     </div>
   )
