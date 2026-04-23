@@ -1,7 +1,7 @@
 import { peso, shortDateTime } from '../../../shared/utils/formatters'
 import '../styles/receipt.css'
 
-function ReceiptPreview({ receipt, onClose }) {
+function ReceiptPreview({ receipt, onClose, showActions = true }) {
   if (!receipt) {
     return null
   }
@@ -69,18 +69,26 @@ function ReceiptPreview({ receipt, onClose }) {
 
         <p className="receipt-notes">
           Payment method: <strong>{receipt.paymentMethodLabel}</strong>
+          {receipt.discountTypeLabel && Number(receipt.discount || 0) > 0 ? (
+            <>
+              <br />
+              Discount type: <strong>{receipt.discountTypeLabel}</strong>
+            </>
+          ) : null}
         </p>
       </div>
 
-      <div className="receipt-actions">
-        <button
-          type="button"
-          className="ghost-action"
-          onClick={onClose}
-        >
-          Close Receipt
-        </button>
-      </div>
+      {showActions ? (
+        <div className="receipt-actions">
+          <button
+            type="button"
+            className="ghost-action"
+            onClick={onClose}
+          >
+            Close Receipt
+          </button>
+        </div>
+      ) : null}
     </div>
   )
 }

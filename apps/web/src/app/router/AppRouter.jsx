@@ -67,7 +67,7 @@ function AppRouter() {
           <Route
             path="pos"
             element={
-              <ProtectedRoute allowedRoles={[ROLE_EMPLOYEE]}>
+              <ProtectedRoute allowedRoles={[ROLE_ADMIN, ROLE_EMPLOYEE]}>
                 {renderLazyPage(<PosPage />, 'Loading sales workspace...')}
               </ProtectedRoute>
             }

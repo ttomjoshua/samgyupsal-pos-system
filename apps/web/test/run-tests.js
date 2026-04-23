@@ -11,6 +11,11 @@ import {
   isServiceFeeLineItem,
 } from '../src/features/pos/utils/serviceFees.js'
 import {
+  buildReceiptPreviewData,
+  filterSalesRecords,
+  getSaleReference,
+} from '../src/features/pos/services/salesService.js'
+import {
   INVENTORY_CATEGORY_UNCATEGORIZED,
   INVENTORY_FILTER_EXPIRY_DATE,
   INVENTORY_FILTER_LOW_STOCK,
@@ -256,6 +261,134 @@ const tests = [
         }),
         true,
       )
+    },
+  },
+  {
+    name: 'filterSalesRecords preserves employee sales scope in local history mode',
+    run() {
+      const result = filterSalesRecords(
+        [
+          {
+            id: 1,
+            cashier_id: 'employee-1',
+            cashier_name: 'Cashier One',
+            branch_id: 1,
+            branch_name: 'Sta. Lucia',
+            payment_method: 'cash',
+            subtotal: 200,
+            discount: 0,
+            total_amount: 200,
+            submitted_at: '2026-04-20T09:00:00.000Z',
+            items: [{ item_name: 'Set A', quantity: 2, unit_price: 100, line_total: 200 }],
+          },
+          {
+            id: 2,
+            cashier_id: 'employee-2',
+            cashier_name: 'Cashier Two',
+            branch_id: 1,
+            branch_name: 'Sta. Lucia',
+            payment_method: 'cash',
+            subtotal: 150,
+            discount: 0,
+            total_amount: 150,
+            submitted_at: '2026-04-21T09:00:00.000Z',
+            items: [{ item_name: 'Set B', quantity: 1, unit_price: 150, line_total: 150 }],
+          },
+        ],
+        {
+          user: {
+            id: 'employee-1',
+            roleKey: 'employee',
+          },
+        },
+      )
+
+      assert.equal(result.length, 1)
+      assert.equal(result[0].cashier_id, 'employee-1')
+    },
+  },
+  {
+    name: 'filterSalesRecords supports admin transaction and cashier filtering',
+    run() {
+      const result = filterSalesRecords(
+        [
+          {
+            id: 12,
+            cashier_id: 'employee-1',
+            cashier_name: 'Cashier One',
+            branch_id: 1,
+            branch_name: 'Sta. Lucia',
+            payment_method: 'cash',
+            subtotal: 300,
+            discount: 20,
+            total_amount: 280,
+            submitted_at: '2026-04-22T11:30:00.000Z',
+            items: [{ item_name: 'Set A', quantity: 3, unit_price: 100, line_total: 300 }],
+          },
+          {
+            id: 44,
+            cashier_id: 'employee-2',
+            cashier_name: 'Cashier Two',
+            branch_id: 2,
+            branch_name: 'Dollar',
+            payment_method: 'cash',
+            subtotal: 180,
+            discount: 0,
+            total_amount: 180,
+            submitted_at: '2026-04-21T11:30:00.000Z',
+            items: [{ item_name: 'Set B', quantity: 2, unit_price: 90, line_total: 180 }],
+          },
+        ],
+        {
+          user: {
+            id: 'admin-1',
+            roleKey: 'admin',
+          },
+          cashierQuery: 'cashier one',
+          transactionQuery: 'TRX-000012',
+        },
+      )
+
+      assert.equal(result.length, 1)
+      assert.equal(result[0].id, 12)
+      assert.equal(getSaleReference(result[0]), 'TRX-000012')
+    },
+  },
+  {
+    name: 'buildReceiptPreviewData rolls up service fees and discount labels for history details',
+    run() {
+      const result = buildReceiptPreviewData({
+        id: 7,
+        discount_type: 'pwd',
+        cashier_name: 'Cashier One',
+        branch_name: 'Sta. Lucia',
+        payment_method: 'cash',
+        subtotal: 250,
+        discount: 50,
+        total_amount: 205,
+        cash_received: 500,
+        change_amount: 295,
+        submitted_at: '2026-04-23T10:00:00.000Z',
+        items: [
+          {
+            item_name: 'Samgyupsal Set',
+            quantity: 2,
+            unit_price: 100,
+            line_total: 200,
+          },
+          {
+            item_name: 'Service Fee - Microwave Usage',
+            quantity: 1,
+            unit_price: 5,
+            line_total: 5,
+          },
+        ],
+      })
+
+      assert.equal(result.transactionNumber, 'TRX-000007')
+      assert.equal(result.serviceFeeTotal, 5)
+      assert.equal(result.discountTypeLabel, 'PWD')
+      assert.equal(result.items.length, 2)
     },
   },
   {

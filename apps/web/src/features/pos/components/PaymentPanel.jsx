@@ -12,6 +12,7 @@ import {
   calculateDiscountAmount,
   DEFAULT_DISCOUNT_TYPE,
   discountOptions,
+  getDiscountConfig,
 } from '../utils/discounts'
 import {
   createSale,
@@ -247,6 +248,7 @@ function PaymentPanel({
       subtotal,
       serviceFeeTotal,
       discount: numericDiscount,
+      discountTypeLabel: getDiscountConfig(discountType).label,
       total,
       cashReceived: Number(cashReceived || 0),
       change: paymentMethod === 'cash' ? Math.max(0, change) : 0,
@@ -266,6 +268,8 @@ function PaymentPanel({
         cashierName: user?.name,
         branchId: branchId ?? user?.branchId,
         branchName: branchName || user?.branchName,
+        transactionNumber,
+        discountType,
         items: saleLineItems,
       })
       setCart([])

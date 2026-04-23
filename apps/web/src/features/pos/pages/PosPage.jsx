@@ -4,6 +4,7 @@ import EmptyState from '../../../shared/components/common/EmptyState'
 import CartTable from '../components/CartTable'
 import PaymentPanel from '../components/PaymentPanel'
 import ProductGrid from '../components/ProductGrid'
+import SalesHistoryPanel from '../components/SalesHistoryPanel'
 import SelectMenu from '../../../shared/components/ui/SelectMenu'
 import NoticeBanner from '../../../shared/components/common/NoticeBanner'
 import useAuth from '../../auth/hooks/useAuth'
@@ -12,7 +13,11 @@ import { getProducts } from '../../products/services/productService'
 import '../styles/pos.css'
 import { mergeProductAndStoredCategories } from '../../../shared/utils/storage'
 import { normalizeSearchInput } from '../../../shared/utils/validation'
-import { getRoleLabel } from '../../../shared/utils/permissions'
+import {
+  getRoleLabel,
+  isAdminUser,
+  isEmployeeUser,
+} from '../../../shared/utils/permissions'
 
 const PRODUCTS_PER_PAGE = 12
 
@@ -42,6 +47,7 @@ function buildPaginationItems(currentPage, totalPages) {
 
 function PosPage() {
   const { user } = useAuth()
+  const canUseSalesDesk = isEmployeeUser(user)
   const [branchOptions, setBranchOptions] = useState([])
   const [isBranchLoading, setIsBranchLoading] = useState(true)
   const [branchLoadError, setBranchLoadError] = useState('')
@@ -55,7 +61,15 @@ function PosPage() {
   const [cartItems, setCartItems] = useState([])
   const [transactionSequence, setTransactionSequence] = useState(1)
   const [activeBranchId, setActiveBranchId] = useState(user?.branchId || '')
+  const [activeView, setActiveView] = useState(
+    canUseSalesDesk ? 'desk' : 'history',
+  )
+  const [historyRefreshKey, setHistoryRefreshKey] = useState(0)
   const deferredSearchTerm = useDeferredValue(searchTerm)
+
+  useEffect(() => {
+    setActiveView(canUseSalesDesk ? 'desk' : 'history')
+  }, [canUseSalesDesk])
 
   useEffect(() => {
     const timer = window.setInterval(() => {
@@ -129,6 +143,11 @@ function PosPage() {
   )
 
   useEffect(() => {
+    if (!canUseSalesDesk) {
+      setIsCatalogLoading(false)
+      return
+    }
+
     if (!activeBranchId) {
       return
     }
@@ -151,7 +170,7 @@ function PosPage() {
 
     setIsCatalogLoading(true)
     loadCatalog()
-  }, [activeBranchId])
+  }, [activeBranchId, canUseSalesDesk])
 
   const formattedDate = new Intl.DateTimeFormat('en-PH', {
     weekday: 'short',
@@ -173,6 +192,7 @@ function PosPage() {
   const transactionNumber = `TRX-${clock.toISOString().slice(0, 10).replaceAll('-', '')}-${String(transactionSequence).padStart(3, '0')}`
   const cashierRoleLabel = getRoleLabel(user?.roleKey || user?.role)
   const transactionSuffix = String(transactionSequence).padStart(3, '0')
+  const workspaceLabel = activeView === 'history' ? 'Sales History' : 'Sales Desk'
 
   const filteredProducts = useMemo(() => {
     const normalizedSearch = normalizeSearchInput(deferredSearchTerm).toLowerCase()
@@ -236,6 +256,7 @@ function PosPage() {
     }
 
     setTransactionSequence((current) => current + 1)
+    setHistoryRefreshKey((current) => current + 1)
 
     if (details.inventorySynced === false || !Array.isArray(details.soldItems)) {
       return
@@ -266,7 +287,7 @@ function PosPage() {
     return <Loader message="Loading branch scope..." />
   }
 
-  if (!isBranchLoading && !activeBranchId && !user?.branchId) {
+  if (!isBranchLoading && !activeBranchId && !user?.branchId && canUseSalesDesk) {
     return (
         <EmptyState
           title="No branch scope available"
@@ -280,9 +301,9 @@ function PosPage() {
       <div className="pos-topbar">
         <div className="pos-title-block">
           <p className="eyebrow">Sales</p>
-          <h1>Sales Desk</h1>
+          <h1>Sales Workspace</h1>
           <p className="supporting-text">
-            Process customer orders and complete checkout.
+            Process live orders and review completed transaction history in one workspace.
           </p>
         </div>
 
@@ -329,182 +350,225 @@ function PosPage() {
           </article>
 
           <article className="pos-meta-card">
-            <span className="meta-label">Transaction No.</span>
-            <strong className="meta-code">{transactionNumber}</strong>
-            <span className="meta-secondary">Current sale</span>
-            <span className="meta-tertiary">Sequence {transactionSuffix}</span>
+            <span className="meta-label">
+              {activeView === 'history' ? 'Current Workspace' : 'Transaction No.'}
+            </span>
+            {activeView === 'history' ? (
+              <>
+                <strong className="meta-primary">{workspaceLabel}</strong>
+                <span className="meta-secondary">
+                  Review saved transactions without changing recorded data.
+                </span>
+                <span className="meta-tertiary">
+                  {isAdminUser(user) ? 'Administrator access' : 'Account-scoped records'}
+                </span>
+              </>
+            ) : (
+              <>
+                <strong className="meta-code">{transactionNumber}</strong>
+                <span className="meta-secondary">Current sale</span>
+                <span className="meta-tertiary">Sequence {transactionSuffix}</span>
+              </>
+            )}
           </article>
         </div>
       </div>
 
-      <div className="pos-layout">
-        <section className="pos-left">
-          <div className="pos-panel">
-            <div className="panel-header">
-              <div>
-                <p className="card-label">Products</p>
-                <h2>Available Items</h2>
+      <div className="pos-view-switcher">
+        {canUseSalesDesk ? (
+          <button
+            type="button"
+            className={activeView === 'desk' ? 'pos-view-button active' : 'pos-view-button'}
+            onClick={() => setActiveView('desk')}
+          >
+            Sales Desk
+          </button>
+        ) : null}
+        <button
+          type="button"
+          className={activeView === 'history' ? 'pos-view-button active' : 'pos-view-button'}
+          onClick={() => setActiveView('history')}
+        >
+          Sales History
+        </button>
+      </div>
+
+      {activeView === 'history' ? (
+        <SalesHistoryPanel
+          branchOptions={branchOptions}
+          refreshKey={historyRefreshKey}
+          user={user}
+        />
+      ) : (
+        <div className="pos-layout">
+          <section className="pos-left">
+            <div className="pos-panel">
+              <div className="panel-header">
+                <div>
+                  <p className="card-label">Products</p>
+                  <h2>Available Items</h2>
+                </div>
+                <span className="panel-count">{filteredProducts.length} items</span>
               </div>
-              <span className="panel-count">{filteredProducts.length} items</span>
-            </div>
 
-            {catalogError ? (
-              <NoticeBanner
-                variant="error"
-                title="Product catalog unavailable"
-                message={catalogError}
-              />
-            ) : null}
-
-            {branchLoadError ? (
-              <NoticeBanner
-                variant="error"
-                title="Branch scope unavailable"
-                message={branchLoadError}
-              />
-            ) : null}
-
-            <div className="product-grid-toolbar">
-              <div className="product-grid-search-row">
-                <input
-                  type="text"
-                  className="pos-search"
-                  placeholder="Search product, category, or pack size"
-                  value={searchTerm}
-                  aria-label="Search available products"
-                  onChange={(event) => setSearchTerm(event.target.value)}
+              {catalogError ? (
+                <NoticeBanner
+                  variant="error"
+                  title="Product catalog unavailable"
+                  message={catalogError}
                 />
+              ) : null}
 
-                {hasActiveSearch ? (
-                  <button
-                    type="button"
-                    className="ghost-action product-grid-clear-search"
-                    onClick={() => setSearchTerm('')}
-                  >
-                    Clear
-                  </button>
+              {branchLoadError ? (
+                <NoticeBanner
+                  variant="error"
+                  title="Branch scope unavailable"
+                  message={branchLoadError}
+                />
+              ) : null}
+
+              <div className="product-grid-toolbar">
+                <div className="product-grid-search-row">
+                  <input
+                    type="text"
+                    className="pos-search"
+                    placeholder="Search product, category, or pack size"
+                    value={searchTerm}
+                    aria-label="Search available products"
+                    onChange={(event) => setSearchTerm(event.target.value)}
+                  />
+
+                  {hasActiveSearch ? (
+                    <button
+                      type="button"
+                      className="ghost-action product-grid-clear-search"
+                      onClick={() => setSearchTerm('')}
+                    >
+                      Clear
+                    </button>
+                  ) : null}
+                </div>
+
+                <div className="category-row">
+                  {categories.map((category) => (
+                    <button
+                      key={category}
+                      type="button"
+                      className={
+                        activeCategory === category
+                          ? 'category-button active'
+                          : 'category-button'
+                      }
+                      onClick={() => setActiveCategory(category)}
+                    >
+                      {category}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div className="product-grid-summary">
+                <p className="product-grid-results">
+                  {filteredProducts.length === 0
+                    ? 'No matching products found.'
+                    : `Showing ${pageRangeStart}-${pageRangeEnd} of ${filteredProducts.length} matching item${
+                        filteredProducts.length === 1 ? '' : 's'
+                      }.`}
+                </p>
+
+                {totalPages > 1 ? (
+                  <div className="product-grid-pagination">
+                    <button
+                      type="button"
+                      className="pagination-button"
+                      onClick={() => setCurrentPage((page) => Math.max(1, page - 1))}
+                      disabled={currentPage === 1}
+                      aria-label="Go to previous product page"
+                    >
+                      Previous
+                    </button>
+
+                    {visiblePaginationItems.map((item) => {
+                      if (typeof item !== 'number') {
+                        return (
+                          <span
+                            key={item}
+                            className="pagination-ellipsis"
+                          >
+                            ...
+                          </span>
+                        )
+                      }
+
+                      return (
+                        <button
+                          key={item}
+                          type="button"
+                          className={
+                            item === currentPage
+                              ? 'pagination-button active'
+                              : 'pagination-button'
+                          }
+                          onClick={() => setCurrentPage(item)}
+                          aria-label={`Go to product page ${item}`}
+                          aria-current={item === currentPage ? 'page' : undefined}
+                        >
+                          {item}
+                        </button>
+                      )
+                    })}
+
+                    <button
+                      type="button"
+                      className="pagination-button"
+                      onClick={() =>
+                        setCurrentPage((page) => Math.min(totalPages, page + 1))
+                      }
+                      disabled={currentPage === totalPages}
+                      aria-label="Go to next product page"
+                    >
+                      Next
+                    </button>
+                  </div>
                 ) : null}
               </div>
 
-              <div className="category-row">
-                {categories.map((category) => (
-                  <button
-                    key={category}
-                    type="button"
-                    className={
-                      activeCategory === category
-                        ? 'category-button active'
-                        : 'category-button'
-                    }
-                    onClick={() => setActiveCategory(category)}
-                  >
-                    {category}
-                  </button>
-                ))}
+              {isCatalogLoading ? (
+                <Loader message="Loading sales catalog..." />
+              ) : (
+                <ProductGrid
+                  cart={cartItems}
+                  products={paginatedProducts}
+                  setCart={setCartItems}
+                />
+              )}
+            </div>
+          </section>
+
+          <aside className="cart-panel">
+            <div className="panel-header">
+              <div>
+                <p className="card-label">Cart</p>
+                <h2>Current Order</h2>
               </div>
             </div>
 
-            <div className="product-grid-summary">
-              <p className="product-grid-results">
-                {filteredProducts.length === 0
-                  ? 'No matching products found.'
-                  : `Showing ${pageRangeStart}-${pageRangeEnd} of ${filteredProducts.length} matching item${
-                      filteredProducts.length === 1 ? '' : 's'
-                    }.`}
-              </p>
+            <CartTable
+              cart={cartItems}
+              setCart={setCartItems}
+            />
 
-              {totalPages > 1 ? (
-                <div className="product-grid-pagination">
-                  <button
-                    type="button"
-                    className="pagination-button"
-                    onClick={() => setCurrentPage((page) => Math.max(1, page - 1))}
-                    disabled={currentPage === 1}
-                    aria-label="Go to previous product page"
-                  >
-                    Previous
-                  </button>
-
-                  {visiblePaginationItems.map((item) => {
-                    if (typeof item !== 'number') {
-                      return (
-                        <span
-                          key={item}
-                          className="pagination-ellipsis"
-                        >
-                          ...
-                        </span>
-                      )
-                    }
-
-                    return (
-                      <button
-                        key={item}
-                        type="button"
-                        className={
-                          item === currentPage
-                            ? 'pagination-button active'
-                            : 'pagination-button'
-                        }
-                        onClick={() => setCurrentPage(item)}
-                        aria-label={`Go to product page ${item}`}
-                        aria-current={item === currentPage ? 'page' : undefined}
-                      >
-                        {item}
-                      </button>
-                    )
-                  })}
-
-                  <button
-                    type="button"
-                    className="pagination-button"
-                    onClick={() =>
-                      setCurrentPage((page) => Math.min(totalPages, page + 1))
-                    }
-                    disabled={currentPage === totalPages}
-                    aria-label="Go to next product page"
-                  >
-                    Next
-                  </button>
-                </div>
-              ) : null}
-            </div>
-
-            {isCatalogLoading ? (
-              <Loader message="Loading sales catalog..." />
-            ) : (
-              <ProductGrid
-                cart={cartItems}
-                products={paginatedProducts}
-                setCart={setCartItems}
-              />
-            )}
-          </div>
-        </section>
-
-        <aside className="cart-panel">
-          <div className="panel-header">
-            <div>
-              <p className="card-label">Cart</p>
-              <h2>Current Order</h2>
-            </div>
-          </div>
-
-          <CartTable
-            cart={cartItems}
-            setCart={setCartItems}
-          />
-
-          <PaymentPanel
-            cart={cartItems}
-            setCart={setCartItems}
-            transactionNumber={transactionNumber}
-            branchId={activeBranch?.id ?? user?.branchId ?? null}
-            branchName={activeBranch?.name || user?.branchName || 'All Branches'}
-            onOrderComplete={handleOrderComplete}
-          />
-        </aside>
-      </div>
+            <PaymentPanel
+              cart={cartItems}
+              setCart={setCartItems}
+              transactionNumber={transactionNumber}
+              branchId={activeBranch?.id ?? user?.branchId ?? null}
+              branchName={activeBranch?.name || user?.branchName || 'All Branches'}
+              onOrderComplete={handleOrderComplete}
+            />
+          </aside>
+        </div>
+      )}
     </section>
   )
 }

@@ -19,7 +19,7 @@ export const APP_NAV_ITEMS = [
     to: '/app/pos',
     label: 'Sales',
     shortLabel: 'SLS',
-    allowedRoles: [ROLE_EMPLOYEE],
+    allowedRoles: [ROLE_ADMIN, ROLE_EMPLOYEE],
   },
   {
     key: 'inventory',

@@ -1,4 +1,4 @@
-import api from '../../../shared/api/apiClient'
+import api from '../../../shared/api/apiClient.js'
 import { resolveInventoryRecordIds } from '../../../shared/utils/inventoryRecords.js'
 import {
   createSupabaseServiceError,
@@ -7,13 +7,13 @@ import {
   supabaseRuntime,
   supabaseTables,
   supabaseViews,
-} from '../../../shared/api/supabaseClient'
-import { inventoryItems } from '../../../shared/mocks/mockData'
-import { shortDate } from '../../../shared/utils/formatters'
+} from '../../../shared/api/supabaseClient.js'
+import { inventoryItems } from '../../../shared/mocks/mockData.js'
+import { shortDate } from '../../../shared/utils/formatters.js'
 import {
   getStoredInventoryItems,
   saveStoredInventoryItems,
-} from '../../../shared/utils/storage'
+} from '../../../shared/utils/storage.js'
 
 const LOW_STOCK_THRESHOLD = 10
 const NEAR_EXPIRY_DAYS = 30
