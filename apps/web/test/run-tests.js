@@ -201,15 +201,13 @@ const tests = [
     },
   },
   {
-    name: 'resource cache stores cloned values and clears by prefix',
+    name: 'resource cache stores values and clears by prefix',
     run() {
       setCachedResource('test:navigation:one', { count: 1 })
       setCachedResource('test:navigation:two', { count: 2 })
 
-      const cachedValue = getCachedResource('test:navigation:one')
-      cachedValue.count = 99
-
       assert.equal(getCachedResource('test:navigation:one').count, 1)
+      assert.equal(getCachedResource('test:navigation:two').count, 2)
 
       clearCachedResourceByPrefix('test:navigation:')
 

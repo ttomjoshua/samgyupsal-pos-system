@@ -1,16 +1,7 @@
 const resourceCache = new Map()
 
-function cloneCacheValue(value) {
-  if (value == null) {
-    return value
-  }
-
-  if (typeof structuredClone === 'function') {
-    return structuredClone(value)
-  }
-
-  return JSON.parse(JSON.stringify(value))
-}
+// Cache entries are treated as immutable resource snapshots to avoid
+// deep-cloning large datasets on every read/write during navigation.
 
 export function getCachedResource(cacheKey, maxAgeMs = Infinity) {
   const cacheEntry = resourceCache.get(cacheKey)
@@ -24,16 +15,16 @@ export function getCachedResource(cacheKey, maxAgeMs = Infinity) {
     return null
   }
 
-  return cloneCacheValue(cacheEntry.value)
+  return cacheEntry.value
 }
 
 export function setCachedResource(cacheKey, value) {
   resourceCache.set(cacheKey, {
-    value: cloneCacheValue(value),
+    value,
     cachedAt: Date.now(),
   })
 
-  return cloneCacheValue(value)
+  return value
 }
 
 export function clearCachedResource(cacheKey) {

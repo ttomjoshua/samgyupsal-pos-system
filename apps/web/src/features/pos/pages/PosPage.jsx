@@ -1,4 +1,4 @@
-import { useDeferredValue, useEffect, useMemo, useState } from 'react'
+import { useCallback, useDeferredValue, useEffect, useMemo, useState } from 'react'
 import Loader from '../../../shared/components/common/Loader'
 import EmptyState from '../../../shared/components/common/EmptyState'
 import CartTable from '../components/CartTable'
@@ -68,8 +68,6 @@ function PosPage() {
       activeCategory: 'All',
       searchTerm: '',
       currentPage: 1,
-      cartItems: [],
-      transactionSequence: 1,
       activeBranchId: user?.branchId || '',
       activeView: canUseSalesDesk ? 'desk' : 'history',
     }),
@@ -78,15 +76,15 @@ function PosPage() {
   const activeCategory = posViewState?.activeCategory || 'All'
   const searchTerm = posViewState?.searchTerm || ''
   const currentPage = Math.max(1, Number(posViewState?.currentPage || 1))
-  const cartItems = Array.isArray(posViewState?.cartItems) ? posViewState.cartItems : []
-  const transactionSequence = Math.max(1, Number(posViewState?.transactionSequence || 1))
   const activeView = posViewState?.activeView || (canUseSalesDesk ? 'desk' : 'history')
-  const updatePosViewState = (patch) => {
+  const [cartItems, setCartItems] = useState([])
+  const [transactionSequence, setTransactionSequence] = useState(1)
+  const updatePosViewState = useCallback((patch) => {
     setPosViewState((currentState) => ({
       ...(currentState || {}),
       ...(typeof patch === 'function' ? patch(currentState || {}) : patch),
     }))
-  }
+  }, [setPosViewState])
   const initialCatalogProducts = getCachedProducts(
     activeBranchId ? { branchId: activeBranchId } : {},
   )
@@ -95,28 +93,13 @@ function PosPage() {
   const [isCatalogLoading, setIsCatalogLoading] = useState(() => !initialCatalogProducts)
   const [historyRefreshKey, setHistoryRefreshKey] = useState(0)
   const deferredSearchTerm = useDeferredValue(searchTerm)
-  const setCartItems = (valueOrUpdater) => {
-    updatePosViewState((currentState) => {
-      const currentCartItems = Array.isArray(currentState?.cartItems)
-        ? currentState.cartItems
-        : []
-
-      return {
-        ...currentState,
-        cartItems:
-          typeof valueOrUpdater === 'function'
-            ? valueOrUpdater(currentCartItems)
-            : valueOrUpdater,
-      }
-    })
-  }
 
   useEffect(() => {
     updatePosViewState((currentState) => ({
       ...(currentState || {}),
       activeView: canUseSalesDesk ? currentState?.activeView || 'desk' : 'history',
     }))
-  }, [canUseSalesDesk])
+  }, [canUseSalesDesk, updatePosViewState])
 
   useEffect(() => {
     const timer = window.setInterval(() => {
@@ -207,7 +190,7 @@ function PosPage() {
       return
     }
 
-      const loadCatalog = async () => {
+    const loadCatalog = async () => {
       try {
         const products = await getProducts({ branchId: activeBranchId })
         setCatalogProducts(products)
@@ -283,7 +266,7 @@ function PosPage() {
             currentPage: 1,
           }
     ))
-  }, [activeBranchId, activeCategory, deferredSearchTerm])
+  }, [activeBranchId, activeCategory, deferredSearchTerm, updatePosViewState])
 
   const totalPages = Math.max(
     1,
@@ -296,7 +279,7 @@ function PosPage() {
         currentPage: totalPages,
       })
     }
-  }, [currentPage, totalPages])
+  }, [currentPage, totalPages, updatePosViewState])
 
   const paginatedProducts = useMemo(() => {
     const startIndex = (currentPage - 1) * PRODUCTS_PER_PAGE
@@ -321,13 +304,7 @@ function PosPage() {
       return
     }
 
-    updatePosViewState((currentState) => ({
-      ...currentState,
-      transactionSequence: Math.max(
-        1,
-        Number(currentState?.transactionSequence || 1) + 1,
-      ),
-    }))
+    setTransactionSequence((currentValue) => Math.max(1, currentValue + 1))
     setHistoryRefreshKey((current) => current + 1)
 
     if (details.inventorySynced === false || !Array.isArray(details.soldItems)) {
