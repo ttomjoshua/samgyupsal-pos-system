@@ -3,6 +3,7 @@ import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
 import Loader from '../../shared/components/common/Loader'
 import useAuth from '../../features/auth/hooks/useAuth'
 import ProtectedRoute from './ProtectedRoute'
+import SessionInactivityMonitor from './SessionInactivityMonitor'
 import {
   getDefaultAppPath,
   ROLE_ADMIN,
@@ -33,6 +34,7 @@ function AppRouter() {
 
   return (
     <BrowserRouter>
+      <SessionInactivityMonitor />
       <Routes>
         <Route
           path="/"

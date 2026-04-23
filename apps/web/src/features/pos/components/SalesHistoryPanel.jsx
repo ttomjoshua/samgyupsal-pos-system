@@ -459,6 +459,7 @@ function SalesHistoryPanel({
       </section>
 
       <SalesHistoryDetailsModal
+        key={selectedSale?.id || 'sales-history-detail-closed'}
         sale={selectedSale}
         isOpen={Boolean(selectedSale)}
         onClose={() => setSelectedSale(null)}

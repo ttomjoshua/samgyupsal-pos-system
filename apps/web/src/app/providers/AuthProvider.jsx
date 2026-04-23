@@ -1,5 +1,5 @@
 /* eslint-disable react-refresh/only-export-components */
-import { createContext, useCallback, useEffect, useRef, useState } from 'react'
+import { createContext, useCallback, useEffect, useState } from 'react'
 import {
   getAuthenticatedUserFromSession,
   getCurrentSession,
@@ -22,53 +22,9 @@ import {
   isSessionConflictMessage,
   validateCurrentSessionLock,
 } from '../../features/auth/services/sessionLockService'
+import { isInactivityLogoutMessage } from '../../features/auth/utils/inactivity'
 
 export const AuthContext = createContext(null)
-
-const ACTIVITY_STORAGE_KEY = 'samgyupsal:last-activity-at'
-const ACTIVITY_SYNC_THROTTLE_MS = 15000
-const IDLE_CHECK_INTERVAL_MS = 15000
-const ADMIN_IDLE_TIMEOUT_MS = 15 * 60 * 1000
-const EMPLOYEE_IDLE_TIMEOUT_MS = 30 * 60 * 1000
-const INACTIVITY_EVENTS = [
-  'pointerdown',
-  'pointermove',
-  'keydown',
-  'scroll',
-  'touchstart',
-]
-const INACTIVITY_LOGOUT_MESSAGES = {
-  admin:
-    'For security, your administrator session ended after 15 minutes of inactivity. Sign in again to continue.',
-  employee:
-    'For security, your employee session ended after 30 minutes of inactivity. Sign in again to continue.',
-}
-
-function getIdleTimeoutMs(user) {
-  return isAdminUser(user) ? ADMIN_IDLE_TIMEOUT_MS : EMPLOYEE_IDLE_TIMEOUT_MS
-}
-
-function getInactivityLogoutMessage(user) {
-  return isAdminUser(user)
-    ? INACTIVITY_LOGOUT_MESSAGES.admin
-    : INACTIVITY_LOGOUT_MESSAGES.employee
-}
-
-function isInactivityLogoutMessage(value) {
-  return Object.values(INACTIVITY_LOGOUT_MESSAGES).includes(
-    String(value || '').trim(),
-  )
-}
-
-function parseActivityTimestamp(value) {
-  const timestamp = Number(value)
-
-  if (!Number.isFinite(timestamp) || timestamp <= 0) {
-    return null
-  }
-
-  return timestamp
-}
 
 function normalizeAuthenticatedUser(payload, fallbackIdentifier) {
   const candidateUser = payload?.user && typeof payload.user === 'object'
@@ -114,9 +70,6 @@ function normalizeAuthenticatedUser(payload, fallbackIdentifier) {
 }
 
 export function AuthProvider({ children }) {
-  const lastActivityAtRef = useRef(Date.now())
-  const lastActivitySyncAtRef = useRef(0)
-  const isIdleLogoutInProgressRef = useRef(false)
   const [user, setUser] = useState(() =>
     isSupabaseAuthEnabled ? null : normalizeAuthenticatedUser(getSavedUser()),
   )
@@ -124,28 +77,11 @@ export function AuthProvider({ children }) {
   const [isAuthReady, setIsAuthReady] = useState(!isSupabaseAuthEnabled)
   const [authError, setAuthError] = useState('')
 
-  const resetInactivityTracking = useCallback(() => {
-    lastActivityAtRef.current = Date.now()
-    lastActivitySyncAtRef.current = 0
-    isIdleLogoutInProgressRef.current = false
-
-    if (typeof window === 'undefined') {
-      return
-    }
-
-    try {
-      window.localStorage.removeItem(ACTIVITY_STORAGE_KEY)
-    } catch {
-      // Ignore storage cleanup errors.
-    }
-  }, [])
-
   const clearAuthenticatedState = useCallback((message = '') => {
     setUser(null)
     clearSavedUser()
-    resetInactivityTracking()
     setAuthError(message)
-  }, [resetInactivityTracking])
+  }, [])
 
   useEffect(() => {
     if (!isSupabaseAuthEnabled) {
@@ -300,163 +236,6 @@ export function AuthProvider({ children }) {
     }
   }, [clearAuthenticatedState, user?.id])
 
-  useEffect(() => {
-    if (!user?.id) {
-      return undefined
-    }
-
-    let isMounted = true
-    const idleTimeoutMs = getIdleTimeoutMs(user)
-    const inactivityMessage = getInactivityLogoutMessage(user)
-
-    const persistActivityTimestamp = (timestamp) => {
-      if (typeof window === 'undefined') {
-        return
-      }
-
-      try {
-        window.localStorage.setItem(ACTIVITY_STORAGE_KEY, String(timestamp))
-        lastActivitySyncAtRef.current = timestamp
-      } catch {
-        // Ignore storage sync errors.
-      }
-    }
-
-    const syncActivityFromStorage = () => {
-      if (typeof window === 'undefined') {
-        return null
-      }
-
-      try {
-        const storedTimestamp = parseActivityTimestamp(
-          window.localStorage.getItem(ACTIVITY_STORAGE_KEY),
-        )
-
-        if (
-          storedTimestamp != null &&
-          storedTimestamp > lastActivityAtRef.current
-        ) {
-          lastActivityAtRef.current = storedTimestamp
-          lastActivitySyncAtRef.current = storedTimestamp
-        }
-
-        return storedTimestamp
-      } catch {
-        return null
-      }
-    }
-
-    const markActivity = (timestamp = Date.now()) => {
-      lastActivityAtRef.current = timestamp
-
-      if (
-        timestamp - lastActivitySyncAtRef.current >=
-        ACTIVITY_SYNC_THROTTLE_MS
-      ) {
-        persistActivityTimestamp(timestamp)
-      }
-    }
-
-    const handleIdleLogout = async () => {
-      if (!isMounted || isIdleLogoutInProgressRef.current) {
-        return
-      }
-
-      isIdleLogoutInProgressRef.current = true
-
-      try {
-        await logoutUser()
-      } catch (error) {
-        console.error('Unable to sign out the inactive session:', error)
-      }
-
-      if (!isMounted) {
-        return
-      }
-
-      clearAuthenticatedState(inactivityMessage)
-      setIsAuthReady(true)
-    }
-
-    const checkForIdleSession = () => {
-      syncActivityFromStorage()
-
-      if (Date.now() - lastActivityAtRef.current < idleTimeoutMs) {
-        return
-      }
-
-      void handleIdleLogout()
-    }
-
-    const initialActivityAt =
-      syncActivityFromStorage() ?? Date.now()
-
-    lastActivityAtRef.current = initialActivityAt
-    persistActivityTimestamp(initialActivityAt)
-    checkForIdleSession()
-
-    const handleActivity = () => {
-      markActivity(Date.now())
-    }
-
-    const handleVisibilityChange = () => {
-      if (document.visibilityState === 'visible') {
-        checkForIdleSession()
-
-        if (!isIdleLogoutInProgressRef.current) {
-          markActivity(Date.now())
-        }
-      }
-    }
-
-    const handleWindowFocus = () => {
-      checkForIdleSession()
-
-      if (!isIdleLogoutInProgressRef.current) {
-        markActivity(Date.now())
-      }
-    }
-
-    const handleStorage = (event) => {
-      if (event.key !== ACTIVITY_STORAGE_KEY) {
-        return
-      }
-
-      const nextActivityAt = parseActivityTimestamp(event.newValue)
-
-      if (
-        nextActivityAt != null &&
-        nextActivityAt > lastActivityAtRef.current
-      ) {
-        lastActivityAtRef.current = nextActivityAt
-        lastActivitySyncAtRef.current = nextActivityAt
-      }
-    }
-
-    INACTIVITY_EVENTS.forEach((eventName) => {
-      window.addEventListener(eventName, handleActivity, { passive: true })
-    })
-    document.addEventListener('visibilitychange', handleVisibilityChange)
-    window.addEventListener('focus', handleWindowFocus)
-    window.addEventListener('storage', handleStorage)
-
-    const idleInterval = window.setInterval(
-      checkForIdleSession,
-      IDLE_CHECK_INTERVAL_MS,
-    )
-
-    return () => {
-      isMounted = false
-      window.clearInterval(idleInterval)
-      INACTIVITY_EVENTS.forEach((eventName) => {
-        window.removeEventListener(eventName, handleActivity)
-      })
-      document.removeEventListener('visibilitychange', handleVisibilityChange)
-      window.removeEventListener('focus', handleWindowFocus)
-      window.removeEventListener('storage', handleStorage)
-    }
-  }, [clearAuthenticatedState, user])
-
   const login = async (credentials) => {
     setIsAuthenticating(true)
     setAuthError('')
@@ -488,13 +267,31 @@ export function AuthProvider({ children }) {
     }
   }
 
-  const logout = async () => {
+  const logout = async (options = {}) => {
+    const normalizedOptions =
+      typeof options === 'string'
+        ? { message: options }
+        : options || {}
+    const logoutMessage = String(normalizedOptions.message || '').trim()
+    const suppressErrors = normalizedOptions.suppressErrors === true
+
     setIsAuthenticating(true)
-    setAuthError('')
+
+    if (!logoutMessage) {
+      setAuthError('')
+    }
 
     try {
       await logoutUser()
-      clearAuthenticatedState('')
+      clearAuthenticatedState(logoutMessage)
+    } catch (error) {
+      if (suppressErrors) {
+        console.error('Unable to finish the forced logout flow:', error)
+        clearAuthenticatedState(logoutMessage)
+        return
+      }
+
+      throw error
     } finally {
       setIsAuthenticating(false)
       setIsAuthReady(true)

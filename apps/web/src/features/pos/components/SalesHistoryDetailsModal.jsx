@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useMemo, useState } from 'react'
 import EmptyState from '../../../shared/components/common/EmptyState'
 import Loader from '../../../shared/components/common/Loader'
 import NoticeBanner from '../../../shared/components/common/NoticeBanner'
@@ -21,12 +21,6 @@ import {
 
 function SalesHistoryDetailsModal({ sale, isOpen, onClose }) {
   const [actionNotice, setActionNotice] = useState(null)
-
-  useEffect(() => {
-    if (!isOpen) {
-      setActionNotice(null)
-    }
-  }, [isOpen, sale?.id])
 
   const detailState = useMemo(() => {
     if (!sale) {

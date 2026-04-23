@@ -8,6 +8,15 @@ import {
   setCachedResource,
 } from '../src/shared/utils/resourceCache.js'
 import {
+  DEFAULT_ADMIN_IDLE_TIMEOUT_MS,
+  DEFAULT_EMPLOYEE_IDLE_TIMEOUT_MS,
+  getActivityStorageKey,
+  getConfiguredIdleTimeouts,
+  getIdleTimeoutMs,
+  getInactivityLogoutMessage,
+  parseActivityTimestamp,
+} from '../src/features/auth/utils/inactivity.js'
+import {
   isSessionConflictError,
   isSessionConflictMessage,
 } from '../src/features/auth/services/sessionLockService.js'
@@ -213,6 +222,46 @@ const tests = [
 
       assert.equal(getCachedResource('test:navigation:one'), null)
       assert.equal(getCachedResource('test:navigation:two'), null)
+    },
+  },
+  {
+    name: 'role-based inactivity timeouts resolve to production defaults',
+    run() {
+      const configuredTimeouts = getConfiguredIdleTimeouts()
+
+      assert.equal(configuredTimeouts.admin, DEFAULT_ADMIN_IDLE_TIMEOUT_MS)
+      assert.equal(configuredTimeouts.employee, DEFAULT_EMPLOYEE_IDLE_TIMEOUT_MS)
+      assert.equal(
+        getIdleTimeoutMs({ id: 1, roleKey: 'admin' }),
+        DEFAULT_ADMIN_IDLE_TIMEOUT_MS,
+      )
+      assert.equal(
+        getIdleTimeoutMs({ id: 2, roleKey: 'employee' }),
+        DEFAULT_EMPLOYEE_IDLE_TIMEOUT_MS,
+      )
+    },
+  },
+  {
+    name: 'inactivity activity keys are scoped per authenticated account',
+    run() {
+      assert.equal(
+        getActivityStorageKey({ id: 1, roleKey: 'admin' }),
+        'samgyupsal:last-activity-at:admin:1',
+      )
+      assert.equal(
+        getActivityStorageKey({ id: 2, roleKey: 'employee' }),
+        'samgyupsal:last-activity-at:employee:2',
+      )
+      assert.equal(
+        getInactivityLogoutMessage({ id: 1, roleKey: 'admin' }).includes('15 minutes'),
+        true,
+      )
+      assert.equal(
+        getInactivityLogoutMessage({ id: 2, roleKey: 'employee' }).includes('30 minutes'),
+        true,
+      )
+      assert.equal(parseActivityTimestamp('12345'), 12345)
+      assert.equal(parseActivityTimestamp('invalid'), null)
     },
   },
   {
