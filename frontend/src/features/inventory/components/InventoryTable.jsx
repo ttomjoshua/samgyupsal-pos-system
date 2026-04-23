@@ -49,7 +49,12 @@ function InventoryTable({
   }
 
   return (
-    <div className="inventory-table-shell">
+    <div
+      className="inventory-table-shell inventory-table-shell--scrollable"
+      role="region"
+      aria-label="Inventory records table"
+      tabIndex={0}
+    >
       <table className="inventory-table">
         <colgroup>
           <col className="inventory-table-col inventory-table-col--product" />

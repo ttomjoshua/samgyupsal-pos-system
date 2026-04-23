@@ -199,48 +199,108 @@
   color: var(--text-strong);
 }
 
+.inventory-table-shell--scrollable {
+  --inventory-product-column-width: 21rem;
+  --inventory-category-column-width: 17rem;
+  --inventory-stock-column-width: 7rem;
+  --inventory-unit-column-width: 12rem;
+  --inventory-expiry-column-width: 11.5rem;
+  --inventory-status-column-width: 10rem;
+  --inventory-actions-column-width: 18rem;
+  --inventory-table-min-width:
+    calc(
+      var(--inventory-product-column-width) +
+      var(--inventory-category-column-width) +
+      var(--inventory-stock-column-width) +
+      var(--inventory-unit-column-width) +
+      var(--inventory-expiry-column-width) +
+      var(--inventory-status-column-width) +
+      var(--inventory-actions-column-width)
+    );
+  position: relative;
+  max-width: 100%;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scrollbar-gutter: stable both-edges;
+  overscroll-behavior-x: contain;
+  -webkit-overflow-scrolling: touch;
+  isolation: isolate;
+}
+
 .inventory-table {
-  width: 100%;
-  min-width: 1120px;
+  width: max(100%, var(--inventory-table-min-width));
+  min-width: var(--inventory-table-min-width);
   border-collapse: collapse;
   table-layout: fixed;
 }
 
-.inventory-table-shell {
-  scrollbar-gutter: stable both-edges;
-}
-
 .inventory-table-col--product {
-  width: 25%;
+  width: var(--inventory-product-column-width);
 }
 
 .inventory-table-col--category {
-  width: 14%;
+  width: var(--inventory-category-column-width);
 }
 
 .inventory-table-col--stock {
-  width: 8%;
+  width: var(--inventory-stock-column-width);
 }
 
 .inventory-table-col--unit {
-  width: 15%;
+  width: var(--inventory-unit-column-width);
 }
 
 .inventory-table-col--expiry {
-  width: 8%;
+  width: var(--inventory-expiry-column-width);
 }
 
 .inventory-table-col--status {
-  width: 10%;
+  width: var(--inventory-status-column-width);
 }
 
 .inventory-table-col--actions {
-  width: 20%;
+  width: var(--inventory-actions-column-width);
 }
 
 .inventory-table th,
 .inventory-table td {
   vertical-align: middle;
+}
+
+.inventory-table thead .inventory-table-column--product,
+.inventory-table tbody .inventory-table-column--product {
+  position: sticky;
+  left: 0;
+  z-index: 2;
+  background: var(--inventory-row-background, rgba(255, 255, 255, 0.94));
+  box-shadow: 14px 0 18px -18px rgba(31, 49, 69, 0.32);
+}
+
+.inventory-table thead .inventory-table-column--actions,
+.inventory-table tbody .inventory-table-column--actions {
+  position: sticky;
+  right: 0;
+  z-index: 2;
+  background: var(--inventory-row-background, rgba(255, 255, 255, 0.94));
+  box-shadow: -14px 0 18px -18px rgba(31, 49, 69, 0.32);
+}
+
+.inventory-table thead .inventory-table-column--product,
+.inventory-table thead .inventory-table-column--actions {
+  --inventory-row-background: #f7f2ec;
+  z-index: 4;
+}
+
+.inventory-table tbody tr {
+  --inventory-row-background: rgba(255, 255, 255, 0.94);
+}
+
+.inventory-table tbody tr:nth-child(even) {
+  --inventory-row-background: rgba(251, 248, 243, 0.65);
+}
+
+.inventory-table tbody tr:hover {
+  --inventory-row-background: rgba(246, 239, 229, 0.92);
 }
 
 .inventory-table-column {
@@ -266,11 +326,12 @@
 .inventory-status-cell {
   display: flex;
   align-items: center;
+  justify-content: flex-start;
   min-height: 44px;
 }
 
 .inventory-status-cell .status-badge {
-  min-width: 6.75rem;
+  min-width: 7.5rem;
   max-width: 100%;
   overflow: hidden;
   white-space: nowrap;
@@ -279,7 +340,7 @@
 
 .inventory-actions {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: repeat(2, minmax(8.25rem, 1fr));
   gap: 0.5rem;
   align-items: stretch;
 }
@@ -383,6 +444,16 @@
 
   .inventory-form {
     grid-template-columns: 1fr;
+  }
+
+  .inventory-table-shell--scrollable {
+    --inventory-product-column-width: 18rem;
+    --inventory-category-column-width: 15rem;
+    --inventory-stock-column-width: 6.5rem;
+    --inventory-unit-column-width: 10rem;
+    --inventory-expiry-column-width: 10rem;
+    --inventory-status-column-width: 9rem;
+    --inventory-actions-column-width: 16rem;
   }
 
   .inventory-danger-action,
