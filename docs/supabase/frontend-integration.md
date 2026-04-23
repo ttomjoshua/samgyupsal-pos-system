@@ -2,6 +2,8 @@
 
 This frontend now treats `public.products` as the branch-scoped inventory source of truth, with compatibility views layered on top for read-heavy screens.
 
+The current operational contract expects branch scope, stock settings, and product visibility to live on `public.products` itself instead of being split across normalized legacy tables.
+
 Important:
 
 - when `VITE_SUPABASE_AUTH_ENABLED=false`, the stabilized frontend now stays on the local/demo data path instead of using anonymous Supabase table access
@@ -33,11 +35,14 @@ Copy [`apps/web/.env.example`](../../apps/web/.env.example) into `.env` and fill
 - `VITE_SUPABASE_URL`
 - `VITE_SUPABASE_ANON_KEY`
 
+Optional live contract-test env vars:
+
+- `SUPABASE_TEST_EMAILS`
+- `SUPABASE_TEST_PASSWORD`
+
 ## Table and view names currently expected by the frontend
 
-- `VITE_SUPABASE_CATEGORIES_TABLE`
 - `VITE_SUPABASE_PRODUCTS_TABLE`
-- `VITE_SUPABASE_INVENTORY_TABLE`
 - `VITE_SUPABASE_SALES_TABLE`
 - `VITE_SUPABASE_SALE_ITEMS_TABLE`
 - `VITE_SUPABASE_BRANCHES_TABLE`
@@ -59,12 +64,15 @@ Use `false` for `VITE_SUPABASE_SYNC_INVENTORY_ON_SALE` only if the backend team 
 ### `products`
 
 - `id`
+- `branch_id`
 - `branch`
 - `category`
 - `product_name`
 - `net_weight`
 - `price`
 - `stock_quantity`
+- `reorder_level`
+- `is_active`
 - `expiration_date`
 
 ### `sales`
@@ -94,6 +102,20 @@ Use `false` for `VITE_SUPABASE_SYNC_INVENTORY_ON_SALE` only if the backend team 
 - `created_at`
 - `updated_at`
 
+### `branches`
+
+- `id`
+- `code`
+- `name`
+- `manager_name`
+- `contact_number`
+- `address`
+- `opening_date`
+- `notes`
+- `status`
+- `created_at`
+- `updated_at`
+
 ### `sale_items`
 
 - `id`
@@ -104,6 +126,11 @@ Use `false` for `VITE_SUPABASE_SYNC_INVENTORY_ON_SALE` only if the backend team 
 - `quantity`
 - `unit_price`
 - `line_total`
+
+Important:
+
+- `sale_items.inventory_item_id` is now a legacy compatibility column
+- the active checkout flow now writes both `product_id` and `inventory_item_id` using the same product-backed identifier emitted by `inventory_catalog_view`
 
 ### `product_catalog_view`
 
@@ -119,6 +146,10 @@ Read model used by the admin Products page:
 - `unit_label`
 - `default_price`
 - `is_active`
+
+Important:
+
+- `category_id` is still exposed for compatibility, but the flattened `products` table no longer uses a live normalized category foreign key
 
 ### `inventory_catalog_view`
 
@@ -146,7 +177,10 @@ Read model used by POS and Inventory:
 Important:
 
 - `product_catalog_view` and `inventory_catalog_view` are compatibility read models built from `public.products`
-- `categories` and `inventory_items` may still exist in older projects, but the frontend write path now saves directly to `public.products`
+- `inventory_catalog_view.inventory_item_id` mirrors `products.id` in the flattened model
+- `category_id` remains a compatibility placeholder in the flattened model
+- `categories` and `inventory_items` are legacy migration artifacts, not active frontend read/write tables
+- after the final cleanup script runs, those legacy tables should no longer exist in the live project
 - both views should remain `security_invoker = true` so authenticated requests still obey the underlying table RLS policies
 
 ## Safe rollout order
@@ -162,6 +196,31 @@ Important:
 5. Deploy the `admin-create-user` Edge Function
 6. Manually create and seed only the first admin user
 7. After that, create employee accounts from the Users page
+
+## Live contract test
+
+To verify that Supabase is still returning every field the frontend depends on, run:
+
+```bash
+npm run test:supabase:web
+```
+
+This authenticated contract check verifies the current live shape for:
+
+- `products`
+- `product_catalog_view`
+- `inventory_catalog_view`
+- `sales`
+- `sale_items`
+- `branches`
+- `profiles`
+
+It also checks cross-source invariants such as:
+
+- `inventory_catalog_view.inventory_item_id = product_id`
+- product/view field alignment across `products`, `product_catalog_view`, and `inventory_catalog_view`
+- sale-item alignment where product-backed rows keep `inventory_item_id = product_id`
+- branch references staying visible through the `branches` table
 
 ## Important current assumption
 

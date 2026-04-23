@@ -12,6 +12,7 @@
     "build:web": "npm --prefix ./apps/web run build",
     "lint:web": "npm --prefix ./apps/web run lint",
     "test:web": "npm --prefix ./apps/web run test",
+    "test:supabase:web": "npm --prefix ./apps/web run test:supabase-contract",
     "preview:web": "npm --prefix ./apps/web run preview"
   }
 }

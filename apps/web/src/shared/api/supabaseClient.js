@@ -15,9 +15,6 @@ export const isSupabaseDataEnabled = isSupabaseAuthEnabled
 
 export const supabaseTables = {
   products: runtimeEnv.VITE_SUPABASE_PRODUCTS_TABLE || 'products',
-  categories: runtimeEnv.VITE_SUPABASE_CATEGORIES_TABLE || 'categories',
-  inventoryItems:
-    runtimeEnv.VITE_SUPABASE_INVENTORY_TABLE || 'inventory_items',
   sales: runtimeEnv.VITE_SUPABASE_SALES_TABLE || 'sales',
   saleItems: runtimeEnv.VITE_SUPABASE_SALE_ITEMS_TABLE || 'sale_items',
   branches: runtimeEnv.VITE_SUPABASE_BRANCHES_TABLE || 'branches',

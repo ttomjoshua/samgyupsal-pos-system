@@ -8,6 +8,7 @@
     "build": "vite build",
     "lint": "eslint .",
     "test": "node --experimental-specifier-resolution=node ./test/run-tests.js",
+    "test:supabase-contract": "node --experimental-specifier-resolution=node ./test/run-supabase-contract-check.js",
     "preview": "vite preview"
   },
   "dependencies": {

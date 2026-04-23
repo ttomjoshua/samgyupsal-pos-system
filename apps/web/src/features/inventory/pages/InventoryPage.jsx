@@ -395,6 +395,7 @@ function InventoryPage() {
         const updatedItem = await updateInventoryItem(selectedItem.id, {
           ...validation.sanitizedData,
           branch_id: selectedBranchId,
+          branch_name: activeBranch?.name || selectedItem.branch_name || '',
         })
 
         setInventoryItems((previousItems) =>
@@ -409,6 +410,7 @@ function InventoryPage() {
           {
             ...validation.sanitizedData,
             branch_id: selectedBranchId,
+            branch_name: activeBranch?.name || '',
           },
           inventoryItems,
         )

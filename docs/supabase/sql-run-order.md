@@ -29,6 +29,7 @@ Important:
 - This is the base bootstrap step.
 - It is designed to be safe for the current state where your old `products` table already exists.
 - Do not manually delete `products_legacy` until the team is fully happy with the migrated data.
+- Do not rerun this script on an already-cleaned live environment just to pick up one missing column or field. Use the later catch-up scripts instead.
 
 ## 2. Flatten `products` into the branch-stock table used by the app
 
@@ -260,6 +261,73 @@ Important:
 - it is safe to run after the flattening step whenever category labels drift back to `Uncategorized`
 - `apps/web/supabase/sql/08_flatten_products_schema.sql` now includes the same recovery logic for future rebuilds
 
+## 13. Align flattened `products` with the live frontend contract
+
+Run when the project already flattened `public.products` before the branch/reorder alignment work landed:
+
+- [`apps/web/supabase/sql/13_products_operational_alignment.sql`](../../apps/web/supabase/sql/13_products_operational_alignment.sql)
+
+This catch-up script:
+
+- adds `products.branch_id` as the branch-scoping column used by the frontend and RLS
+- persists `products.reorder_level` instead of relying on the view-level hardcoded `10`
+- restores `products.is_active` as a real operational flag instead of a compatibility constant
+- rebuilds `product_catalog_view` and `inventory_catalog_view` so they continue reading from `public.products` only
+- keeps `products.branch` and `products.branch_id` synchronized through a trigger for compatibility and safer inserts
+- clears legacy `inventory_items` rows automatically when a `products` row is deleted, so product removal no longer depends on frontend cleanup order
+- backfills `sale_items.inventory_item_id` from legacy `inventory_items` only when a matching legacy row still exists
+
+Important:
+
+- this script is additive and does not delete `products_legacy`, `inventory_items`, or `categories`
+- fresh rebuilds should pick up the same alignment from the updated flatten script in [`apps/web/supabase/sql/08_flatten_products_schema.sql`](../../apps/web/supabase/sql/08_flatten_products_schema.sql)
+- older deployed environments should run this catch-up script before deploying the frontend changes that write `branch_id` and `reorder_level`
+- if the auth/RLS rollout is already live in an older environment, rerun [`apps/web/supabase/sql/09_auth_role_policies.sql`](../../apps/web/supabase/sql/09_auth_role_policies.sql) after this catch-up so product row policies become `branch_id`-first with branch-name fallback
+
+## 14. Drop obsolete legacy tables after verification
+
+Run after:
+
+- the legacy category repair in step 12, if you still need it
+- the product alignment catch-up in step 13, when applicable
+- the role-aware policy script in step 9
+
+Run:
+
+- [`apps/web/supabase/sql/14_drop_obsolete_legacy_tables.sql`](../../apps/web/supabase/sql/14_drop_obsolete_legacy_tables.sql)
+
+This final cleanup script:
+
+- aligns `sale_items.product_id` and `sale_items.inventory_item_id` one last time before removing legacy foreign-key dependencies
+- removes the legacy cleanup and backfill triggers that only existed to bridge `inventory_items`
+- drops the obsolete tables:
+  - `categories`
+  - `inventory_items`
+  - `products_legacy`
+  - `sale_items_legacy`
+
+Important:
+
+- run step 12 before this if you still need to recover category labels from `products_legacy`
+- after this step, `products`, `sales`, `sale_items`, `branches`, `profiles`, and the two compatibility views are the only frontend-relevant tables left in the active public schema
+- [`apps/web/supabase/sql/09_auth_role_policies.sql`](../../apps/web/supabase/sql/09_auth_role_policies.sql) and [`apps/web/supabase/sql/11_legacy_table_policy_lockdown.sql`](../../apps/web/supabase/sql/11_legacy_table_policy_lockdown.sql) are now guarded so rerunning them after cleanup will not fail when the dropped tables are already gone
+
+## 15. Align `branches` with the frontend branch-management contract
+
+Run when the live contract test or branch-management flow reports that `public.branches.notes` is missing:
+
+- [`apps/web/supabase/sql/15_align_branches_notes_column.sql`](../../apps/web/supabase/sql/15_align_branches_notes_column.sql)
+
+This catch-up script:
+
+- adds `public.branches.notes`
+
+Important:
+
+- the Users branch-management flow already reads and writes `notes`
+- fresh rebuilds pick this up from the updated [`apps/web/supabase/sql/01_core_tables.sql`](../../apps/web/supabase/sql/01_core_tables.sql)
+- older deployed environments should run this script before using the live Supabase contract test or the branch create flow
+
 ## New backend shape
 
 The frontend is now aligned to this structure:
@@ -273,6 +341,34 @@ The frontend is now aligned to this structure:
 
 `products` is now the raw branch stock table again, and the two views act as compatibility read models for the current frontend.
 
+The live operational fields are now:
+
+- `branches.code`
+- `branches.name`
+- `branches.manager_name`
+- `branches.contact_number`
+- `branches.address`
+- `branches.opening_date`
+- `branches.notes`
+- `branches.status`
+- `products.branch_id`
+- `products.branch`
+- `products.category`
+- `products.product_name`
+- `products.net_weight`
+- `products.price`
+- `products.stock_quantity`
+- `products.reorder_level`
+- `products.is_active`
+- `products.expiration_date`
+
+Compatibility notes:
+
+- `inventory_catalog_view.inventory_item_id` is still emitted for the UI, but in the flattened model it mirrors `products.id`
+- `product_catalog_view.category_id` and `inventory_catalog_view.category_id` remain compatibility placeholders, not live normalized category foreign keys
+- before step 14, `inventory_items` and `categories` may still remain as migration leftovers
+- after step 14, those legacy tables should be gone from the live project
+
 ## Legacy data caution
 
 Some legacy rows still carry messy text values such as:
@@ -282,21 +378,28 @@ Some legacy rows still carry messy text values such as:
 
 The flattened schema keeps operational values in these columns:
 
+- `products.branch_id`
 - `products.branch`
 - `products.price`
 - `products.stock_quantity`
+- `products.reorder_level`
+- `products.is_active`
 - `products.expiration_date`
 
 ## Recommended quick checks after running the scripts
 
-1. Confirm that `products_legacy` still exists.
-2. Confirm that `products` now contains rows.
-3. If you ran the auth rollout, confirm that `profiles` contains rows for your auth users.
-4. Check these review queries in SQL Editor:
+1. Confirm that `products` now contains rows.
+2. If you ran the auth rollout, confirm that `profiles` contains rows for your auth users.
+3. Check these review queries in SQL Editor:
 
 ```sql
-select count(*) from public.products_legacy;
 select count(*) from public.products;
+
+select
+  to_regclass('public.products_legacy') as products_legacy_table,
+  to_regclass('public.sale_items_legacy') as sale_items_legacy_table,
+  to_regclass('public.categories') as categories_table,
+  to_regclass('public.inventory_items') as inventory_items_table;
 
 select count(*)
 from public.products
@@ -311,9 +414,22 @@ select *
 from public.products
 where stock_quantity < 0
 limit 20;
+
+select *
+from public.products
+where branch_id is null
+limit 20;
+
+select *
+from public.products
+where reorder_level < 0;
 ```
 
-Those last two queries help you spot rows that still need manual cleanup later.
+Important:
+
+- before step 14, the `to_regclass(...)` query will show the legacy tables when they still exist
+- after step 14, all four values should come back `null`
+- the remaining review queries help you spot rows that still need manual cleanup later
 
 If you ran the auth rollout too, add:
 

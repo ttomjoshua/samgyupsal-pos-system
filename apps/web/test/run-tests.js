@@ -29,6 +29,7 @@ import {
   getReceiptFilename,
 } from '../src/features/pos/utils/receiptActions.js'
 import {
+  buildSaleLineItems,
   buildReceiptPreviewData,
   filterSalesRecords,
   getSaleReference,
@@ -343,6 +344,52 @@ const tests = [
       assert.equal(result[0].line_total, 10)
       assert.equal(result[1].item_name, 'Service Fee - Microwave Usage')
       assert.equal(result[1].line_total, 5)
+    },
+  },
+  {
+    name: 'buildSaleLineItems keeps product and inventory identifiers aligned for checkout',
+    run() {
+      const result = buildSaleLineItems(
+        [
+          {
+            id: 41,
+            inventoryItemId: 88,
+            name: 'Kimchi',
+            quantity: 2,
+            price: 75,
+          },
+        ],
+        [
+          {
+            product_id: null,
+            item_name: 'Service Fee - Microwave Usage',
+            quantity: 1,
+            unit_price: 5,
+            line_total: 5,
+            is_service_fee: true,
+          },
+        ],
+      )
+
+      assert.deepEqual(result, [
+        {
+          product_id: 41,
+          inventory_item_id: 88,
+          quantity: 2,
+          unit_price: 75,
+          item_name: 'Kimchi',
+          line_total: 150,
+        },
+        {
+          product_id: null,
+          inventory_item_id: null,
+          item_name: 'Service Fee - Microwave Usage',
+          quantity: 1,
+          unit_price: 5,
+          line_total: 5,
+          is_service_fee: true,
+        },
+      ])
     },
   },
   {

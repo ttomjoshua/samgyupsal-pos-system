@@ -15,6 +15,7 @@ import {
   getDiscountConfig,
 } from '../utils/discounts'
 import {
+  buildSaleLineItems,
   createSale,
   paymentMethods,
 } from '../services/salesService'
@@ -68,6 +69,10 @@ function PaymentPanel({
         0,
       ),
     [selectedFeeLineItems],
+  )
+  const saleLineItems = useMemo(
+    () => buildSaleLineItems(cart, selectedFeeLineItems),
+    [cart, selectedFeeLineItems],
   )
 
   const numericDiscount = useMemo(
@@ -211,17 +216,6 @@ function PaymentPanel({
       return
     }
 
-    const saleLineItems = [
-      ...cart.map((item) => ({
-        product_id: item.id,
-        quantity: item.quantity,
-        unit_price: getUnitPrice(item),
-        item_name: item.name,
-        line_total: getUnitPrice(item) * Number(item.quantity || 0),
-      })),
-      ...selectedFeeLineItems,
-    ]
-
     const payload = {
       cashier_id: user?.id,
       payment_method: paymentMethod,
@@ -232,6 +226,7 @@ function PaymentPanel({
       change_amount: paymentMethod === 'cash' ? change : 0,
       items: saleLineItems.map((item) => ({
         product_id: item.product_id,
+        inventory_item_id: item.inventory_item_id ?? null,
         quantity: item.quantity,
         unit_price: item.unit_price,
       })),
@@ -280,7 +275,9 @@ function PaymentPanel({
       onOrderComplete?.('checkout', {
         inventorySynced: result.inventorySynced,
         soldItems: cart.map((item) => ({
-          product_id: item.id,
+          product_id: item.product_id ?? item.productId ?? item.id ?? null,
+          inventory_item_id:
+            item.inventory_item_id ?? item.inventoryItemId ?? item.id ?? null,
           quantity: item.quantity,
           unit_price: getUnitPrice(item),
         })),

@@ -126,7 +126,10 @@ function resolveSupabaseProductBranch(values = {}, fallbackItem = {}) {
 }
 
 function buildSupabaseProductPayload(values, fallbackItem = {}) {
+  const branchId = resolveSupabaseBranchId(values, fallbackItem)
+
   return {
+    branch_id: branchId,
     branch: resolveSupabaseProductBranch(values, fallbackItem),
     category:
       sanitizeInventoryText(
@@ -145,6 +148,9 @@ function buildSupabaseProductPayload(values, fallbackItem = {}) {
     stock_quantity: Number(
       values.stock_quantity ?? values.stock ?? fallbackItem.stock_quantity ?? 0,
     ),
+    reorder_level: Number(
+      values.reorder_level ?? fallbackItem.reorder_level ?? LOW_STOCK_THRESHOLD,
+    ),
     expiration_date:
       sanitizeInventoryText(
         values.expiry_date ??
@@ -152,6 +158,7 @@ function buildSupabaseProductPayload(values, fallbackItem = {}) {
           fallbackItem.expiry_date ??
           fallbackItem.expiration_date,
       ) || null,
+    is_active: fallbackItem.is_active ?? fallbackItem.isActive ?? true,
   }
 }
 
@@ -239,10 +246,15 @@ async function findSupabaseProductConflict(values, fallbackItem = {}, excludePro
   let query = supabase
     .from(supabaseTables.products)
     .select('*')
-    .eq('branch', payload.branch)
     .eq('category', payload.category)
     .eq('product_name', payload.product_name)
     .eq('net_weight', payload.net_weight)
+
+  if (payload.branch_id != null && String(payload.branch_id).trim() !== '') {
+    query = query.eq('branch_id', payload.branch_id)
+  } else {
+    query = query.eq('branch', payload.branch)
+  }
 
   if (excludeProductId != null) {
     query = query.neq('id', Number(excludeProductId))
@@ -550,22 +562,12 @@ export async function removeInventoryItem(itemId) {
       throw new Error('The selected inventory item could not be found.')
     }
 
-    const { error: legacyInventoryDeleteError } = await supabase
-      .from(supabaseTables.inventoryItems)
-      .delete()
-      .eq('product_id', Number(productId))
-
-    if (legacyInventoryDeleteError) {
-      throw createSupabaseServiceError(
-        legacyInventoryDeleteError,
-        'Unable to clear legacy inventory records for this product.',
-      )
-    }
-
-    const { error } = await supabase
+    const deleteProduct = async () => supabase
       .from(supabaseTables.products)
       .delete()
       .eq('id', Number(productId))
+
+    const { error } = await deleteProduct()
 
     if (error) {
       throw createSupabaseServiceError(

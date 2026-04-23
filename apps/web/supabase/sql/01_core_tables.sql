@@ -19,6 +19,7 @@ create table if not exists public.branches (
   contact_number text,
   address text,
   opening_date date,
+  notes text,
   status text not null default 'active' check (status in ('active', 'inactive')),
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
@@ -29,6 +30,7 @@ alter table public.branches
   add column if not exists contact_number text,
   add column if not exists address text,
   add column if not exists opening_date date,
+  add column if not exists notes text,
   add column if not exists status text not null default 'active',
   add column if not exists created_at timestamptz not null default now(),
   add column if not exists updated_at timestamptz not null default now();
@@ -41,11 +43,12 @@ insert into public.branches (
   contact_number,
   address,
   opening_date,
+  notes,
   status
 )
 values
-  (1, 'MAIN', 'Sta. Lucia', null, null, null, null, 'active'),
-  (2, 'DOLLAR', 'Dollar', null, null, null, null, 'active')
+  (1, 'MAIN', 'Sta. Lucia', null, null, null, null, null, 'active'),
+  (2, 'DOLLAR', 'Dollar', null, null, null, null, null, 'active')
 on conflict (id) do update
 set
   code = excluded.code,
@@ -54,6 +57,7 @@ set
   contact_number = excluded.contact_number,
   address = excluded.address,
   opening_date = excluded.opening_date,
+  notes = excluded.notes,
   status = excluded.status,
   updated_at = now();
 
@@ -378,6 +382,17 @@ begin
     where conname = 'products_catalog_unique'
       and conrelid = 'public.products'::regclass
   ) then
+    if exists (
+      select 1
+      from pg_class relation
+      join pg_namespace namespace
+        on namespace.oid = relation.relnamespace
+      where relation.relname = 'products_catalog_unique'
+        and namespace.nspname = 'public'
+    ) then
+      drop index if exists public.products_catalog_unique;
+    end if;
+
     alter table public.products
       add constraint products_catalog_unique
       unique (branch, category_id, product_name, unit_label);
@@ -430,6 +445,17 @@ begin
     where conname = 'inventory_items_branch_product_unique'
       and conrelid = 'public.inventory_items'::regclass
   ) then
+    if exists (
+      select 1
+      from pg_class relation
+      join pg_namespace namespace
+        on namespace.oid = relation.relnamespace
+      where relation.relname = 'inventory_items_branch_product_unique'
+        and namespace.nspname = 'public'
+    ) then
+      drop index if exists public.inventory_items_branch_product_unique;
+    end if;
+
     alter table public.inventory_items
       add constraint inventory_items_branch_product_unique
       unique (branch_id, product_id);

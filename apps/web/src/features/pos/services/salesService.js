@@ -139,6 +139,36 @@ function normalizeSaleItem(item = {}, fallbackId) {
   }
 }
 
+export function buildSaleLineItems(cartItems = [], extraLineItems = []) {
+  const normalizedCartItems = Array.isArray(cartItems) ? cartItems : []
+  const normalizedExtraLineItems = Array.isArray(extraLineItems) ? extraLineItems : []
+
+  return [
+    ...normalizedCartItems.map((item) => {
+      const quantity = getNumericValue(item.quantity, 0)
+      const unitPrice = getNumericValue(
+        item.price ?? item.unit_price ?? item.unitPrice,
+        0,
+      )
+
+      return {
+        product_id: item.product_id ?? item.productId ?? item.id ?? null,
+        inventory_item_id:
+          item.inventory_item_id ?? item.inventoryItemId ?? item.id ?? null,
+        quantity,
+        unit_price: unitPrice,
+        item_name: normalizeText(item.name || item.item_name) || 'Unknown Item',
+        line_total: quantity * unitPrice,
+      }
+    }),
+    ...normalizedExtraLineItems.map((item) => ({
+      ...item,
+      inventory_item_id:
+        item.inventory_item_id ?? item.inventoryItemId ?? null,
+    })),
+  ]
+}
+
 function normalizeSaleRecord(sale = {}) {
   const normalizedItems = Array.isArray(sale.items)
     ? sale.items.map((item, index) =>

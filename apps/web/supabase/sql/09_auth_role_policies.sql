@@ -55,18 +55,14 @@ grant execute on function private.current_user_is_active() to authenticated;
 grant execute on function private.current_user_branch_id() to authenticated;
 grant execute on function private.current_user_branch_name() to authenticated;
 
-revoke all on public.categories from anon, authenticated;
 revoke all on public.products from anon, authenticated;
-revoke all on public.inventory_items from anon, authenticated;
 revoke all on public.branches from anon, authenticated;
 revoke all on public.sales from anon, authenticated;
 revoke all on public.sale_items from anon, authenticated;
 revoke all on public.product_catalog_view from anon, authenticated;
 revoke all on public.inventory_catalog_view from anon, authenticated;
 
-grant select on public.categories to authenticated;
 grant select, insert, update, delete on public.products to authenticated;
-grant select, delete on public.inventory_items to authenticated;
 grant select, insert on public.branches to authenticated;
 grant select, insert, delete on public.sales to authenticated;
 grant select, insert on public.sale_items to authenticated;
@@ -77,19 +73,10 @@ grant usage, select on all sequences in schema public to authenticated;
 alter view public.product_catalog_view set (security_invoker = true);
 alter view public.inventory_catalog_view set (security_invoker = true);
 
-drop policy if exists demo_categories_select on public.categories;
-drop policy if exists demo_categories_insert on public.categories;
-drop policy if exists demo_categories_update on public.categories;
-
 drop policy if exists demo_products_select on public.products;
 drop policy if exists demo_products_insert on public.products;
 drop policy if exists demo_products_update on public.products;
 drop policy if exists demo_products_delete on public.products;
-
-drop policy if exists demo_inventory_items_select on public.inventory_items;
-drop policy if exists demo_inventory_items_insert on public.inventory_items;
-drop policy if exists demo_inventory_items_update on public.inventory_items;
-drop policy if exists demo_inventory_items_delete on public.inventory_items;
 
 drop policy if exists demo_branches_select on public.branches;
 drop policy if exists demo_branches_insert on public.branches;
@@ -101,12 +88,27 @@ drop policy if exists demo_sales_delete on public.sales;
 drop policy if exists demo_sale_items_select on public.sale_items;
 drop policy if exists demo_sale_items_insert on public.sale_items;
 
-drop policy if exists categories_select_admin on public.categories;
-create policy categories_select_admin
-  on public.categories
-  for select
-  to authenticated
-  using (private.current_user_is_admin());
+do $$
+begin
+  if to_regclass('public.categories') is not null then
+    execute 'revoke all on public.categories from anon, authenticated';
+    execute 'drop policy if exists demo_categories_select on public.categories';
+    execute 'drop policy if exists demo_categories_insert on public.categories';
+    execute 'drop policy if exists demo_categories_update on public.categories';
+    execute 'drop policy if exists categories_select_admin on public.categories';
+  end if;
+
+  if to_regclass('public.inventory_items') is not null then
+    execute 'revoke all on public.inventory_items from anon, authenticated';
+    execute 'drop policy if exists demo_inventory_items_select on public.inventory_items';
+    execute 'drop policy if exists demo_inventory_items_insert on public.inventory_items';
+    execute 'drop policy if exists demo_inventory_items_update on public.inventory_items';
+    execute 'drop policy if exists demo_inventory_items_delete on public.inventory_items';
+    execute 'drop policy if exists inventory_items_select_admin on public.inventory_items';
+    execute 'drop policy if exists inventory_items_delete_admin on public.inventory_items';
+  end if;
+end
+$$;
 
 drop policy if exists branches_select_admin on public.branches;
 create policy branches_select_admin
@@ -146,7 +148,13 @@ create policy products_select_assigned
   to authenticated
   using (
     private.current_user_is_active()
-    and branch = private.current_user_branch_name()
+    and (
+      branch_id = private.current_user_branch_id()
+      or (
+        branch_id is null
+        and branch = private.current_user_branch_name()
+      )
+    )
   );
 
 drop policy if exists products_insert_admin on public.products;
@@ -171,30 +179,28 @@ create policy products_update_assigned
   to authenticated
   using (
     private.current_user_is_active()
-    and branch = private.current_user_branch_name()
+    and (
+      branch_id = private.current_user_branch_id()
+      or (
+        branch_id is null
+        and branch = private.current_user_branch_name()
+      )
+    )
   )
   with check (
     private.current_user_is_active()
-    and branch = private.current_user_branch_name()
+    and (
+      branch_id = private.current_user_branch_id()
+      or (
+        branch_id is null
+        and branch = private.current_user_branch_name()
+      )
+    )
   );
 
 drop policy if exists products_delete_admin on public.products;
 create policy products_delete_admin
   on public.products
-  for delete
-  to authenticated
-  using (private.current_user_is_admin());
-
-drop policy if exists inventory_items_select_admin on public.inventory_items;
-create policy inventory_items_select_admin
-  on public.inventory_items
-  for select
-  to authenticated
-  using (private.current_user_is_admin());
-
-drop policy if exists inventory_items_delete_admin on public.inventory_items;
-create policy inventory_items_delete_admin
-  on public.inventory_items
   for delete
   to authenticated
   using (private.current_user_is_admin());
