@@ -8,10 +8,17 @@ import SalesHistoryPanel from '../components/SalesHistoryPanel'
 import SelectMenu from '../../../shared/components/ui/SelectMenu'
 import NoticeBanner from '../../../shared/components/common/NoticeBanner'
 import useAuth from '../../auth/hooks/useAuth'
-import { getBranches } from '../../branches/services/branchService'
-import { getProducts } from '../../products/services/productService'
+import {
+  getBranches,
+  getCachedBranches,
+} from '../../branches/services/branchService'
+import {
+  getCachedProducts,
+  getProducts,
+} from '../../products/services/productService'
 import '../styles/pos.css'
 import { mergeProductAndStoredCategories } from '../../../shared/utils/storage'
+import useSessionStorageState from '../../../shared/hooks/useSessionStorageState'
 import { normalizeSearchInput } from '../../../shared/utils/validation'
 import {
   getRoleLabel,
@@ -20,6 +27,7 @@ import {
 } from '../../../shared/utils/permissions'
 
 const PRODUCTS_PER_PAGE = 12
+const POS_PAGE_STATE_KEY = 'page-state:pos'
 
 function buildPaginationItems(currentPage, totalPages) {
   if (totalPages <= 5) {
@@ -48,27 +56,66 @@ function buildPaginationItems(currentPage, totalPages) {
 function PosPage() {
   const { user } = useAuth()
   const canUseSalesDesk = isEmployeeUser(user)
-  const [branchOptions, setBranchOptions] = useState([])
-  const [isBranchLoading, setIsBranchLoading] = useState(true)
+  const [branchOptions, setBranchOptions] = useState(() => getCachedBranches() || [])
+  const [isBranchLoading, setIsBranchLoading] = useState(
+    () => (getCachedBranches() || []).length === 0,
+  )
   const [branchLoadError, setBranchLoadError] = useState('')
   const [clock, setClock] = useState(() => new Date())
-  const [catalogProducts, setCatalogProducts] = useState([])
-  const [catalogError, setCatalogError] = useState('')
-  const [isCatalogLoading, setIsCatalogLoading] = useState(true)
-  const [activeCategory, setActiveCategory] = useState('All')
-  const [searchTerm, setSearchTerm] = useState('')
-  const [currentPage, setCurrentPage] = useState(1)
-  const [cartItems, setCartItems] = useState([])
-  const [transactionSequence, setTransactionSequence] = useState(1)
-  const [activeBranchId, setActiveBranchId] = useState(user?.branchId || '')
-  const [activeView, setActiveView] = useState(
-    canUseSalesDesk ? 'desk' : 'history',
+  const [posViewState, setPosViewState] = useSessionStorageState(
+    POS_PAGE_STATE_KEY,
+    () => ({
+      activeCategory: 'All',
+      searchTerm: '',
+      currentPage: 1,
+      cartItems: [],
+      transactionSequence: 1,
+      activeBranchId: user?.branchId || '',
+      activeView: canUseSalesDesk ? 'desk' : 'history',
+    }),
   )
+  const activeBranchId = posViewState?.activeBranchId ?? user?.branchId ?? ''
+  const activeCategory = posViewState?.activeCategory || 'All'
+  const searchTerm = posViewState?.searchTerm || ''
+  const currentPage = Math.max(1, Number(posViewState?.currentPage || 1))
+  const cartItems = Array.isArray(posViewState?.cartItems) ? posViewState.cartItems : []
+  const transactionSequence = Math.max(1, Number(posViewState?.transactionSequence || 1))
+  const activeView = posViewState?.activeView || (canUseSalesDesk ? 'desk' : 'history')
+  const updatePosViewState = (patch) => {
+    setPosViewState((currentState) => ({
+      ...(currentState || {}),
+      ...(typeof patch === 'function' ? patch(currentState || {}) : patch),
+    }))
+  }
+  const initialCatalogProducts = getCachedProducts(
+    activeBranchId ? { branchId: activeBranchId } : {},
+  )
+  const [catalogProducts, setCatalogProducts] = useState(() => initialCatalogProducts || [])
+  const [catalogError, setCatalogError] = useState('')
+  const [isCatalogLoading, setIsCatalogLoading] = useState(() => !initialCatalogProducts)
   const [historyRefreshKey, setHistoryRefreshKey] = useState(0)
   const deferredSearchTerm = useDeferredValue(searchTerm)
+  const setCartItems = (valueOrUpdater) => {
+    updatePosViewState((currentState) => {
+      const currentCartItems = Array.isArray(currentState?.cartItems)
+        ? currentState.cartItems
+        : []
+
+      return {
+        ...currentState,
+        cartItems:
+          typeof valueOrUpdater === 'function'
+            ? valueOrUpdater(currentCartItems)
+            : valueOrUpdater,
+      }
+    })
+  }
 
   useEffect(() => {
-    setActiveView(canUseSalesDesk ? 'desk' : 'history')
+    updatePosViewState((currentState) => ({
+      ...(currentState || {}),
+      activeView: canUseSalesDesk ? currentState?.activeView || 'desk' : 'history',
+    }))
   }, [canUseSalesDesk])
 
   useEffect(() => {
@@ -95,9 +142,14 @@ function PosPage() {
 
         setBranchOptions(branches)
         setBranchLoadError('')
-        setActiveBranchId((currentBranchId) => {
+        updatePosViewState((currentState) => {
+          const currentBranchId = currentState?.activeBranchId ?? ''
+
           if (user?.branchId) {
-            return user.branchId
+            return {
+              ...currentState,
+              activeBranchId: user.branchId,
+            }
           }
 
           const hasCurrentBranch = branches.some(
@@ -105,10 +157,13 @@ function PosPage() {
           )
 
           if (hasCurrentBranch) {
-            return currentBranchId
+            return currentState
           }
 
-          return branches[0]?.id || ''
+          return {
+            ...currentState,
+            activeBranchId: branches[0]?.id || '',
+          }
         })
       } catch (error) {
         console.error('Failed to load sales branch options:', error)
@@ -133,7 +188,7 @@ function PosPage() {
     return () => {
       isMounted = false
     }
-  }, [user?.branchId])
+  }, [updatePosViewState, user?.branchId])
 
   const activeBranch = useMemo(
     () =>
@@ -152,7 +207,7 @@ function PosPage() {
       return
     }
 
-    const loadCatalog = async () => {
+      const loadCatalog = async () => {
       try {
         const products = await getProducts({ branchId: activeBranchId })
         setCatalogProducts(products)
@@ -168,7 +223,9 @@ function PosPage() {
       }
     }
 
-    setIsCatalogLoading(true)
+    if (!getCachedProducts({ branchId: activeBranchId })) {
+      setIsCatalogLoading(true)
+    }
     loadCatalog()
   }, [activeBranchId, canUseSalesDesk])
 
@@ -218,7 +275,14 @@ function PosPage() {
   }, [activeCategory, catalogProducts, deferredSearchTerm])
 
   useEffect(() => {
-    setCurrentPage(1)
+    updatePosViewState((currentState) => (
+      Number(currentState?.currentPage || 1) === 1
+        ? currentState
+        : {
+            ...currentState,
+            currentPage: 1,
+          }
+    ))
   }, [activeBranchId, activeCategory, deferredSearchTerm])
 
   const totalPages = Math.max(
@@ -228,7 +292,9 @@ function PosPage() {
 
   useEffect(() => {
     if (currentPage > totalPages) {
-      setCurrentPage(totalPages)
+      updatePosViewState({
+        currentPage: totalPages,
+      })
     }
   }, [currentPage, totalPages])
 
@@ -255,7 +321,13 @@ function PosPage() {
       return
     }
 
-    setTransactionSequence((current) => current + 1)
+    updatePosViewState((currentState) => ({
+      ...currentState,
+      transactionSequence: Math.max(
+        1,
+        Number(currentState?.transactionSequence || 1) + 1,
+      ),
+    }))
     setHistoryRefreshKey((current) => current + 1)
 
     if (details.inventorySynced === false || !Array.isArray(details.soldItems)) {
@@ -330,7 +402,11 @@ function PosPage() {
                 <SelectMenu
                   className="pos-branch-select"
                   value={activeBranchId}
-                  onChange={(event) => setActiveBranchId(Number(event.target.value))}
+                  onChange={(event) =>
+                    updatePosViewState({
+                      activeBranchId: Number(event.target.value),
+                    })
+                  }
                   id="active-pos-branch-select"
                   placeholder="Select active sales branch"
                   options={branchOptions.map((branch) => ({
@@ -379,7 +455,11 @@ function PosPage() {
           <button
             type="button"
             className={activeView === 'desk' ? 'pos-view-button active' : 'pos-view-button'}
-            onClick={() => setActiveView('desk')}
+          onClick={() =>
+            updatePosViewState({
+              activeView: 'desk',
+            })
+          }
           >
             Sales Desk
           </button>
@@ -387,7 +467,11 @@ function PosPage() {
         <button
           type="button"
           className={activeView === 'history' ? 'pos-view-button active' : 'pos-view-button'}
-          onClick={() => setActiveView('history')}
+          onClick={() =>
+            updatePosViewState({
+              activeView: 'history',
+            })
+          }
         >
           Sales History
         </button>
@@ -435,14 +519,22 @@ function PosPage() {
                     placeholder="Search product, category, or pack size"
                     value={searchTerm}
                     aria-label="Search available products"
-                    onChange={(event) => setSearchTerm(event.target.value)}
+                    onChange={(event) =>
+                      updatePosViewState({
+                        searchTerm: event.target.value,
+                      })
+                    }
                   />
 
                   {hasActiveSearch ? (
                     <button
                       type="button"
                       className="ghost-action product-grid-clear-search"
-                      onClick={() => setSearchTerm('')}
+                      onClick={() =>
+                        updatePosViewState({
+                          searchTerm: '',
+                        })
+                      }
                     >
                       Clear
                     </button>
@@ -459,7 +551,11 @@ function PosPage() {
                           ? 'category-button active'
                           : 'category-button'
                       }
-                      onClick={() => setActiveCategory(category)}
+                      onClick={() =>
+                        updatePosViewState({
+                          activeCategory: category,
+                        })
+                      }
                     >
                       {category}
                     </button>
@@ -481,7 +577,15 @@ function PosPage() {
                     <button
                       type="button"
                       className="pagination-button"
-                      onClick={() => setCurrentPage((page) => Math.max(1, page - 1))}
+                      onClick={() =>
+                        updatePosViewState((currentState) => ({
+                          ...currentState,
+                          currentPage: Math.max(
+                            1,
+                            Number(currentState?.currentPage || 1) - 1,
+                          ),
+                        }))
+                      }
                       disabled={currentPage === 1}
                       aria-label="Go to previous product page"
                     >
@@ -509,7 +613,11 @@ function PosPage() {
                               ? 'pagination-button active'
                               : 'pagination-button'
                           }
-                          onClick={() => setCurrentPage(item)}
+                          onClick={() =>
+                            updatePosViewState({
+                              currentPage: item,
+                            })
+                          }
                           aria-label={`Go to product page ${item}`}
                           aria-current={item === currentPage ? 'page' : undefined}
                         >
@@ -522,7 +630,13 @@ function PosPage() {
                       type="button"
                       className="pagination-button"
                       onClick={() =>
-                        setCurrentPage((page) => Math.min(totalPages, page + 1))
+                        updatePosViewState((currentState) => ({
+                          ...currentState,
+                          currentPage: Math.min(
+                            totalPages,
+                            Number(currentState?.currentPage || 1) + 1,
+                          ),
+                        }))
                       }
                       disabled={currentPage === totalPages}
                       aria-label="Go to next product page"
@@ -536,7 +650,7 @@ function PosPage() {
               {isCatalogLoading ? (
                 <Loader message="Loading sales catalog..." />
               ) : (
-                <ProductGrid
+              <ProductGrid
                   cart={cartItems}
                   products={paginatedProducts}
                   setCart={setCartItems}

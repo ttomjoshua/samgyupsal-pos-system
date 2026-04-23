@@ -5,7 +5,9 @@ import NoticeBanner from '../../../shared/components/common/NoticeBanner'
 import StatusBadge from '../../../shared/components/common/StatusBadge'
 import SummaryCards from '../components/SummaryCards'
 import TopItemsTable from '../components/TopItemsTable'
+import useSessionStorageState from '../../../shared/hooks/useSessionStorageState'
 import {
+  getCachedReportSnapshot,
   getDefaultReportDateRange,
   getReportSnapshot,
 } from '../services/reportService'
@@ -17,21 +19,33 @@ import { shortDate } from '../../../shared/utils/formatters'
 import '../styles/reports.css'
 
 const INITIAL_REPORT_RANGE = getDefaultReportDateRange()
+const REPORTS_PAGE_STATE_KEY = 'page-state:reports'
 
 function ReportsPage() {
-  const [reportData, setReportData] = useState({
-    summary: {},
-    topItems: [],
-    lowStock: [],
-    cashierPerformance: [],
-  })
-  const [isLoading, setIsLoading] = useState(true)
-  const [dateFrom, setDateFrom] = useState(INITIAL_REPORT_RANGE.dateFrom)
-  const [dateTo, setDateTo] = useState(INITIAL_REPORT_RANGE.dateTo)
+  const [reportFilters, setReportFilters] = useSessionStorageState(
+    REPORTS_PAGE_STATE_KEY,
+    INITIAL_REPORT_RANGE,
+  )
+  const dateFrom = reportFilters?.dateFrom || INITIAL_REPORT_RANGE.dateFrom
+  const dateTo = reportFilters?.dateTo || INITIAL_REPORT_RANGE.dateTo
+  const cachedInitialReport =
+    getCachedReportSnapshot({ dateFrom, dateTo }) || {
+      summary: {},
+      topItems: [],
+      lowStock: [],
+      cashierPerformance: [],
+    }
+  const [reportData, setReportData] = useState(cachedInitialReport)
+  const [isLoading, setIsLoading] = useState(
+    () => !getCachedReportSnapshot({ dateFrom, dateTo }),
+  )
   const [filterError, setFilterError] = useState('')
   const [filterMessage, setFilterMessage] = useState('')
   const [loadError, setLoadError] = useState('')
-  const initialRangeRef = useRef(INITIAL_REPORT_RANGE)
+  const initialRangeRef = useRef({
+    dateFrom,
+    dateTo,
+  })
 
   const reviewWindowLabel = useMemo(() => {
     const startDate = new Date(`${dateFrom}T00:00:00`)
@@ -57,7 +71,7 @@ function ReportsPage() {
       if (announceRange) {
         setFilterMessage('')
       }
-      setIsLoading(true)
+      setIsLoading((currentValue) => currentValue || !getCachedReportSnapshot(range))
       const snapshot = await getReportSnapshot(range)
       setReportData(snapshot)
       setLoadError('')
@@ -179,7 +193,10 @@ function ReportsPage() {
               onChange={(event) => {
                 setFilterError('')
                 setFilterMessage('')
-                setDateFrom(event.target.value)
+                setReportFilters((currentFilters) => ({
+                  ...(currentFilters || {}),
+                  dateFrom: event.target.value,
+                }))
               }}
               aria-invalid={Boolean(filterError)}
             />
@@ -192,7 +209,10 @@ function ReportsPage() {
               onChange={(event) => {
                 setFilterError('')
                 setFilterMessage('')
-                setDateTo(event.target.value)
+                setReportFilters((currentFilters) => ({
+                  ...(currentFilters || {}),
+                  dateTo: event.target.value,
+                }))
               }}
               aria-invalid={Boolean(filterError)}
             />

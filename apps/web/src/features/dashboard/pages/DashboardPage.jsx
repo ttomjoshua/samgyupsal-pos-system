@@ -2,10 +2,22 @@ import { useEffect, useMemo, useState } from 'react'
 import EmptyState from '../../../shared/components/common/EmptyState'
 import Loader from '../../../shared/components/common/Loader'
 import NoticeBanner from '../../../shared/components/common/NoticeBanner'
-import { getBranches } from '../../branches/services/branchService'
-import { getInventoryItems } from '../../inventory/services/inventoryService'
-import { getProfilesDirectory } from '../../users/services/profileService'
-import { getReportSnapshot } from '../../reports/services/reportService'
+import {
+  getBranches,
+  getCachedBranches,
+} from '../../branches/services/branchService'
+import {
+  getCachedInventoryItems,
+  getInventoryItems,
+} from '../../inventory/services/inventoryService'
+import {
+  getCachedProfilesDirectory,
+  getProfilesDirectory,
+} from '../../users/services/profileService'
+import {
+  getCachedReportSnapshot,
+  getReportSnapshot,
+} from '../../reports/services/reportService'
 import { isSupabaseAuthEnabled } from '../../../shared/api/supabaseClient'
 import { getMockUsers } from '../../users/services/userService'
 import { peso } from '../../../shared/utils/formatters'
@@ -25,24 +37,61 @@ function getTodayRange() {
   }
 }
 
+function buildInitialDashboardSnapshot(user, isAdmin) {
+  const inventoryScope =
+    isAdmin || !user?.branchId
+      ? {}
+      : { branchId: user.branchId }
+  const reportScope = isAdmin
+    ? {}
+    : {
+        ...getTodayRange(),
+        branchId: user?.branchId ?? null,
+        cashierId: user?.id ?? null,
+      }
+  const cachedBranches = getCachedBranches() || []
+  const cachedInventoryResponse = getCachedInventoryItems(inventoryScope)
+  const cachedInventoryItems =
+    cachedInventoryResponse?.items || cachedInventoryResponse || []
+  const cachedAccounts = isAdmin
+    ? isSupabaseAuthEnabled
+      ? getCachedProfilesDirectory() || []
+      : getMockUsers()
+    : []
+  const cachedReport = getCachedReportSnapshot(reportScope)
+  const hasCachedSnapshot =
+    cachedBranches.length > 0 ||
+    cachedInventoryItems.length > 0 ||
+    cachedAccounts.length > 0 ||
+    Boolean(cachedReport)
+
+  return {
+    isLoading: !hasCachedSnapshot,
+    hasPartialError: false,
+    branches: cachedBranches,
+    inventoryItems: cachedInventoryItems,
+    accounts: cachedAccounts,
+    report: cachedReport,
+  }
+}
+
 function DashboardPage() {
   const { user } = useAuth()
   const isAdmin = isAdminUser(user)
-  const [snapshot, setSnapshot] = useState({
-    isLoading: true,
-    hasPartialError: false,
-    branches: [],
-    inventoryItems: [],
-    accounts: [],
-    report: null,
-  })
+  const [snapshot, setSnapshot] = useState(() =>
+    buildInitialDashboardSnapshot(user, isAdmin),
+  )
 
   useEffect(() => {
     const loadTimer = window.setTimeout(() => {
       const loadDashboardSnapshot = async () => {
         setSnapshot((previousSnapshot) => ({
           ...previousSnapshot,
-          isLoading: true,
+          isLoading:
+            previousSnapshot.branches.length === 0 &&
+            previousSnapshot.inventoryItems.length === 0 &&
+            previousSnapshot.accounts.length === 0 &&
+            !previousSnapshot.report,
         }))
 
         const inventoryScope =

@@ -4,7 +4,9 @@ import Loader from '../../../shared/components/common/Loader'
 import NoticeBanner from '../../../shared/components/common/NoticeBanner'
 import PaginationControls from '../../../shared/components/common/PaginationControls'
 import Modal from '../../../shared/components/ui/Modal'
+import useSessionStorageState from '../../../shared/hooks/useSessionStorageState'
 import {
+  getCachedProductCatalog,
   getProductCatalog,
   removeProductCategory,
   renameProductCategory,
@@ -20,13 +22,24 @@ import '../styles/products.css'
 const CATEGORY_PAGE_SIZE = 8
 const PRODUCT_PREVIEW_PAGE_SIZE = 10
 const VISIBLE_CATEGORY_PAGE_SIZE = 8
+const PRODUCTS_PAGE_STATE_KEY = 'page-state:products'
 
 function ProductsPage() {
-  const [products, setProducts] = useState([])
-  const [isLoading, setIsLoading] = useState(true)
+  const [products, setProducts] = useState(() => getCachedProductCatalog() || [])
+  const [isLoading, setIsLoading] = useState(() => !getCachedProductCatalog())
 
   const [customCategories, setCustomCategories] = useState(() =>
     getStoredCategories(),
+  )
+  const [productsViewState, setProductsViewState] = useSessionStorageState(
+    PRODUCTS_PAGE_STATE_KEY,
+    () => ({
+      categoryPage: 1,
+      productPage: 1,
+      visibleCategoryPage: 1,
+      categorySearch: '',
+      productSearch: '',
+    }),
   )
   const [newCategoryName, setNewCategoryName] = useState('')
   const [categoryMessage, setCategoryMessage] = useState(
@@ -34,11 +47,6 @@ function ProductsPage() {
   )
   const [categoryMessageTone, setCategoryMessageTone] = useState('info')
   const [loadError, setLoadError] = useState('')
-  const [categoryPage, setCategoryPage] = useState(1)
-  const [productPage, setProductPage] = useState(1)
-  const [visibleCategoryPage, setVisibleCategoryPage] = useState(1)
-  const [categorySearch, setCategorySearch] = useState('')
-  const [productSearch, setProductSearch] = useState('')
   const [categoryEditor, setCategoryEditor] = useState(null)
   const [categoryEditorName, setCategoryEditorName] = useState('')
   const [categoryEditorError, setCategoryEditorError] = useState('')
@@ -46,6 +54,20 @@ function ProductsPage() {
   const [categoryRemovalTarget, setCategoryRemovalTarget] = useState(null)
   const [categoryRemovalError, setCategoryRemovalError] = useState('')
   const [isRemovingCategory, setIsRemovingCategory] = useState(false)
+  const categoryPage = Math.max(1, Number(productsViewState?.categoryPage || 1))
+  const productPage = Math.max(1, Number(productsViewState?.productPage || 1))
+  const visibleCategoryPage = Math.max(
+    1,
+    Number(productsViewState?.visibleCategoryPage || 1),
+  )
+  const categorySearch = productsViewState?.categorySearch || ''
+  const productSearch = productsViewState?.productSearch || ''
+  const updateProductsViewState = (patch) => {
+    setProductsViewState((currentState) => ({
+      ...(currentState || {}),
+      ...(typeof patch === 'function' ? patch(currentState || {}) : patch),
+    }))
+  }
   const deferredCategorySearch = useDeferredValue(categorySearch)
   const deferredProductSearch = useDeferredValue(productSearch)
 
@@ -198,32 +220,55 @@ function ProductsPage() {
     ) || 0
 
   useEffect(() => {
-    setCategoryPage(1)
+    updateProductsViewState((currentState) => (
+      Number(currentState?.categoryPage || 1) === 1
+        ? currentState
+        : {
+            ...currentState,
+            categoryPage: 1,
+          }
+    ))
   }, [customCategories, normalizedCategorySearch])
 
   useEffect(() => {
     if (categoryPage > categoryTotalPages) {
-      setCategoryPage(categoryTotalPages)
+      updateProductsViewState({ categoryPage: categoryTotalPages })
     }
   }, [categoryPage, categoryTotalPages])
 
   useEffect(() => {
     if (productPage > productTotalPages) {
-      setProductPage(productTotalPages)
+      updateProductsViewState({ productPage: productTotalPages })
     }
   }, [productPage, productTotalPages])
 
   useEffect(() => {
-    setVisibleCategoryPage(1)
+    updateProductsViewState((currentState) => (
+      Number(currentState?.visibleCategoryPage || 1) === 1
+        ? currentState
+        : {
+            ...currentState,
+            visibleCategoryPage: 1,
+          }
+    ))
   }, [availableCategories, normalizedCategorySearch])
 
   useEffect(() => {
-    setProductPage(1)
+    updateProductsViewState((currentState) => (
+      Number(currentState?.productPage || 1) === 1
+        ? currentState
+        : {
+            ...currentState,
+            productPage: 1,
+          }
+    ))
   }, [normalizedProductSearch])
 
   useEffect(() => {
     if (visibleCategoryPage > visibleCategoryTotalPages) {
-      setVisibleCategoryPage(visibleCategoryTotalPages)
+      updateProductsViewState({
+        visibleCategoryPage: visibleCategoryTotalPages,
+      })
     }
   }, [visibleCategoryPage, visibleCategoryTotalPages])
 
@@ -509,7 +554,11 @@ function ProductsPage() {
               className="products-search-input"
               placeholder="Search existing categories..."
               value={categorySearch}
-              onChange={(event) => setCategorySearch(event.target.value)}
+              onChange={(event) =>
+                updateProductsViewState({
+                  categorySearch: event.target.value,
+                })
+              }
             />
           </div>
 
@@ -582,7 +631,11 @@ function ProductsPage() {
                   totalPages={categoryTotalPages}
                   totalItems={filteredCustomCategoryRows.length}
                   pageSize={CATEGORY_PAGE_SIZE}
-                  onPageChange={setCategoryPage}
+                  onPageChange={(page) =>
+                    updateProductsViewState({
+                      categoryPage: page,
+                    })
+                  }
                   summaryLabel="categories"
                 />
               </>
@@ -658,7 +711,11 @@ function ProductsPage() {
                   totalPages={visibleCategoryTotalPages}
                   totalItems={filteredVisibleCategoryRows.length}
                   pageSize={VISIBLE_CATEGORY_PAGE_SIZE}
-                  onPageChange={setVisibleCategoryPage}
+                  onPageChange={(page) =>
+                    updateProductsViewState({
+                      visibleCategoryPage: page,
+                    })
+                  }
                   summaryLabel="visible categories"
                 />
               </>
@@ -706,7 +763,11 @@ function ProductsPage() {
                 className="products-search-input"
                 placeholder="Search product, category, branch, or pack size"
                 value={productSearch}
-                onChange={(event) => setProductSearch(event.target.value)}
+                onChange={(event) =>
+                  updateProductsViewState({
+                    productSearch: event.target.value,
+                  })
+                }
               />
             </div>
           </div>
@@ -782,7 +843,11 @@ function ProductsPage() {
                   totalPages={productTotalPages}
                   totalItems={filteredProducts.length}
                   pageSize={PRODUCT_PREVIEW_PAGE_SIZE}
-                  onPageChange={setProductPage}
+                  onPageChange={(page) =>
+                    updateProductsViewState({
+                      productPage: page,
+                    })
+                  }
                   summaryLabel="products"
               />
             </>

@@ -3,6 +3,11 @@ import { resolveInventoryRecordIds } from '../src/shared/utils/inventoryRecords.
 import { deriveProductSellability } from '../src/shared/utils/productAvailability.js'
 import { getDefaultReportDateRange } from '../src/shared/utils/reporting.js'
 import {
+  clearCachedResourceByPrefix,
+  getCachedResource,
+  setCachedResource,
+} from '../src/shared/utils/resourceCache.js'
+import {
   isSessionConflictError,
   isSessionConflictMessage,
 } from '../src/features/auth/services/sessionLockService.js'
@@ -193,6 +198,23 @@ const tests = [
         availabilityReason: 'Price not set',
         hasPriceConfigured: false,
       })
+    },
+  },
+  {
+    name: 'resource cache stores cloned values and clears by prefix',
+    run() {
+      setCachedResource('test:navigation:one', { count: 1 })
+      setCachedResource('test:navigation:two', { count: 2 })
+
+      const cachedValue = getCachedResource('test:navigation:one')
+      cachedValue.count = 99
+
+      assert.equal(getCachedResource('test:navigation:one').count, 1)
+
+      clearCachedResourceByPrefix('test:navigation:')
+
+      assert.equal(getCachedResource('test:navigation:one'), null)
+      assert.equal(getCachedResource('test:navigation:two'), null)
     },
   },
   {

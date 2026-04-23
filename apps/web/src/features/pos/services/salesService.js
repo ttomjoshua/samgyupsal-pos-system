@@ -11,6 +11,11 @@ import {
   getStoredSalesHistory,
   saveStoredSalesHistory,
 } from '../../../shared/utils/storage.js'
+import {
+  clearCachedResourceByPrefix,
+  getCachedResource,
+  setCachedResource,
+} from '../../../shared/utils/resourceCache.js'
 import { normalizeSearchInput } from '../../../shared/utils/validation.js'
 import { applySaleToInventory } from '../../inventory/services/inventoryService.js'
 import { getDiscountConfig } from '../utils/discounts.js'
@@ -24,6 +29,8 @@ import {
 export const SALES_HISTORY_ALL_FILTER = 'all'
 export const DEFAULT_SALES_HISTORY_PAGE_SIZE = 10
 export const paymentMethods = [{ value: 'cash', label: 'Cash' }]
+const SALES_CACHE_PREFIX = 'sales:'
+const SALES_CACHE_TTL_MS = 30 * 1000
 export const salesHistoryPaymentMethodOptions = [
   { value: SALES_HISTORY_ALL_FILTER, label: 'All Payment Methods' },
   ...paymentMethods,
@@ -51,6 +58,35 @@ function normalizePaymentMethod(value) {
   return String(value || '')
     .trim()
     .toLowerCase()
+}
+
+function invalidateSalesCaches() {
+  clearCachedResourceByPrefix(SALES_CACHE_PREFIX)
+  clearCachedResourceByPrefix('reports:')
+}
+
+function buildSalesCacheKey(namespace, options = {}) {
+  return `${SALES_CACHE_PREFIX}${namespace}:${JSON.stringify({
+    userId: normalizeText(options.user?.id),
+    userRole: normalizeText(options.user?.roleKey ?? options.user?.role),
+    userBranchId: options.user?.branchId ?? null,
+    transactionQuery: normalizeSearchInput(options.transactionQuery),
+    cashierQuery: normalizeSearchInput(options.cashierQuery),
+    cashierId: normalizeText(options.cashierId),
+    dateFrom: String(options.dateFrom || '').trim(),
+    dateTo: String(options.dateTo || '').trim(),
+    paymentMethod: normalizePaymentMethod(options.paymentMethod),
+    branchId: String(options.branchId || '').trim(),
+    page: Number(options.page || 1),
+    pageSize: Number(options.pageSize || DEFAULT_SALES_HISTORY_PAGE_SIZE),
+  })}`
+}
+
+export function getCachedSalesHistoryPage(options = {}) {
+  return getCachedResource(
+    buildSalesCacheKey('page', options),
+    SALES_CACHE_TTL_MS,
+  )
 }
 
 function toDateBoundary(value, boundary = 'start') {
@@ -480,6 +516,7 @@ function buildLocalSaleRecord(payload, meta = {}) {
 function persistLocalSaleRecord(record) {
   const salesHistory = getStoredSalesHistory()
   saveStoredSalesHistory([record, ...salesHistory])
+  invalidateSalesCaches()
 }
 
 async function syncSaleToInventory(record) {
@@ -663,14 +700,31 @@ export function filterSalesRecords(records = [], options = {}) {
 }
 
 export async function getSalesRecords(options = {}) {
-  if (isSupabaseDataEnabled) {
-    return loadSupabaseSalesHistory(options)
+  const cacheKey = buildSalesCacheKey('records', options)
+  const cachedRecords = getCachedResource(cacheKey, SALES_CACHE_TTL_MS)
+
+  if (cachedRecords) {
+    return cachedRecords
   }
 
-  return filterSalesRecords(getLocalSalesHistoryRecords(), options)
+  if (isSupabaseDataEnabled) {
+    return setCachedResource(cacheKey, await loadSupabaseSalesHistory(options))
+  }
+
+  return setCachedResource(
+    cacheKey,
+    filterSalesRecords(getLocalSalesHistoryRecords(), options),
+  )
 }
 
 export async function getSalesHistoryPage(options = {}) {
+  const cacheKey = buildSalesCacheKey('page', options)
+  const cachedHistoryPage = getCachedResource(cacheKey, SALES_CACHE_TTL_MS)
+
+  if (cachedHistoryPage) {
+    return cachedHistoryPage
+  }
+
   const normalizedPage = Math.max(1, Number(options.page || 1))
   const normalizedPageSize = Math.max(
     1,
@@ -678,18 +732,25 @@ export async function getSalesHistoryPage(options = {}) {
   )
 
   if (isSupabaseDataEnabled) {
-    return loadSupabaseSalesHistory(options, {
-      page: normalizedPage,
-      pageSize: normalizedPageSize,
-    })
+    return setCachedResource(
+      cacheKey,
+      await loadSupabaseSalesHistory(options, {
+        page: normalizedPage,
+        pageSize: normalizedPageSize,
+      }),
+    )
   }
 
   const filteredRecords = filterSalesRecords(getLocalSalesHistoryRecords(), options)
-  return paginateSalesHistory(filteredRecords, normalizedPage, normalizedPageSize)
+  return setCachedResource(
+    cacheKey,
+    paginateSalesHistory(filteredRecords, normalizedPage, normalizedPageSize),
+  )
 }
 
 export async function createSale(payload, meta = {}) {
   const localRecord = buildLocalSaleRecord(payload, meta)
+  invalidateSalesCaches()
 
   if (isSupabaseDataEnabled) {
     return createSupabaseSale(localRecord, payload)

@@ -8,12 +8,32 @@ import { getSalesRecords } from '../../pos/services/salesService'
 import { getDefaultReportDateRange } from '../../../shared/utils/reporting.js'
 import { isSupabaseDataEnabled } from '../../../shared/api/supabaseClient'
 import { peso } from '../../../shared/utils/formatters'
+import {
+  getCachedResource,
+  setCachedResource,
+} from '../../../shared/utils/resourceCache'
+
+const REPORTS_CACHE_PREFIX = 'reports:'
+const REPORTS_CACHE_TTL_MS = 60 * 1000
 
 function parseCurrencyValue(value) {
   return Number(String(value || '').replace(/[^\d.-]/g, '')) || 0
 }
 
 export { getDefaultReportDateRange }
+
+function getReportCacheKey(options = {}) {
+  return `${REPORTS_CACHE_PREFIX}${JSON.stringify({
+    branchId: options.branchId ?? null,
+    cashierId: options.cashierId ?? null,
+    dateFrom: options.dateFrom || '',
+    dateTo: options.dateTo || '',
+  })}`
+}
+
+export function getCachedReportSnapshot(options = {}) {
+  return getCachedResource(getReportCacheKey(options), REPORTS_CACHE_TTL_MS)
+}
 
 function summarizeSales(sales) {
   return sales.reduce(
@@ -138,6 +158,12 @@ function buildLowStockRows(inventoryItems) {
 }
 
 export async function getReportSnapshot(options = {}) {
+  const cachedSnapshot = getCachedReportSnapshot(options)
+
+  if (cachedSnapshot) {
+    return cachedSnapshot
+  }
+
   const inventoryResponse = await getInventoryItems({
     branchId: options.branchId,
   })
@@ -149,7 +175,7 @@ export async function getReportSnapshot(options = {}) {
     const salesHistory = await getSalesRecords(options)
     const saleSummary = summarizeSales(salesHistory)
 
-    return {
+    return setCachedResource(getReportCacheKey(options), {
       summary: {
         total_sales: saleSummary.totalSales,
         transaction_count: saleSummary.transactionCount,
@@ -159,7 +185,7 @@ export async function getReportSnapshot(options = {}) {
       topItems: buildTopItems([], salesHistory),
       lowStock: lowStockRows,
       cashierPerformance: buildCashierPerformance([], salesHistory),
-    }
+    })
   }
 
   const salesHistory = await getSalesRecords(options)
@@ -169,7 +195,7 @@ export async function getReportSnapshot(options = {}) {
   const fallbackTransactionCount = useSeededFallback ? 29 : 0
   const fallbackItemsSold = useSeededFallback ? 165 : 0
 
-  return {
+  return setCachedResource(getReportCacheKey(options), {
     summary: {
       total_sales: fallbackTotalSales + saleSummary.totalSales,
       transaction_count: fallbackTransactionCount + saleSummary.transactionCount,
@@ -185,5 +211,5 @@ export async function getReportSnapshot(options = {}) {
       useSeededFallback ? cashierSales : [],
       salesHistory,
     ),
-  }
+  })
 }

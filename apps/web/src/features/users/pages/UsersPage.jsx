@@ -5,9 +5,14 @@ import NoticeBanner from '../../../shared/components/common/NoticeBanner'
 import StatusBadge from '../../../shared/components/common/StatusBadge'
 import Modal from '../../../shared/components/ui/Modal'
 import SelectMenu from '../../../shared/components/ui/SelectMenu'
-import { createBranch, getBranches } from '../../branches/services/branchService'
+import {
+  createBranch,
+  getBranches,
+  getCachedBranches,
+} from '../../branches/services/branchService'
 import {
   createManagedEmployeeAccount,
+  getCachedProfilesDirectory,
   getProfilesDirectory,
   updateProfileDirectoryEntry,
 } from '../services/profileService'
@@ -42,9 +47,18 @@ const INITIAL_BRANCH_FORM = {
 }
 
 function UsersPage() {
-  const [branchOptions, setBranchOptions] = useState([])
-  const [accounts, setAccounts] = useState([])
-  const [isLoading, setIsLoading] = useState(true)
+  const [branchOptions, setBranchOptions] = useState(() => getCachedBranches() || [])
+  const [accounts, setAccounts] = useState(() => (
+    isSupabaseAuthEnabled ? getCachedProfilesDirectory() || [] : getMockUsers()
+  ))
+  const [isLoading, setIsLoading] = useState(() => {
+    const cachedBranches = getCachedBranches() || []
+    const cachedAccounts = isSupabaseAuthEnabled
+      ? getCachedProfilesDirectory() || []
+      : getMockUsers()
+
+    return cachedBranches.length === 0 && cachedAccounts.length === 0
+  })
   const [editingEmployee, setEditingEmployee] = useState(null)
   const [formData, setFormData] = useState(INITIAL_EMPLOYEE_FORM)
   const [formError, setFormError] = useState('')
@@ -64,7 +78,9 @@ function UsersPage() {
 
   const loadDirectory = async () => {
     try {
-      setIsLoading(true)
+      setIsLoading((currentValue) => (
+        currentValue || (branchOptions.length === 0 && accounts.length === 0)
+      ))
       const branches = await getBranches()
       setBranchOptions(branches)
 

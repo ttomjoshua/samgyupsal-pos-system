@@ -5,12 +5,14 @@ import NoticeBanner from '../../../shared/components/common/NoticeBanner'
 import PaginationControls from '../../../shared/components/common/PaginationControls'
 import StatusBadge from '../../../shared/components/common/StatusBadge'
 import SelectMenu from '../../../shared/components/ui/SelectMenu'
+import useSessionStorageState from '../../../shared/hooks/useSessionStorageState'
 import { peso, shortDateTime } from '../../../shared/utils/formatters'
 import { isAdminUser } from '../../../shared/utils/permissions'
 import SalesHistoryDetailsModal from './SalesHistoryDetailsModal'
 import {
   DEFAULT_SALES_HISTORY_PAGE_SIZE,
   SALES_HISTORY_ALL_FILTER,
+  getCachedSalesHistoryPage,
   getSaleItemCount,
   getSalePaymentMethodLabel,
   getSaleReference,
@@ -25,6 +27,19 @@ const EMPTY_HISTORY_PAGE = {
   currentPage: 1,
   pageSize: DEFAULT_SALES_HISTORY_PAGE_SIZE,
 }
+const SALES_HISTORY_PAGE_STATE_KEY = 'page-state:sales-history'
+
+function buildInitialHistoryViewState(user, isAdmin) {
+  return {
+    transactionQuery: '',
+    cashierQuery: '',
+    dateFrom: '',
+    dateTo: '',
+    paymentMethod: SALES_HISTORY_ALL_FILTER,
+    branchId: isAdmin ? SALES_HISTORY_ALL_FILTER : user?.branchId || SALES_HISTORY_ALL_FILTER,
+    currentPage: 1,
+  }
+}
 
 function SalesHistoryPanel({
   branchOptions = [],
@@ -32,17 +47,40 @@ function SalesHistoryPanel({
   user,
 }) {
   const isAdmin = isAdminUser(user)
-  const [transactionQuery, setTransactionQuery] = useState('')
-  const [cashierQuery, setCashierQuery] = useState('')
-  const [dateFrom, setDateFrom] = useState('')
-  const [dateTo, setDateTo] = useState('')
-  const [paymentMethod, setPaymentMethod] = useState(SALES_HISTORY_ALL_FILTER)
-  const [branchId, setBranchId] = useState(
-    isAdmin ? SALES_HISTORY_ALL_FILTER : user?.branchId || SALES_HISTORY_ALL_FILTER,
+  const [historyViewState, setHistoryViewState] = useSessionStorageState(
+    SALES_HISTORY_PAGE_STATE_KEY,
+    () => buildInitialHistoryViewState(user, isAdmin),
   )
-  const [currentPage, setCurrentPage] = useState(1)
-  const [historyPage, setHistoryPage] = useState(EMPTY_HISTORY_PAGE)
-  const [isLoading, setIsLoading] = useState(true)
+  const transactionQuery = historyViewState?.transactionQuery || ''
+  const cashierQuery = historyViewState?.cashierQuery || ''
+  const dateFrom = historyViewState?.dateFrom || ''
+  const dateTo = historyViewState?.dateTo || ''
+  const paymentMethod = historyViewState?.paymentMethod || SALES_HISTORY_ALL_FILTER
+  const branchId =
+    historyViewState?.branchId ??
+    (isAdmin ? SALES_HISTORY_ALL_FILTER : user?.branchId || SALES_HISTORY_ALL_FILTER)
+  const currentPage = Math.max(1, Number(historyViewState?.currentPage || 1))
+  const updateHistoryViewState = (patch) => {
+    setHistoryViewState((currentState) => ({
+      ...(currentState || {}),
+      ...(typeof patch === 'function' ? patch(currentState || {}) : patch),
+    }))
+  }
+  const initialCachedHistoryPage = getCachedSalesHistoryPage({
+    user,
+    page: currentPage,
+    pageSize: DEFAULT_SALES_HISTORY_PAGE_SIZE,
+    transactionQuery,
+    cashierQuery: isAdmin ? cashierQuery : '',
+    dateFrom,
+    dateTo,
+    paymentMethod,
+    branchId: isAdmin ? branchId : user?.branchId ?? '',
+  })
+  const [historyPage, setHistoryPage] = useState(
+    () => initialCachedHistoryPage || EMPTY_HISTORY_PAGE,
+  )
+  const [isLoading, setIsLoading] = useState(() => !initialCachedHistoryPage)
   const [loadError, setLoadError] = useState('')
   const [selectedSale, setSelectedSale] = useState(null)
   const deferredTransactionQuery = useDeferredValue(transactionQuery)
@@ -60,13 +98,22 @@ function SalesHistoryPanel({
   )
 
   useEffect(() => {
-    setBranchId(
-      isAdmin ? SALES_HISTORY_ALL_FILTER : user?.branchId || SALES_HISTORY_ALL_FILTER,
-    )
+    updateHistoryViewState((currentState) => ({
+      ...(currentState || {}),
+      branchId:
+        isAdmin ? currentState?.branchId || SALES_HISTORY_ALL_FILTER : user?.branchId || SALES_HISTORY_ALL_FILTER,
+    }))
   }, [isAdmin, user?.branchId])
 
   useEffect(() => {
-    setCurrentPage(1)
+    updateHistoryViewState((currentState) => (
+      Number(currentState?.currentPage || 1) === 1
+        ? currentState
+        : {
+            ...currentState,
+            currentPage: 1,
+          }
+    ))
   }, [
     branchId,
     dateFrom,
@@ -82,7 +129,19 @@ function SalesHistoryPanel({
 
     const loadHistory = async () => {
       try {
-        setIsLoading(true)
+        if (!getCachedSalesHistoryPage({
+          user,
+          page: currentPage,
+          pageSize: DEFAULT_SALES_HISTORY_PAGE_SIZE,
+          transactionQuery: deferredTransactionQuery,
+          cashierQuery: isAdmin ? deferredCashierQuery : '',
+          dateFrom,
+          dateTo,
+          paymentMethod,
+          branchId: isAdmin ? branchId : user?.branchId ?? '',
+        })) {
+          setIsLoading(true)
+        }
         const nextHistoryPage = await getSalesHistoryPage({
           user,
           page: currentPage,
@@ -103,7 +162,9 @@ function SalesHistoryPanel({
         setLoadError('')
 
         if (nextHistoryPage.currentPage !== currentPage) {
-          setCurrentPage(nextHistoryPage.currentPage)
+          updateHistoryViewState({
+            currentPage: nextHistoryPage.currentPage,
+          })
         }
 
       } catch (error) {
@@ -200,7 +261,11 @@ function SalesHistoryPanel({
               <input
                 type="text"
                 value={transactionQuery}
-                onChange={(event) => setTransactionQuery(event.target.value)}
+                onChange={(event) =>
+                  updateHistoryViewState({
+                    transactionQuery: event.target.value,
+                  })
+                }
                 placeholder="Search transaction number"
               />
             </label>
@@ -211,7 +276,11 @@ function SalesHistoryPanel({
                 <input
                   type="text"
                   value={cashierQuery}
-                  onChange={(event) => setCashierQuery(event.target.value)}
+                  onChange={(event) =>
+                    updateHistoryViewState({
+                      cashierQuery: event.target.value,
+                    })
+                  }
                   placeholder="Filter by cashier name"
                 />
               </label>
@@ -222,7 +291,11 @@ function SalesHistoryPanel({
               <input
                 type="date"
                 value={dateFrom}
-                onChange={(event) => setDateFrom(event.target.value)}
+                onChange={(event) =>
+                  updateHistoryViewState({
+                    dateFrom: event.target.value,
+                  })
+                }
               />
             </label>
 
@@ -231,7 +304,11 @@ function SalesHistoryPanel({
               <input
                 type="date"
                 value={dateTo}
-                onChange={(event) => setDateTo(event.target.value)}
+                onChange={(event) =>
+                  updateHistoryViewState({
+                    dateTo: event.target.value,
+                  })
+                }
               />
             </label>
 
@@ -240,7 +317,11 @@ function SalesHistoryPanel({
               <SelectMenu
                 className="sales-history-select"
                 value={paymentMethod}
-                onChange={(event) => setPaymentMethod(event.target.value)}
+                onChange={(event) =>
+                  updateHistoryViewState({
+                    paymentMethod: event.target.value,
+                  })
+                }
                 options={salesHistoryPaymentMethodOptions}
               />
             </label>
@@ -251,7 +332,11 @@ function SalesHistoryPanel({
                 <SelectMenu
                   className="sales-history-select"
                   value={branchId}
-                  onChange={(event) => setBranchId(event.target.value)}
+                  onChange={(event) =>
+                    updateHistoryViewState({
+                      branchId: event.target.value,
+                    })
+                  }
                   options={branchFilterOptions}
                 />
               </label>
@@ -263,16 +348,18 @@ function SalesHistoryPanel({
               type="button"
               className="ghost-action sales-history-reset"
               onClick={() => {
-                setTransactionQuery('')
-                setCashierQuery('')
-                setDateFrom('')
-                setDateTo('')
-                setPaymentMethod(SALES_HISTORY_ALL_FILTER)
-                setBranchId(
-                  isAdmin
-                    ? SALES_HISTORY_ALL_FILTER
-                    : user?.branchId || SALES_HISTORY_ALL_FILTER,
-                )
+                updateHistoryViewState({
+                  transactionQuery: '',
+                  cashierQuery: '',
+                  dateFrom: '',
+                  dateTo: '',
+                  paymentMethod: SALES_HISTORY_ALL_FILTER,
+                  branchId:
+                    isAdmin
+                      ? SALES_HISTORY_ALL_FILTER
+                      : user?.branchId || SALES_HISTORY_ALL_FILTER,
+                  currentPage: 1,
+                })
               }}
             >
               Clear Filters
@@ -360,7 +447,11 @@ function SalesHistoryPanel({
               totalPages={historyPage.totalPages}
               totalItems={historyPage.totalCount}
               pageSize={historyPage.pageSize}
-              onPageChange={setCurrentPage}
+              onPageChange={(page) =>
+                updateHistoryViewState({
+                  currentPage: page,
+                })
+              }
               summaryLabel={recordsLabel}
             />
           </>

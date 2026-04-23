@@ -6,10 +6,15 @@ import NoticeBanner from '../../../shared/components/common/NoticeBanner'
 import PaginationControls from '../../../shared/components/common/PaginationControls'
 import Modal from '../../../shared/components/ui/Modal'
 import SelectMenu from '../../../shared/components/ui/SelectMenu'
-import { getBranches } from '../../branches/services/branchService'
+import {
+  getBranches,
+  getCachedBranches,
+} from '../../branches/services/branchService'
 import useAuth from '../../auth/hooks/useAuth'
+import useSessionStorageState from '../../../shared/hooks/useSessionStorageState'
 import {
   createInventoryItem,
+  getCachedInventoryItems,
   getInventoryItems,
   hasInventoryCatalogConflict,
   removeInventoryItem,
@@ -45,6 +50,7 @@ const INITIAL_PRODUCT_FORM = {
 }
 
 const INVENTORY_PAGE_SIZE = 10
+const INVENTORY_PAGE_STATE_KEY = 'page-state:inventory'
 
 function InventoryPage() {
   const { user } = useAuth()
@@ -53,16 +59,27 @@ function InventoryPage() {
   const isAdminInventoryView = isAdminUser(user)
   const canEditCatalog = canManageInventoryCatalog(user)
   const canUpdateStock = canAdjustInventoryStock(user)
-  const [branchOptions, setBranchOptions] = useState([])
-  const [isBranchLoading, setIsBranchLoading] = useState(true)
-  const [branchLoadError, setBranchLoadError] = useState('')
-  const [inventoryItems, setInventoryItems] = useState([])
-  const [isLoading, setIsLoading] = useState(true)
-  const [activeBranchId, setActiveBranchId] = useState(
-    user?.branchId != null ? String(user.branchId) : '',
+  const [branchOptions, setBranchOptions] = useState(() => getCachedBranches() || [])
+  const [isBranchLoading, setIsBranchLoading] = useState(
+    () => (getCachedBranches() || []).length === 0,
   )
-  const [activeFilter, setActiveFilter] = useState(INVENTORY_FILTER_ALL)
-  const [activeCategory, setActiveCategory] = useState(INVENTORY_FILTER_ALL)
+  const [branchLoadError, setBranchLoadError] = useState('')
+  const [inventoryViewState, setInventoryViewState] = useSessionStorageState(
+    INVENTORY_PAGE_STATE_KEY,
+    () => ({
+      activeBranchId: user?.branchId != null ? String(user.branchId) : '',
+      activeFilter: INVENTORY_FILTER_ALL,
+      activeCategory: INVENTORY_FILTER_ALL,
+      currentPage: 1,
+    }),
+  )
+  const initialInventoryResponse = getCachedInventoryItems(
+    isAdminInventoryView ? {} : { branchId: user?.branchId ?? null },
+  )
+  const [inventoryItems, setInventoryItems] = useState(
+    () => initialInventoryResponse?.items || initialInventoryResponse || [],
+  )
+  const [isLoading, setIsLoading] = useState(() => !initialInventoryResponse)
   const [productDialogMode, setProductDialogMode] = useState(null)
   const [selectedItem, setSelectedItem] = useState(null)
   const [formData, setFormData] = useState(INITIAL_PRODUCT_FORM)
@@ -76,7 +93,18 @@ function InventoryPage() {
   const [removeDialogItem, setRemoveDialogItem] = useState(null)
   const [removeError, setRemoveError] = useState('')
   const [isRemoving, setIsRemoving] = useState(false)
-  const [currentPage, setCurrentPage] = useState(1)
+  const activeBranchId =
+    inventoryViewState?.activeBranchId ??
+    (user?.branchId != null ? String(user.branchId) : '')
+  const activeFilter = inventoryViewState?.activeFilter || INVENTORY_FILTER_ALL
+  const activeCategory = inventoryViewState?.activeCategory || INVENTORY_FILTER_ALL
+  const currentPage = Math.max(1, Number(inventoryViewState?.currentPage || 1))
+  const updateInventoryViewState = useCallback((patch) => {
+    setInventoryViewState((currentState) => ({
+      ...(currentState || {}),
+      ...(typeof patch === 'function' ? patch(currentState || {}) : patch),
+    }))
+  }, [setInventoryViewState])
 
   const activeBranch = useMemo(
     () =>
@@ -99,9 +127,14 @@ function InventoryPage() {
 
         setBranchOptions(branches)
         setBranchLoadError('')
-        setActiveBranchId((currentBranchId) => {
+        updateInventoryViewState((currentState) => {
+          const currentBranchId = currentState?.activeBranchId ?? ''
+
           if (user?.branchId) {
-            return String(user.branchId)
+            return {
+              ...currentState,
+              activeBranchId: String(user.branchId),
+            }
           }
 
           const hasCurrentBranch = branches.some(
@@ -109,10 +142,13 @@ function InventoryPage() {
           )
 
           if (hasCurrentBranch) {
-            return currentBranchId
+            return currentState
           }
 
-          return branches[0]?.id != null ? String(branches[0].id) : ''
+          return {
+            ...currentState,
+            activeBranchId: branches[0]?.id != null ? String(branches[0].id) : '',
+          }
         })
       } catch (error) {
         console.error('Failed to load inventory branches:', error)
@@ -137,7 +173,22 @@ function InventoryPage() {
     return () => {
       isMounted = false
     }
-  }, [user?.branchId])
+  }, [updateInventoryViewState, user?.branchId])
+
+  useEffect(() => {
+    if (!user?.branchId) {
+      return
+    }
+
+    updateInventoryViewState((currentState) => (
+      currentState?.activeBranchId === String(user.branchId)
+        ? currentState
+        : {
+            ...currentState,
+            activeBranchId: String(user.branchId),
+          }
+    ))
+  }, [updateInventoryViewState, user?.branchId])
 
   const loadInventory = useCallback(async () => {
     const requestId = inventoryRequestRef.current + 1
@@ -187,7 +238,9 @@ function InventoryPage() {
     }
 
     inventoryLoadScopeRef.current = loadScopeKey
-    setIsLoading(true)
+    if (!getCachedInventoryItems(isAdminInventoryView ? {} : { branchId: user?.branchId ?? null })) {
+      setIsLoading(true)
+    }
     void loadInventory()
   }, [activeBranchId, isAdminInventoryView, loadInventory, user?.branchId])
 
@@ -203,9 +256,11 @@ function InventoryPage() {
 
   useEffect(() => {
     if (activeCategory !== inventoryFilterResults.resolvedCategory) {
-      setActiveCategory(inventoryFilterResults.resolvedCategory)
+      updateInventoryViewState({
+        activeCategory: inventoryFilterResults.resolvedCategory,
+      })
     }
-  }, [activeCategory, inventoryFilterResults.resolvedCategory])
+  }, [activeCategory, inventoryFilterResults.resolvedCategory, updateInventoryViewState])
 
   const effectiveActiveCategory = inventoryFilterResults.resolvedCategory
   const filteredItems = inventoryFilterResults.filteredItems
@@ -216,8 +271,15 @@ function InventoryPage() {
   )
 
   useEffect(() => {
-    setCurrentPage(1)
-  }, [activeBranchId, activeCategory, activeFilter])
+    updateInventoryViewState((currentState) => (
+      Number(currentState?.currentPage || 1) === 1
+        ? currentState
+        : {
+            ...currentState,
+            currentPage: 1,
+          }
+    ))
+  }, [activeBranchId, activeCategory, activeFilter, updateInventoryViewState])
 
   const totalBranchItems = inventoryFilterResults.branchItems.length
   const filterCategoryOptions = inventoryFilterResults.categoryOptions
@@ -227,9 +289,11 @@ function InventoryPage() {
 
   useEffect(() => {
     if (currentPage > totalPages) {
-      setCurrentPage(totalPages)
+      updateInventoryViewState({
+        currentPage: totalPages,
+      })
     }
-  }, [currentPage, totalPages])
+  }, [currentPage, totalPages, updateInventoryViewState])
 
   const paginatedItems = useMemo(() => {
     const startIndex = (currentPage - 1) * INVENTORY_PAGE_SIZE
@@ -364,7 +428,9 @@ function InventoryPage() {
       return
     }
 
-    setActiveFilter(INVENTORY_FILTER_ALL)
+    updateInventoryViewState({
+      activeFilter: INVENTORY_FILTER_ALL,
+    })
     setFormError('')
     setFormData(INITIAL_PRODUCT_FORM)
     setSelectedItem(null)
@@ -620,7 +686,11 @@ function InventoryPage() {
                 <SelectMenu
                   name="activeBranch"
                   value={activeBranchId}
-                  onChange={(event) => setActiveBranchId(String(event.target.value))}
+                  onChange={(event) =>
+                    updateInventoryViewState({
+                      activeBranchId: String(event.target.value),
+                    })
+                  }
                   disabled={isLoading}
                   options={branchOptions.map((branch) => ({
                     value: String(branch.id),
@@ -637,7 +707,11 @@ function InventoryPage() {
                   ? 'inventory-filter active'
                   : 'inventory-filter'
               }
-              onClick={() => setActiveFilter(INVENTORY_FILTER_ALL)}
+              onClick={() =>
+                updateInventoryViewState({
+                  activeFilter: INVENTORY_FILTER_ALL,
+                })
+              }
               disabled={isLoading}
             >
               All Items
@@ -649,7 +723,11 @@ function InventoryPage() {
                   ? 'inventory-filter active'
                   : 'inventory-filter'
               }
-              onClick={() => setActiveFilter(INVENTORY_FILTER_LOW_STOCK)}
+              onClick={() =>
+                updateInventoryViewState({
+                  activeFilter: INVENTORY_FILTER_LOW_STOCK,
+                })
+              }
               disabled={isLoading}
             >
               Low Stock
@@ -661,7 +739,11 @@ function InventoryPage() {
                   ? 'inventory-filter active'
                   : 'inventory-filter'
               }
-              onClick={() => setActiveFilter(INVENTORY_FILTER_EXPIRY_DATE)}
+              onClick={() =>
+                updateInventoryViewState({
+                  activeFilter: INVENTORY_FILTER_EXPIRY_DATE,
+                })
+              }
               disabled={isLoading}
             >
               Expiry Dates
@@ -671,7 +753,11 @@ function InventoryPage() {
               <SelectMenu
                 name="activeCategory"
                 value={effectiveActiveCategory}
-                onChange={(event) => setActiveCategory(event.target.value)}
+                onChange={(event) =>
+                  updateInventoryViewState({
+                    activeCategory: event.target.value,
+                  })
+                }
                 disabled={isLoading || filterCategoryOptions.length === 0}
                 options={[
                   { value: INVENTORY_FILTER_ALL, label: 'All Categories' },
@@ -711,7 +797,11 @@ function InventoryPage() {
               totalPages={totalPages}
               totalItems={filteredItems.length}
               pageSize={INVENTORY_PAGE_SIZE}
-              onPageChange={setCurrentPage}
+              onPageChange={(page) =>
+                updateInventoryViewState({
+                  currentPage: page,
+                })
+              }
               summaryLabel="products"
             />
           ) : null}

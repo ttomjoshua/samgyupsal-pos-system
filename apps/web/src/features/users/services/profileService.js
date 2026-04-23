@@ -1,5 +1,10 @@
 import { getRoleLabel, normalizeRoleKey } from '../../../shared/utils/permissions'
 import {
+  clearCachedResource,
+  getCachedResource,
+  setCachedResource,
+} from '../../../shared/utils/resourceCache'
+import {
   createSupabaseServiceError,
   createSupabaseConfigError,
   getSupabaseClient,
@@ -121,6 +126,16 @@ function createProfileValidationError(message) {
     },
   }
   return error
+}
+
+const PROFILE_DIRECTORY_CACHE_KEY = 'profiles:directory'
+const PROFILE_DIRECTORY_CACHE_TTL_MS = 2 * 60 * 1000
+
+export function getCachedProfilesDirectory() {
+  return getCachedResource(
+    PROFILE_DIRECTORY_CACHE_KEY,
+    PROFILE_DIRECTORY_CACHE_TTL_MS,
+  )
 }
 
 function validateDirectoryProfilePayload(profileId, payload = {}) {
@@ -260,6 +275,12 @@ export async function getProfilesDirectory() {
     return []
   }
 
+  const cachedDirectory = getCachedProfilesDirectory()
+
+  if (cachedDirectory) {
+    return cachedDirectory
+  }
+
   try {
     const supabase = getSupabaseClient()
     const { data, error } = await supabase
@@ -271,7 +292,10 @@ export async function getProfilesDirectory() {
       throw error
     }
 
-    return (data || []).map((profile) => normalizeDirectoryProfile(profile))
+    return setCachedResource(
+      PROFILE_DIRECTORY_CACHE_KEY,
+      (data || []).map((profile) => normalizeDirectoryProfile(profile)),
+    )
   } catch (error) {
     throw createSupabaseServiceError(
       error,
@@ -304,6 +328,7 @@ export async function createManagedEmployeeAccount(payload = {}) {
       throw error
     }
 
+    clearCachedResource(PROFILE_DIRECTORY_CACHE_KEY)
     return normalizeDirectoryProfile(data?.profile || data)
   } catch (error) {
     const message = await extractFunctionErrorMessage(
@@ -335,6 +360,7 @@ export async function updateProfileDirectoryEntry(profileId, payload = {}) {
       throw error
     }
 
+    clearCachedResource(PROFILE_DIRECTORY_CACHE_KEY)
     return normalizeDirectoryProfile(data)
   } catch (error) {
     const message = String(error?.message || '').toLowerCase()

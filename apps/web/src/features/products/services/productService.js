@@ -8,6 +8,14 @@ import {
 import { products as mockProducts } from '../../../shared/mocks/mockData'
 import { getInventoryItems } from '../../inventory/services/inventoryService'
 import { deriveProductSellability } from '../../../shared/utils/productAvailability'
+import {
+  clearCachedResourceByPrefix,
+  getCachedResource,
+  setCachedResource,
+} from '../../../shared/utils/resourceCache'
+
+const PRODUCTS_CACHE_PREFIX = 'products:'
+const PRODUCTS_CACHE_TTL_MS = 60 * 1000
 
 function extractProductArray(payload) {
   if (Array.isArray(payload)) {
@@ -121,6 +129,32 @@ function getFallbackBranchName(branchId) {
   return Number(branchId) === 2 ? 'Dollar' : 'Sta. Lucia'
 }
 
+function getProductsCacheKey(options = {}) {
+  const branchId =
+    options.branchId != null && String(options.branchId).trim() !== ''
+      ? String(options.branchId).trim()
+      : 'all'
+
+  return `${PRODUCTS_CACHE_PREFIX}catalog:${isSupabaseDataEnabled ? 'supabase' : 'local'}:${branchId}`
+}
+
+function getProductCatalogCacheKey() {
+  return `${PRODUCTS_CACHE_PREFIX}review:${isSupabaseDataEnabled ? 'supabase' : 'local'}`
+}
+
+function invalidateProductCaches() {
+  clearCachedResourceByPrefix(PRODUCTS_CACHE_PREFIX)
+  clearCachedResourceByPrefix('inventory:')
+}
+
+export function getCachedProducts(options = {}) {
+  return getCachedResource(getProductsCacheKey(options), PRODUCTS_CACHE_TTL_MS)
+}
+
+export function getCachedProductCatalog() {
+  return getCachedResource(getProductCatalogCacheKey(), PRODUCTS_CACHE_TTL_MS)
+}
+
 async function getLocalCatalogSource(options = {}) {
   try {
     const inventoryResponse = await getInventoryItems(options)
@@ -148,6 +182,12 @@ async function getLocalCatalogSource(options = {}) {
 }
 
 export async function getProducts(options = {}) {
+  const cachedProducts = getCachedProducts(options)
+
+  if (cachedProducts) {
+    return cachedProducts
+  }
+
   if (isSupabaseDataEnabled) {
     const supabase = getSupabaseClient()
     let query = supabase
@@ -168,18 +208,30 @@ export async function getProducts(options = {}) {
       )
     }
 
-    return extractProductArray(data)
+    return setCachedResource(
+      getProductsCacheKey(options),
+      extractProductArray(data)
       .map(normalizeInventoryProduct)
-      .filter((product) => Boolean(product.id))
+      .filter((product) => Boolean(product.id)),
+    )
   }
 
   const localCatalog = await getLocalCatalogSource(options)
-  return extractProductArray(localCatalog)
+  return setCachedResource(
+    getProductsCacheKey(options),
+    extractProductArray(localCatalog)
     .map(normalizeInventoryProduct)
-    .filter((product) => Boolean(product.id))
+    .filter((product) => Boolean(product.id)),
+  )
 }
 
 export async function getProductCatalog() {
+  const cachedCatalog = getCachedProductCatalog()
+
+  if (cachedCatalog) {
+    return cachedCatalog
+  }
+
   if (isSupabaseDataEnabled) {
     const supabase = getSupabaseClient()
     const { data, error } = await supabase
@@ -194,15 +246,21 @@ export async function getProductCatalog() {
       )
     }
 
-    return extractProductArray(data)
+    return setCachedResource(
+      getProductCatalogCacheKey(),
+      extractProductArray(data)
       .map(normalizeCatalogProduct)
-      .filter((product) => Boolean(product.id))
+      .filter((product) => Boolean(product.id)),
+    )
   }
 
   const localCatalog = await getLocalCatalogSource()
-  return extractProductArray(localCatalog)
+  return setCachedResource(
+    getProductCatalogCacheKey(),
+    extractProductArray(localCatalog)
     .map(normalizeCatalogProduct)
-    .filter((product) => Boolean(product.id))
+    .filter((product) => Boolean(product.id)),
+  )
 }
 
 export async function renameProductCategory(currentCategoryName, nextCategoryName) {
@@ -226,6 +284,7 @@ export async function renameProductCategory(currentCategoryName, nextCategoryNam
     )
   }
 
+  invalidateProductCaches()
   return Array.isArray(data) ? data.length : 0
 }
 
@@ -254,5 +313,6 @@ export async function removeProductCategory(categoryName) {
     )
   }
 
+  invalidateProductCaches()
   return Array.isArray(data) ? data.length : 0
 }

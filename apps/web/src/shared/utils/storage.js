@@ -10,6 +10,10 @@ function canUseStorage() {
   return typeof window !== 'undefined' && Boolean(window.localStorage)
 }
 
+function canUseSessionStorage() {
+  return typeof window !== 'undefined' && Boolean(window.sessionStorage)
+}
+
 function readStorageValue(storageKey, fallbackValue) {
   if (!canUseStorage()) {
     return fallbackValue
@@ -44,8 +48,54 @@ function removeStorageValue(storageKey) {
   window.localStorage.removeItem(storageKey)
 }
 
+function readSessionValue(storageKey, fallbackValue) {
+  if (!canUseSessionStorage()) {
+    return fallbackValue
+  }
+
+  const rawValue = window.sessionStorage.getItem(storageKey)
+
+  if (!rawValue) {
+    return fallbackValue
+  }
+
+  try {
+    return JSON.parse(rawValue)
+  } catch {
+    return fallbackValue
+  }
+}
+
+function writeSessionValue(storageKey, value) {
+  if (!canUseSessionStorage()) {
+    return
+  }
+
+  window.sessionStorage.setItem(storageKey, JSON.stringify(value))
+}
+
+function removeSessionValue(storageKey) {
+  if (!canUseSessionStorage()) {
+    return
+  }
+
+  window.sessionStorage.removeItem(storageKey)
+}
+
 function normalizeCategoryName(categoryName) {
   return categoryName.trim().replace(/\s+/g, ' ')
+}
+
+export function readSessionStorageValue(storageKey, fallbackValue) {
+  return readSessionValue(storageKey, fallbackValue)
+}
+
+export function writeSessionStorageValue(storageKey, value) {
+  writeSessionValue(storageKey, value)
+}
+
+export function removeSessionStorageValue(storageKey) {
+  removeSessionValue(storageKey)
 }
 
 export function getStoredCategories() {

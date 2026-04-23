@@ -2,6 +2,11 @@ import {
   getStoredMockBranches,
   saveStoredMockBranches,
 } from '../../../shared/utils/storage'
+import {
+  clearCachedResource,
+  getCachedResource,
+  setCachedResource,
+} from '../../../shared/utils/resourceCache'
 import { createBranch as createLocalBranch, getMockBranches } from '../../users/services/userService'
 import {
   createSupabaseServiceError,
@@ -53,12 +58,20 @@ function sortBranchesByName(branches) {
   )
 }
 
+const BRANCHES_CACHE_KEY = 'branches:all'
+const BRANCHES_CACHE_TTL_MS = 5 * 60 * 1000
+
 function syncBranchCache(branches) {
   const normalizedBranches = sortBranchesByName(
     branches.map((branch) => normalizeBranchRecord(branch)),
   )
+  setCachedResource(BRANCHES_CACHE_KEY, normalizedBranches)
   saveStoredMockBranches(normalizedBranches)
   return normalizedBranches
+}
+
+export function getCachedBranches() {
+  return getCachedResource(BRANCHES_CACHE_KEY, BRANCHES_CACHE_TTL_MS)
 }
 
 function getLocalBranchFallback() {
@@ -132,6 +145,12 @@ function buildSupabaseBranchPayload(branch) {
 }
 
 export async function getBranches() {
+  const cachedBranches = getCachedBranches()
+
+  if (cachedBranches) {
+    return cachedBranches
+  }
+
   if (!isSupabaseDataEnabled) {
     return getLocalBranchFallback()
   }
@@ -170,6 +189,7 @@ export async function createBranch(payload) {
     return normalizeBranchRecord(createdBranch)
   }
 
+  clearCachedResource(BRANCHES_CACHE_KEY)
   const existingBranches = await getBranches()
   const validatedBranch = validateBranchPayload(payload, existingBranches)
 

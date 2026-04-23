@@ -11,15 +11,44 @@ import {
 import { inventoryItems } from '../../../shared/mocks/mockData.js'
 import { shortDate } from '../../../shared/utils/formatters.js'
 import {
+  clearCachedResourceByPrefix,
+  getCachedResource,
+  setCachedResource,
+} from '../../../shared/utils/resourceCache.js'
+import {
   getStoredInventoryItems,
   saveStoredInventoryItems,
 } from '../../../shared/utils/storage.js'
 
 const LOW_STOCK_THRESHOLD = 10
 const NEAR_EXPIRY_DAYS = 30
+const INVENTORY_CACHE_PREFIX = 'inventory:'
+const INVENTORY_CACHE_TTL_MS = 60 * 1000
 
 function cloneInventoryValue(value) {
   return JSON.parse(JSON.stringify(value))
+}
+
+function getInventoryCacheKey(options = {}) {
+  const branchId =
+    options.branchId != null && String(options.branchId).trim() !== ''
+      ? String(options.branchId).trim()
+      : 'all'
+
+  return `${INVENTORY_CACHE_PREFIX}${isSupabaseDataEnabled ? 'supabase' : 'local'}:${branchId}`
+}
+
+function invalidateInventoryQueryCaches() {
+  clearCachedResourceByPrefix(INVENTORY_CACHE_PREFIX)
+  clearCachedResourceByPrefix('products:')
+  clearCachedResourceByPrefix('reports:')
+}
+
+export function getCachedInventoryItems(options = {}) {
+  return getCachedResource(
+    getInventoryCacheKey(options),
+    INVENTORY_CACHE_TTL_MS,
+  )
 }
 
 function ensureLocalInventoryItems() {
@@ -242,25 +271,31 @@ async function getSupabaseInventoryContext(itemId) {
 }
 
 export async function getInventoryItems(options = {}) {
+  const cachedInventoryResponse = getCachedInventoryItems(options)
+
+  if (cachedInventoryResponse) {
+    return cachedInventoryResponse
+  }
+
   if (isSupabaseDataEnabled) {
-    return {
+    return setCachedResource(getInventoryCacheKey(options), {
       items: (await fetchSupabaseInventoryItems(options)).map((item) =>
         normalizeInventoryItem(item),
       ),
-    }
+    })
   }
 
   const legacyInventoryItems = await fetchLegacyInventoryItems()
 
   if (legacyInventoryItems.length > 0) {
-    return {
+    return setCachedResource(getInventoryCacheKey(options), {
       items: legacyInventoryItems.map((item) => normalizeInventoryItem(item)),
-    }
+    })
   }
 
-  return {
+  return setCachedResource(getInventoryCacheKey(options), {
     items: ensureLocalInventoryItems().map((item) => normalizeInventoryItem(item)),
-  }
+  })
 }
 
 export function normalizeInventoryItem(item) {
@@ -342,11 +377,13 @@ export async function createInventoryItem(values, existingItems = []) {
     }
 
     const createdItem = await fetchSupabaseInventoryItemByProductId(data.id)
+    invalidateInventoryQueryCaches()
     return normalizeInventoryItem(createdItem || data)
   }
 
   const createdItem = createInventoryItemRecord(values, existingItems)
   persistInventoryItems([createdItem, ...existingItems])
+  invalidateInventoryQueryCaches()
   return createdItem
 }
 
@@ -390,6 +427,7 @@ export async function updateInventoryItem(itemId, values) {
     }
 
     const updatedItem = await fetchSupabaseInventoryItemByProductId(productId)
+    invalidateInventoryQueryCaches()
     return normalizeInventoryItem(updatedItem)
   }
 
@@ -415,6 +453,7 @@ export async function updateInventoryItem(itemId, values) {
     ),
   )
 
+  invalidateInventoryQueryCaches()
   return updatedItem
 }
 
@@ -455,6 +494,7 @@ export async function updateInventoryStock(itemId, quantityValue, options = {}) 
     }
 
     const updatedItem = await fetchSupabaseInventoryItemByProductId(productId)
+    invalidateInventoryQueryCaches()
     return normalizeInventoryItem(updatedItem)
   }
 
@@ -483,6 +523,7 @@ export async function updateInventoryStock(itemId, quantityValue, options = {}) 
     ),
   )
 
+  invalidateInventoryQueryCaches()
   return updatedItem
 }
 
@@ -521,6 +562,7 @@ export async function removeInventoryItem(itemId) {
       )
     }
 
+    invalidateInventoryQueryCaches()
     return normalizeInventoryItem(currentProduct)
   }
 
@@ -539,6 +581,7 @@ export async function removeInventoryItem(itemId) {
     currentItems.filter((item) => String(item.id) !== String(itemId)),
   )
 
+  invalidateInventoryQueryCaches()
   return selectedItem
 }
 
@@ -586,6 +629,8 @@ export function persistInventoryItems(items = []) {
   if (!isSupabaseDataEnabled) {
     saveStoredInventoryItems(normalizedItems)
   }
+
+  invalidateInventoryQueryCaches()
 
   return normalizedItems
 }
@@ -670,6 +715,7 @@ export async function applySaleToInventory(soldItems = [], options = {}) {
       }),
     )
 
+    invalidateInventoryQueryCaches()
     const inventoryResponse = await getInventoryItems({ branchId })
     return inventoryResponse.items || inventoryResponse
   }
@@ -695,6 +741,7 @@ export async function applySaleToInventory(soldItems = [], options = {}) {
   })
 
   persistInventoryItems(nextInventoryItems)
+  invalidateInventoryQueryCaches()
   return nextInventoryItems
 }
 
