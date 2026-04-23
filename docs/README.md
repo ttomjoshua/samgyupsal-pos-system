@@ -16,4 +16,4 @@ This folder is the canonical home for project-facing documentation that explains
 - `mermaid/`
   - deployment, ERD, and network diagrams
 
-Operational SQL files and Edge Functions still live in `frontend/supabase/`, because they are runtime assets rather than narrative documentation.
+Operational SQL files and Edge Functions still live in `apps/web/supabase/`, because they are runtime assets rather than narrative documentation.

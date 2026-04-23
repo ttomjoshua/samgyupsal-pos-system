@@ -19,7 +19,7 @@ This folder contains the live React frontend for the Samgyupsal POS and Inventor
 
 ## Environment Variables
 
-See [`frontend/.env.example`](../../frontend/.env.example).
+See [`apps/web/.env.example`](../../apps/web/.env.example).
 
 Key values:
 
@@ -47,3 +47,4 @@ The app prefers Supabase when it is configured. If Supabase is unavailable, some
 - seeded mock data
 
 That fallback behavior exists to keep demos resilient, but Supabase is the intended primary data source.
+

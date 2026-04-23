@@ -6,7 +6,7 @@ Run these files in order inside the Supabase SQL Editor.
 
 Run:
 
-- [`frontend/supabase/sql/01_core_tables.sql`](../../frontend/supabase/sql/01_core_tables.sql)
+- [`apps/web/supabase/sql/01_core_tables.sql`](../../apps/web/supabase/sql/01_core_tables.sql)
 
 This script still does the careful base reset path:
 
@@ -34,7 +34,7 @@ Important:
 
 Run:
 
-- [`frontend/supabase/sql/08_flatten_products_schema.sql`](../../frontend/supabase/sql/08_flatten_products_schema.sql)
+- [`apps/web/supabase/sql/08_flatten_products_schema.sql`](../../apps/web/supabase/sql/08_flatten_products_schema.sql)
 
 This script makes `public.products` the source of truth for branch inventory with this final shape:
 
@@ -57,7 +57,7 @@ It also:
 
 Run:
 
-- [`frontend/supabase/sql/02_dev_demo_policies.sql`](../../frontend/supabase/sql/02_dev_demo_policies.sql)
+- [`apps/web/supabase/sql/02_dev_demo_policies.sql`](../../apps/web/supabase/sql/02_dev_demo_policies.sql)
 
 This script:
 
@@ -81,8 +81,8 @@ When you want the database to reflect the owner-provided CSV inventory for:
 
 use:
 
-- [`frontend/supabase/generate_owner_inventory_sql.ps1`](../../frontend/supabase/generate_owner_inventory_sql.ps1)
-- [`frontend/supabase/sql/07_replace_inventory_with_owner_csv.sql`](../../frontend/supabase/sql/07_replace_inventory_with_owner_csv.sql)
+- [`apps/web/supabase/generate_owner_inventory_sql.ps1`](../../apps/web/supabase/generate_owner_inventory_sql.ps1)
+- [`apps/web/supabase/sql/07_replace_inventory_with_owner_csv.sql`](../../apps/web/supabase/sql/07_replace_inventory_with_owner_csv.sql)
 
 Workflow:
 
@@ -92,7 +92,7 @@ Workflow:
 ./generate_owner_inventory_sql.ps1
 ```
 
-2. Run [`frontend/supabase/sql/07_replace_inventory_with_owner_csv.sql`](../../frontend/supabase/sql/07_replace_inventory_with_owner_csv.sql) in the Supabase SQL Editor.
+2. Run [`apps/web/supabase/sql/07_replace_inventory_with_owner_csv.sql`](../../apps/web/supabase/sql/07_replace_inventory_with_owner_csv.sql) in the Supabase SQL Editor.
 
 This replacement script:
 
@@ -111,9 +111,9 @@ Expected verification result after the script runs:
 
 ## 5. Optional profile table scaffold
 
-Run only when the backend/auth team is ready:
+Run only when the authentication rollout team is ready:
 
-- [`frontend/supabase/sql/03_optional_profiles_table.sql`](../../frontend/supabase/sql/03_optional_profiles_table.sql)
+- [`apps/web/supabase/sql/03_optional_profiles_table.sql`](../../apps/web/supabase/sql/03_optional_profiles_table.sql)
 
 This prepares a `profiles` table linked to `auth.users`.
 
@@ -121,7 +121,7 @@ This prepares a `profiles` table linked to `auth.users`.
 
 Run when you are ready to switch the frontend login to Supabase Auth:
 
-- [`frontend/supabase/sql/04_auth_profiles_rollout.sql`](../../frontend/supabase/sql/04_auth_profiles_rollout.sql)
+- [`apps/web/supabase/sql/04_auth_profiles_rollout.sql`](../../apps/web/supabase/sql/04_auth_profiles_rollout.sql)
 
 This script:
 
@@ -144,7 +144,7 @@ Important:
 
 Run only after you manually create the first admin Auth user in Supabase Dashboard:
 
-- [`frontend/supabase/sql/05_auth_profile_seed_template.sql`](../../frontend/supabase/sql/05_auth_profile_seed_template.sql)
+- [`apps/web/supabase/sql/05_auth_profile_seed_template.sql`](../../apps/web/supabase/sql/05_auth_profile_seed_template.sql)
 
 Before running:
 
@@ -162,7 +162,7 @@ This script is just a template so you can assign:
 
 Run after the auth rollout and admin seeding steps:
 
-- [`frontend/supabase/sql/09_auth_role_policies.sql`](../../frontend/supabase/sql/09_auth_role_policies.sql)
+- [`apps/web/supabase/sql/09_auth_role_policies.sql`](../../apps/web/supabase/sql/09_auth_role_policies.sql)
 
 This script:
 
@@ -182,7 +182,7 @@ Important:
 
 Run after the auth rollout and role-aware policy scripts:
 
-- [`frontend/supabase/sql/10_auth_session_locking.sql`](../../frontend/supabase/sql/10_auth_session_locking.sql)
+- [`apps/web/supabase/sql/10_auth_session_locking.sql`](../../apps/web/supabase/sql/10_auth_session_locking.sql)
 
 This script:
 
@@ -204,7 +204,7 @@ Important:
 
 Run when `products_legacy` or `sale_items_legacy` still exist from the older schema transition:
 
-- [`frontend/supabase/sql/11_legacy_table_policy_lockdown.sql`](../../frontend/supabase/sql/11_legacy_table_policy_lockdown.sql)
+- [`apps/web/supabase/sql/11_legacy_table_policy_lockdown.sql`](../../apps/web/supabase/sql/11_legacy_table_policy_lockdown.sql)
 
 This script:
 
@@ -221,7 +221,7 @@ Important:
 
 The repo now includes:
 
-- [`frontend/supabase/functions/admin-create-user/index.ts`](../../frontend/supabase/functions/admin-create-user/index.ts)
+- [`apps/web/supabase/functions/admin-create-user/index.ts`](../../apps/web/supabase/functions/admin-create-user/index.ts)
 
 This is the trusted server-side path that lets an authenticated admin create employee Auth users without exposing the `service_role` key in the browser.
 
@@ -297,3 +297,4 @@ left join auth.users as auth_user
   on auth_user.id = profile.id
 order by profile.created_at desc;
 ```
+

@@ -6,7 +6,7 @@ This file captures the current frontend integration status, known demo-safe devi
 
 | Item | Status | Notes |
 | --- | --- | --- |
-| Folder separation | Pass | `frontend/` contains the live app, `documentation/` contains project docs, and `backend/` remains reserved for future trusted services. |
+| Folder separation | Pass | `apps/web/` contains the live app, `docs/` contains project docs, and `apps/api/` remains reserved for future trusted services. |
 | Reusable modal | Pass | Inventory dialogs and receipt preview use the shared `Modal` component. The live POS flow intentionally keeps checkout inline in the summary panel. |
 | Validation | Pass | Shared validation is centralized in `src/shared/utils/validation.js`. |
 | Receipt preview | Partial | Cashier can review the latest receipt after a successful checkout. Pre-confirmation receipt preview is not active in the live POS flow. |
@@ -86,3 +86,4 @@ Recommended order from the current project state:
 - `feat: persist demo sales and sync reports with cashier flow`
 - `feat: persist inventory updates and admin inventory actions`
 - `style: polish resilient empty, loading, and notice states`
+

@@ -1,10 +1,10 @@
-# Backend Placeholder
+# API Placeholder
 
 This folder is intentionally reserved for a future trusted backend layer.
 
 It is currently kept empty on purpose because the live system runs as:
 
-- `frontend/` for the Vite + React application
+- `apps/web/` for the Vite + React application
 - Supabase for Auth, Postgres, and Edge Functions
 
 Keep this folder if the project later adds:

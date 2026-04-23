@@ -18,7 +18,7 @@ Use this when switching the frontend from local demo login to real Supabase Auth
 
 In Supabase SQL Editor, run:
 
-- [`frontend/supabase/sql/04_auth_profiles_rollout.sql`](../../frontend/supabase/sql/04_auth_profiles_rollout.sql)
+- [`apps/web/supabase/sql/04_auth_profiles_rollout.sql`](../../apps/web/supabase/sql/04_auth_profiles_rollout.sql)
 
 This creates:
 
@@ -31,7 +31,7 @@ This creates:
 
 In Supabase SQL Editor, run:
 
-- [`frontend/supabase/sql/10_auth_session_locking.sql`](../../frontend/supabase/sql/10_auth_session_locking.sql)
+- [`apps/web/supabase/sql/10_auth_session_locking.sql`](../../apps/web/supabase/sql/10_auth_session_locking.sql)
 
 This creates:
 
@@ -68,7 +68,7 @@ Use a real email address that you can recognize in the seed step.
 
 Open:
 
-- [`frontend/supabase/sql/05_auth_profile_seed_template.sql`](../../frontend/supabase/sql/05_auth_profile_seed_template.sql)
+- [`apps/web/supabase/sql/05_auth_profile_seed_template.sql`](../../apps/web/supabase/sql/05_auth_profile_seed_template.sql)
 
 Before running it:
 
@@ -132,3 +132,4 @@ That means:
 - employee directory editing is real
 - employee account creation is real only through the trusted Edge Function
 - the first admin account still needs a manual bootstrap step
+

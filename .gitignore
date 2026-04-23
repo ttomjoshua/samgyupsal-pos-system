@@ -3,5 +3,6 @@
 .windsurf/
 .vscode/
 .vercel/
+**/.vercel/
 skills-lock.json
-frontend/.env
+apps/web/.env

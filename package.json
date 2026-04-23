@@ -2,10 +2,16 @@
   "name": "samgyupsal-pos-system",
   "private": true,
   "scripts": {
-    "dev": "cd frontend && npm run dev",
-    "build": "cd frontend && npm run build",
-    "lint": "cd frontend && npm run lint",
-    "test": "cd frontend && npm run test",
-    "preview": "cd frontend && npm run preview"
+    "dev": "npm run dev:web",
+    "build": "npm run build:web",
+    "lint": "npm run lint:web",
+    "test": "npm run test:web",
+    "preview": "npm run preview:web",
+    "install:web": "npm --prefix ./apps/web ci",
+    "dev:web": "npm --prefix ./apps/web run dev",
+    "build:web": "npm --prefix ./apps/web run build",
+    "lint:web": "npm --prefix ./apps/web run lint",
+    "test:web": "npm --prefix ./apps/web run test",
+    "preview:web": "npm --prefix ./apps/web run preview"
   }
 }

@@ -9,10 +9,10 @@ Important:
 
 ## What is already wired
 
-- branch-scoped POS product loading via [`frontend/src/features/products/services/productService.js`](../../frontend/src/features/products/services/productService.js)
-- branch-scoped inventory reads and writes via [`frontend/src/features/inventory/services/inventoryService.js`](../../frontend/src/features/inventory/services/inventoryService.js)
-- sales and sale items via [`frontend/src/features/pos/services/salesService.js`](../../frontend/src/features/pos/services/salesService.js)
-- report snapshot via [`frontend/src/features/reports/services/reportService.js`](../../frontend/src/features/reports/services/reportService.js)
+- branch-scoped POS product loading via [`apps/web/src/features/products/services/productService.js`](../../apps/web/src/features/products/services/productService.js)
+- branch-scoped inventory reads and writes via [`apps/web/src/features/inventory/services/inventoryService.js`](../../apps/web/src/features/inventory/services/inventoryService.js)
+- sales and sale items via [`apps/web/src/features/pos/services/salesService.js`](../../apps/web/src/features/pos/services/salesService.js)
+- report snapshot via [`apps/web/src/features/reports/services/reportService.js`](../../apps/web/src/features/reports/services/reportService.js)
 
 ## What is partially migrated now
 
@@ -28,7 +28,7 @@ Important:
 
 ## Required frontend env vars
 
-Copy [`frontend/.env.example`](../../frontend/.env.example) into `.env` and fill in:
+Copy [`apps/web/.env.example`](../../apps/web/.env.example) into `.env` and fill in:
 
 - `VITE_SUPABASE_URL`
 - `VITE_SUPABASE_ANON_KEY`
@@ -178,8 +178,9 @@ When `VITE_SUPABASE_AUTH_ENABLED=true` and Supabase is configured:
 
 The Users page now reads and updates real Supabase `profiles`, and new employee Auth users can be created through the secured `admin-create-user` Edge Function after it is deployed. The one remaining manual bootstrap step is creating the first admin account.
 
-The auth-enabled frontend also expects the authenticated session-lock RPCs from [`frontend/supabase/sql/10_auth_session_locking.sql`](../../frontend/supabase/sql/10_auth_session_locking.sql). When that script is applied:
+The auth-enabled frontend also expects the authenticated session-lock RPCs from [`apps/web/supabase/sql/10_auth_session_locking.sql`](../../apps/web/supabase/sql/10_auth_session_locking.sql). When that script is applied:
 
 - a second device is blocked from signing into the same employee account
 - the active device keeps the lock until logout or the 5-minute stale timeout expires
 - logout releases only the current browser session instead of ending every device session
+
