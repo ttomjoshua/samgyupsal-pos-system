@@ -14,18 +14,13 @@ export function deriveProductSellability(product = {}) {
     product.isSellable === false
       ? false
       : product.is_active !== false && product.isActive !== false
+  const hasPriceConfigured = Number.isFinite(unitPrice) && unitPrice > 0
 
   if (!isActive) {
     return {
       isSellable: false,
       availabilityReason: 'Unavailable',
-    }
-  }
-
-  if (!Number.isFinite(unitPrice) || unitPrice <= 0) {
-    return {
-      isSellable: false,
-      availabilityReason: 'Price not set',
+      hasPriceConfigured,
     }
   }
 
@@ -33,11 +28,13 @@ export function deriveProductSellability(product = {}) {
     return {
       isSellable: false,
       availabilityReason: 'Out of stock',
+      hasPriceConfigured,
     }
   }
 
   return {
     isSellable: true,
-    availabilityReason: '',
+    availabilityReason: hasPriceConfigured ? '' : 'Price not set',
+    hasPriceConfigured,
   }
 }

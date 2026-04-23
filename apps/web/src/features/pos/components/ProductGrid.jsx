@@ -7,7 +7,9 @@ function ProductGrid({ products, cart = [], setCart, onProductAdded }) {
   )
 
   const addToCart = (product) => {
-    if (product.isSellable === false) {
+    const isPriceNotSet = product.availabilityReason === 'Price not set'
+
+    if (product.isSellable === false && !isPriceNotSet) {
       return
     }
 
@@ -62,9 +64,13 @@ function ProductGrid({ products, cart = [], setCart, onProductAdded }) {
           ? Math.max(0, availableStock - quantityInCart)
           : null
         const isOutOfStock = remainingStock === 0
-        const isUnavailable = product.isSellable === false || isOutOfStock
-        const stockLabel = product.isSellable === false
+        const isPriceNotSet = product.availabilityReason === 'Price not set'
+        const isUnavailable =
+          (product.isSellable === false && !isPriceNotSet) || isOutOfStock
+        const stockLabel = product.isSellable === false && !isPriceNotSet
           ? product.availabilityReason || 'Unavailable'
+          : isPriceNotSet
+            ? 'Price not set'
           : remainingStock == null
             ? 'Stock pending'
             : remainingStock === 0

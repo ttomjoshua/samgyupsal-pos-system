@@ -762,7 +762,9 @@ function ProductsPage() {
                           <td>
                             <div className="products-price-cell">
                               <strong>{peso(item.price)}</strong>
-                              {!item.isSellable && item.availabilityReason ? (
+                              {item.availabilityReason &&
+                              (!item.isSellable ||
+                                item.availabilityReason === 'Price not set') ? (
                                 <span className="products-price-flag">
                                   {item.availabilityReason}
                                 </span>

@@ -101,13 +101,13 @@ const tests = [
     },
   },
   {
-    name: 'validateCheckout rejects non-positive unit prices',
+    name: 'validateCheckout allows zero-priced items in cash sales',
     run() {
       const result = validateCheckout({
         paymentMethod: 'cash',
-        amountReceived: 200,
-        totalAmount: 120,
-        subtotalAmount: 120,
+        amountReceived: 0,
+        totalAmount: 0,
+        subtotalAmount: 0,
         cartItems: [
           {
             name: 'Soju Original',
@@ -118,11 +118,30 @@ const tests = [
         ],
       })
 
-      assert.equal(result.isValid, false)
-      assert.equal(
-        result.errors.cart,
-        'Soju Original cannot be sold until it has a valid price.',
-      )
+      assert.equal(result.isValid, true)
+      assert.deepEqual(result.errors, {})
+    },
+  },
+  {
+    name: 'validateCheckout allows zero-total cash sales without amount received',
+    run() {
+      const result = validateCheckout({
+        paymentMethod: 'cash',
+        amountReceived: '',
+        totalAmount: 0,
+        subtotalAmount: 0,
+        cartItems: [
+          {
+            name: 'Promo Samgyup Add-on',
+            quantity: 1,
+            stockQuantity: 5,
+            price: 0,
+          },
+        ],
+      })
+
+      assert.equal(result.isValid, true)
+      assert.deepEqual(result.errors, {})
     },
   },
   {
@@ -152,7 +171,7 @@ const tests = [
     },
   },
   {
-    name: 'deriveProductSellability flags zero-priced products as unavailable',
+    name: 'deriveProductSellability keeps zero-priced products sellable for checkout',
     run() {
       const result = deriveProductSellability({
         price: 0,
@@ -161,8 +180,9 @@ const tests = [
       })
 
       assert.deepEqual(result, {
-        isSellable: false,
+        isSellable: true,
         availabilityReason: 'Price not set',
+        hasPriceConfigured: false,
       })
     },
   },

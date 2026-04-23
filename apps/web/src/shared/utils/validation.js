@@ -94,7 +94,7 @@ export function validateCheckout({
         break
       }
 
-      if (!Number.isFinite(unitPrice) || unitPrice <= 0) {
+      if (!Number.isFinite(unitPrice) || unitPrice < 0) {
         errors.cart = `${itemName} cannot be sold until it has a valid price.`
         break
       }
@@ -121,12 +121,15 @@ export function validateCheckout({
   }
 
   if (normalizedPaymentMethod === 'cash') {
+    const normalizedTotalAmount = Number(totalAmount || 0)
     const normalizedAmount =
       amountReceived === '' || amountReceived == null ? NaN : Number(amountReceived)
 
     if (Number.isNaN(normalizedAmount)) {
-      errors.amountReceived = 'Amount received is required for cash payments.'
-    } else if (normalizedAmount < Number(totalAmount || 0)) {
+      if (normalizedTotalAmount > 0) {
+        errors.amountReceived = 'Amount received is required for cash payments.'
+      }
+    } else if (normalizedAmount < normalizedTotalAmount) {
       errors.amountReceived =
         'Amount received must be equal to or greater than total amount.'
     }
