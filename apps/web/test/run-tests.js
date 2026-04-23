@@ -34,13 +34,16 @@ import {
   getSaleReference,
 } from '../src/features/pos/services/salesService.js'
 import {
+  INVENTORY_ALLOWED_CATEGORIES,
   INVENTORY_CATEGORY_UNCATEGORIZED,
   INVENTORY_FILTER_EXPIRY_DATE,
   INVENTORY_FILTER_LOW_STOCK,
+  getInventoryCategoryLabel,
   getInventoryCategoryOptions,
   getInventoryCategoryValue,
   resolveInventoryFilterResults,
 } from '../src/features/inventory/utils/inventoryFilters.js'
+import { normalizeInventoryItem } from '../src/features/inventory/services/inventoryService.js'
 import {
   validateCheckout,
   validateInventoryForm,
@@ -88,6 +91,23 @@ const tests = [
 
       assert.equal(result.isValid, false)
       assert.equal(result.errors.stock, 'Stock quantity must be a whole number.')
+    },
+  },
+  {
+    name: 'validateInventoryForm canonicalizes allowed inventory category labels',
+    run() {
+      const result = validateInventoryForm({
+        product_name: 'Seaweed Snack',
+        category_name: '  seaWEED ',
+        price: '55',
+        stock_quantity: '10',
+        unit: 'pack',
+        expiry_date: '2026-05-20',
+        reorder_level: '2',
+      })
+
+      assert.equal(result.isValid, true)
+      assert.equal(result.sanitizedData.category_name, 'Seaweed')
     },
   },
   {
@@ -636,6 +656,32 @@ const tests = [
     },
   },
   {
+    name: 'getInventoryCategoryLabel canonicalizes allowed inventory categories',
+    run() {
+      assert.equal(getInventoryCategoryLabel(' korean noodles '), 'Korean Noodles')
+      assert.equal(getInventoryCategoryLabel('SEAWEED'), 'Seaweed')
+      assert.deepEqual(INVENTORY_ALLOWED_CATEGORIES, [
+        'Korean Noodles',
+        'Samgyup bowl meat',
+        'Samgyup meat',
+        'Seaweed',
+      ])
+    },
+  },
+  {
+    name: 'getInventoryCategoryOptions dedupes normalized labels and keeps allowed labels canonical',
+    run() {
+      const result = getInventoryCategoryOptions([
+        { category_name: ' korean noodles ' },
+        { category_name: 'Korean Noodles' },
+        { category_name: 'SEAWEED' },
+        { category_name: 'Seaweed ' },
+      ])
+
+      assert.deepEqual(result, ['Korean Noodles', 'Seaweed'])
+    },
+  },
+  {
     name: 'resolveInventoryFilterResults matches uncategorized items through category filtering',
     run() {
       const result = resolveInventoryFilterResults({
@@ -702,6 +748,49 @@ const tests = [
       assert.deepEqual(
         result.filteredItems.map((inventoryItem) => inventoryItem.product_name),
         ['Pork Belly'],
+      )
+    },
+  },
+  {
+    name: 'inventory category fallback prefers legacy labels over uncategorized defaults',
+    run() {
+      const item = normalizeInventoryItem({
+        category_name: 'Uncategorized',
+        category: '  samgyup meat  ',
+        product_name: 'Pork Belly Plain',
+        stock_quantity: 9,
+        reorder_level: 10,
+        unit: '250g',
+      })
+
+      assert.equal(item.category_name, 'Samgyup meat')
+    },
+  },
+  {
+    name: 'resolveInventoryFilterResults canonicalizes allowed legacy categories during filtering',
+    run() {
+      const result = resolveInventoryFilterResults({
+        items: [
+          {
+            id: 1,
+            branch_id: 1,
+            category_name: 'Uncategorized',
+            category: '  korean noodles ',
+            product_name: 'Buldak Carbo',
+            stock_quantity: 25,
+            reorder_level: 10,
+            expiry_date: '',
+          },
+        ],
+        branchId: '1',
+        category: 'KOREAN NOODLES',
+      })
+
+      assert.deepEqual(result.categoryOptions, ['Korean Noodles'])
+      assert.equal(result.resolvedCategory, 'Korean Noodles')
+      assert.deepEqual(
+        result.filteredItems.map((inventoryItem) => inventoryItem.product_name),
+        ['Buldak Carbo'],
       )
     },
   },

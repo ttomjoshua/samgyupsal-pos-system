@@ -1,20 +1,32 @@
+import {
+  ALLOWED_INVENTORY_CATEGORIES,
+  getCanonicalCategoryLabel,
+  normalizeCategoryComparison,
+  resolvePreferredCategoryLabel,
+  UNCATEGORIZED_CATEGORY_LABEL,
+} from '../../../shared/utils/categoryUtils.js'
+
 export const INVENTORY_FILTER_ALL = 'all'
 export const INVENTORY_FILTER_LOW_STOCK = 'low-stock'
 export const INVENTORY_FILTER_EXPIRY_DATE = 'expiry-date'
-export const INVENTORY_CATEGORY_UNCATEGORIZED = 'Uncategorized'
+export const INVENTORY_CATEGORY_UNCATEGORIZED = UNCATEGORIZED_CATEGORY_LABEL
+export const INVENTORY_ALLOWED_CATEGORIES = ALLOWED_INVENTORY_CATEGORIES
 
 function normalizeFilterText(value) {
-  return String(value || '')
-    .trim()
-    .toLowerCase()
+  return normalizeCategoryComparison(value)
 }
 
 export function getInventoryCategoryLabel(value) {
-  return String(value || '').trim() || INVENTORY_CATEGORY_UNCATEGORIZED
+  return getCanonicalCategoryLabel(value) || INVENTORY_CATEGORY_UNCATEGORIZED
 }
 
 export function getInventoryCategoryValue(item = {}) {
-  return String(item?.category_name || item?.category || '').trim()
+  return resolvePreferredCategoryLabel(
+    item?.category_name,
+    item?.category,
+    item?.legacy_category_name,
+    item?.legacy_category,
+  )
 }
 
 export function isInventoryItemLowStock(item) {
@@ -81,10 +93,24 @@ export function sortInventoryItems(items = [], status = INVENTORY_FILTER_ALL) {
 }
 
 export function getInventoryCategoryOptions(items = []) {
-  return [...new Set(
-    items
-      .map((item) => getInventoryCategoryLabel(getInventoryCategoryValue(item))),
-  )].sort((leftValue, rightValue) => leftValue.localeCompare(rightValue))
+  const normalizedCategoryOptions = new Map()
+
+  items.forEach((item) => {
+    const categoryLabel = getInventoryCategoryLabel(getInventoryCategoryValue(item))
+    const normalizedCategory = normalizeFilterText(categoryLabel)
+
+    if (!normalizedCategory) {
+      return
+    }
+
+    if (!normalizedCategoryOptions.has(normalizedCategory)) {
+      normalizedCategoryOptions.set(normalizedCategory, categoryLabel)
+    }
+  })
+
+  return [...normalizedCategoryOptions.values()].sort((leftValue, rightValue) =>
+    normalizeFilterText(leftValue).localeCompare(normalizeFilterText(rightValue)),
+  )
 }
 
 export function filterInventoryItemsByCategory(items = [], category = 'all') {

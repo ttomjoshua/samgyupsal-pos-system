@@ -13,6 +13,7 @@ import {
   getCachedResource,
   setCachedResource,
 } from '../../../shared/utils/resourceCache'
+import { resolvePreferredCategoryLabel } from '../../../shared/utils/categoryUtils.js'
 
 const PRODUCTS_CACHE_PREFIX = 'products:'
 const PRODUCTS_CACHE_TTL_MS = 60 * 1000
@@ -39,12 +40,11 @@ function extractProductArray(payload) {
 
 function normalizeCatalogProduct(product, index) {
   const productId = product.product_id ?? product.id ?? product._id ?? product.productId
-  const categoryName =
-    product.category_name ||
-    product.categories?.name ||
-    product.category ||
-    product.category_name ||
-    'Uncategorized'
+  const categoryName = resolvePreferredCategoryLabel(
+    product.category_name,
+    product.categories?.name,
+    product.category,
+  )
   const branchName = product.branch_name || product.branch || 'Unassigned Branch'
   const branchId =
     product.branch_id ??
@@ -83,11 +83,11 @@ function normalizeCatalogProduct(product, index) {
 
 function normalizeInventoryProduct(product, index) {
   const productId = product.product_id ?? product.id ?? product._id ?? product.productId
-  const categoryName =
-    product.category_name ||
-    product.categories?.name ||
-    product.category ||
-    'Uncategorized'
+  const categoryName = resolvePreferredCategoryLabel(
+    product.category_name,
+    product.categories?.name,
+    product.category,
+  )
   const branchName = product.branch_name || product.branch || 'Unassigned Branch'
   const branchId =
     product.branch_id ??

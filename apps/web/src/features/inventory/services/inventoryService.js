@@ -15,6 +15,7 @@ import {
   getCachedResource,
   setCachedResource,
 } from '../../../shared/utils/resourceCache.js'
+import { resolvePreferredCategoryLabel } from '../../../shared/utils/categoryUtils.js'
 import {
   getStoredInventoryItems,
   saveStoredInventoryItems,
@@ -127,9 +128,13 @@ function resolveSupabaseProductBranch(values = {}, fallbackItem = {}) {
 function buildSupabaseProductPayload(values, fallbackItem = {}) {
   return {
     branch: resolveSupabaseProductBranch(values, fallbackItem),
-    category: sanitizeInventoryText(
-      values.category_name ?? values.category ?? fallbackItem.category_name ?? fallbackItem.category,
-    ) || 'Uncategorized',
+    category:
+      sanitizeInventoryText(
+        resolvePreferredCategoryLabel(
+          values.category_name ?? values.category,
+          fallbackItem.category_name ?? fallbackItem.category,
+        ),
+      ) || 'Uncategorized',
     product_name: sanitizeInventoryText(
       values.product_name ?? values.product ?? fallbackItem.product_name ?? fallbackItem.product,
     ),
@@ -300,7 +305,12 @@ export async function getInventoryItems(options = {}) {
 
 export function normalizeInventoryItem(item) {
   const productName = item.product_name || item.product || ''
-  const categoryName = item.category_name || item.category || ''
+  const categoryName = resolvePreferredCategoryLabel(
+    item.category_name,
+    item.category,
+    item.legacy_category_name,
+    item.legacy_category,
+  )
   const stockQuantity = Number(item.stock_quantity ?? item.stock ?? 0)
   const reorderLevel = Number(item.reorder_level ?? LOW_STOCK_THRESHOLD)
   const expiryDate =
@@ -341,7 +351,9 @@ export function createInventoryItemRecord(values, existingItems = []) {
     product_id: nextId,
     branch_id: values.branch_id ?? null,
     branch_name: values.branch_name || 'Unassigned Branch',
-    category_name: sanitizeInventoryText(values.category_name ?? values.category),
+    category_name: sanitizeInventoryText(
+      resolvePreferredCategoryLabel(values.category_name, values.category),
+    ),
     product_name: sanitizeInventoryText(values.product_name ?? values.product),
     stock_quantity: Number(values.stock_quantity ?? values.stock ?? 0),
     unit: sanitizeInventoryText(values.unit),

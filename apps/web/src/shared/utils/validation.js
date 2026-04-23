@@ -1,3 +1,5 @@
+import { getCanonicalCategoryLabel } from './categoryUtils.js'
+
 function collapseWhitespace(value) {
   return String(value || '')
     .trim()
@@ -143,7 +145,9 @@ export function validateCheckout({
 
 export function validateInventoryForm(formData = {}) {
   const productName = collapseWhitespace(formData.product_name || formData.name)
-  const categoryName = collapseWhitespace(formData.category_name || formData.category)
+  const categoryName = getCanonicalCategoryLabel(
+    collapseWhitespace(formData.category_name || formData.category),
+  )
   const stockQuantity = formData.stock_quantity ?? formData.stock
   const unit = collapseWhitespace(formData.unit)
   const expiryDate = String(formData.expiry_date || '').trim()

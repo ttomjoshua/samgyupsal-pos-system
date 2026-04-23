@@ -1,3 +1,5 @@
+import { getCanonicalCategoryLabel } from './categoryUtils.js'
+
 const CATEGORY_STORAGE_KEY = 'samyupsal-pos-custom-categories'
 const USER_KEY = 'samyupsal_user'
 const MOCK_BRANCHES_KEY = 'samyupsal_mock_branches'
@@ -83,7 +85,7 @@ function removeSessionValue(storageKey) {
 }
 
 function normalizeCategoryName(categoryName) {
-  return categoryName.trim().replace(/\s+/g, ' ')
+  return getCanonicalCategoryLabel(categoryName)
 }
 
 export function readSessionStorageValue(storageKey, fallbackValue) {

@@ -237,6 +237,29 @@ After deploying it:
 - admins can create employee login accounts directly from the Users page
 - the login page no longer depends on a frontend-only employee placeholder flow
 
+## 12. Restore legacy category labels for uncategorized products
+
+Run when the flattened `products` table still shows `category = 'Uncategorized'` for rows that should have kept one of the legacy retail labels:
+
+- [`apps/web/supabase/sql/12_restore_legacy_product_categories.sql`](../../apps/web/supabase/sql/12_restore_legacy_product_categories.sql)
+
+This repair script:
+
+- cross-references `public.products` against `public.products_legacy`
+- matches rows by normalized branch, product name, and unit / net weight using trimmed, lowercased comparisons
+- restores the original legacy category string when the match resolves cleanly to one of:
+  - `Korean Noodles`
+  - `Samgyup bowl meat`
+  - `Samgyup meat`
+  - `Seaweed`
+- only updates rows that are still blank or already set to `Uncategorized`
+
+Important:
+
+- this script expects `public.products_legacy` to still exist
+- it is safe to run after the flattening step whenever category labels drift back to `Uncategorized`
+- `apps/web/supabase/sql/08_flatten_products_schema.sql` now includes the same recovery logic for future rebuilds
+
 ## New backend shape
 
 The frontend is now aligned to this structure:
@@ -274,6 +297,10 @@ The flattened schema keeps operational values in these columns:
 ```sql
 select count(*) from public.products_legacy;
 select count(*) from public.products;
+
+select count(*)
+from public.products
+where lower(btrim(category)) = 'uncategorized';
 
 select *
 from public.products
