@@ -1,10 +1,11 @@
-import { useDeferredValue, useEffect, useMemo, useState } from 'react'
+import { useCallback, useDeferredValue, useEffect, useMemo, useState } from 'react'
 import EmptyState from '../../../shared/components/common/EmptyState'
 import Loader from '../../../shared/components/common/Loader'
 import NoticeBanner from '../../../shared/components/common/NoticeBanner'
 import PaginationControls from '../../../shared/components/common/PaginationControls'
 import Modal from '../../../shared/components/ui/Modal'
 import useSessionStorageState from '../../../shared/hooks/useSessionStorageState'
+import { isSupabaseDataEnabled } from '../../../shared/api/supabaseClient'
 import {
   getCachedProductCatalog,
   getProductCatalog,
@@ -62,12 +63,12 @@ function ProductsPage() {
   )
   const categorySearch = productsViewState?.categorySearch || ''
   const productSearch = productsViewState?.productSearch || ''
-  const updateProductsViewState = (patch) => {
+  const updateProductsViewState = useCallback((patch) => {
     setProductsViewState((currentState) => ({
       ...(currentState || {}),
       ...(typeof patch === 'function' ? patch(currentState || {}) : patch),
     }))
-  }
+  }, [setProductsViewState])
   const deferredCategorySearch = useDeferredValue(categorySearch)
   const deferredProductSearch = useDeferredValue(productSearch)
 
@@ -160,7 +161,7 @@ function ProductsPage() {
     }
 
     return products.filter((product) =>
-      [product.name, product.category, product.branchName, product.unit]
+      [product.name, product.barcode, product.category, product.branchName, product.unit]
         .filter(Boolean)
         .some((value) => value.toLowerCase().includes(normalizedProductSearch)),
     )
@@ -228,19 +229,19 @@ function ProductsPage() {
             categoryPage: 1,
           }
     ))
-  }, [customCategories, normalizedCategorySearch])
+  }, [customCategories, normalizedCategorySearch, updateProductsViewState])
 
   useEffect(() => {
     if (categoryPage > categoryTotalPages) {
       updateProductsViewState({ categoryPage: categoryTotalPages })
     }
-  }, [categoryPage, categoryTotalPages])
+  }, [categoryPage, categoryTotalPages, updateProductsViewState])
 
   useEffect(() => {
     if (productPage > productTotalPages) {
       updateProductsViewState({ productPage: productTotalPages })
     }
-  }, [productPage, productTotalPages])
+  }, [productPage, productTotalPages, updateProductsViewState])
 
   useEffect(() => {
     updateProductsViewState((currentState) => (
@@ -251,7 +252,7 @@ function ProductsPage() {
             visibleCategoryPage: 1,
           }
     ))
-  }, [availableCategories, normalizedCategorySearch])
+  }, [availableCategories, normalizedCategorySearch, updateProductsViewState])
 
   useEffect(() => {
     updateProductsViewState((currentState) => (
@@ -262,7 +263,7 @@ function ProductsPage() {
             productPage: 1,
           }
     ))
-  }, [normalizedProductSearch])
+  }, [normalizedProductSearch, updateProductsViewState])
 
   useEffect(() => {
     if (visibleCategoryPage > visibleCategoryTotalPages) {
@@ -270,7 +271,7 @@ function ProductsPage() {
         visibleCategoryPage: visibleCategoryTotalPages,
       })
     }
-  }, [visibleCategoryPage, visibleCategoryTotalPages])
+  }, [visibleCategoryPage, visibleCategoryTotalPages, updateProductsViewState])
 
   const isCustomCategory = (categoryName) =>
     customCategories.some(
@@ -281,6 +282,17 @@ function ProductsPage() {
     productCategories.some(
       (category) => category.toLowerCase() === categoryName.toLowerCase(),
     )
+
+  const canEditCategory = (category) =>
+    category.isCustom || (category.isProduct && isSupabaseDataEnabled)
+
+  const getCategoryActionNote = (category) => {
+    if (canEditCategory(category)) {
+      return ''
+    }
+
+    return 'Product-backed categories can be edited after Supabase catalog sync is enabled.'
+  }
 
   const handleAddCategory = (event) => {
     event.preventDefault()
@@ -527,7 +539,7 @@ function ProductsPage() {
             </div>
           </div>
 
-          <form className="category-inline-form" onSubmit={handleAddCategory} style={{ marginBottom: '1rem', marginTop: '1rem' }}>
+          <form className="category-inline-form" onSubmit={handleAddCategory}>
             <input
               type="text"
               className="products-search-input"
@@ -536,7 +548,7 @@ function ProductsPage() {
               onChange={(event) => setNewCategoryName(event.target.value)}
               aria-label="Add new category name"
             />
-            <button type="submit" className="primary-button" style={{ whiteSpace: 'nowrap' }}>
+            <button type="submit" className="primary-button category-inline-submit">
               Add Category
             </button>
           </form>
@@ -547,7 +559,7 @@ function ProductsPage() {
             message={categoryMessage}
           />
 
-          <div className="products-search-shell" style={{ marginBottom: '1rem' }}>
+          <div className="products-search-shell products-category-search">
             <input
               id="category-search"
               type="search"
@@ -680,7 +692,7 @@ function ProductsPage() {
                             </span>
                           ) : null}
                         </div>
-                        <span className="products-table-muted" style={{ marginLeft: '0.5rem', fontSize: '0.85rem' }}>
+                        <span className="products-table-muted products-category-count">
                           ({getProductCategoryUsageCount(category.name)} item{getProductCategoryUsageCount(category.name) === 1 ? '' : 's'})
                         </span>
                       </div>
@@ -689,6 +701,8 @@ function ProductsPage() {
                           type="button"
                           className="products-table-edit-action"
                           onClick={() => handleOpenEditCategory(category.name, category)}
+                          disabled={!canEditCategory(category)}
+                          title={getCategoryActionNote(category) || undefined}
                           aria-label={`Edit ${category.name} category`}
                         >
                           Edit
@@ -697,6 +711,8 @@ function ProductsPage() {
                           type="button"
                           className="products-table-action"
                           onClick={() => handleOpenRemoveCategory(category.name, category)}
+                          disabled={!canEditCategory(category)}
+                          title={getCategoryActionNote(category) || undefined}
                           aria-label={`Remove ${category.name} category`}
                         >
                           Remove
@@ -751,7 +767,7 @@ function ProductsPage() {
           <div className="products-toolbar">
             <div className="products-toolbar-copy">
               <strong>Search Products</strong>
-              <span>Search by product, category, branch, or pack size.</span>
+              <span>Search by product, barcode, category, branch, or pack size.</span>
             </div>
             <div className="products-search-shell">
               <label className="products-search-label" htmlFor="product-search">
@@ -761,7 +777,7 @@ function ProductsPage() {
                 id="product-search"
                 type="search"
                 className="products-search-input"
-                placeholder="Search product, category, branch, or pack size"
+                placeholder="Search product, barcode, category, branch, or pack size"
                 value={productSearch}
                 onChange={(event) =>
                   updateProductsViewState({
@@ -797,6 +813,7 @@ function ProductsPage() {
                     <tr>
                       <th>Product</th>
                       <th>Category</th>
+                      <th>Barcode</th>
                       <th>Branch</th>
                       <th>Unit / Pack Size</th>
                       <th>Price</th>
@@ -814,6 +831,7 @@ function ProductsPage() {
                             </div>
                           </td>
                           <td>{item.category}</td>
+                          <td>{item.barcode || 'N/A'}</td>
                           <td>
                             <span className="products-inline-pill">
                               {item.branchName || 'Unassigned Branch'}

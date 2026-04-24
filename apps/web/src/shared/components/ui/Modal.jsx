@@ -1,4 +1,4 @@
-import { useId } from 'react'
+import { useEffect, useId, useRef } from 'react'
 import '../../styles/modal.css'
 
 function Modal({
@@ -15,6 +15,40 @@ function Modal({
 }) {
   const titleId = useId()
   const descriptionId = useId()
+  const closeButtonRef = useRef(null)
+  const onCloseRef = useRef(onClose)
+
+  useEffect(() => {
+    onCloseRef.current = onClose
+  }, [onClose])
+
+  useEffect(() => {
+    if (!isOpen) {
+      return undefined
+    }
+
+    const previousOverflow = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    window.setTimeout(() => {
+      if (document.activeElement === document.body) {
+        closeButtonRef.current?.focus()
+      }
+    }, 0)
+
+    const handleKeyDown = (event) => {
+      if (event.key === 'Escape') {
+        event.preventDefault()
+        onCloseRef.current?.()
+      }
+    }
+
+    window.addEventListener('keydown', handleKeyDown)
+
+    return () => {
+      document.body.style.overflow = previousOverflow
+      window.removeEventListener('keydown', handleKeyDown)
+    }
+  }, [isOpen])
 
   if (!isOpen) {
     return null
@@ -50,6 +84,7 @@ function Modal({
           </div>
 
           <button
+            ref={closeButtonRef}
             type="button"
             className="modal-close-btn"
             onClick={onClose}

@@ -60,6 +60,13 @@ function normalizePaymentMethod(value) {
     .toLowerCase()
 }
 
+function normalizePostgrestSearchValue(value) {
+  return normalizeSearchInput(value)
+    .replace(/[%*(),]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+}
+
 function invalidateSalesCaches() {
   clearCachedResourceByPrefix(SALES_CACHE_PREFIX)
   clearCachedResourceByPrefix('reports:')
@@ -73,6 +80,9 @@ function buildSalesCacheKey(namespace, options = {}) {
     transactionQuery: normalizeSearchInput(options.transactionQuery),
     cashierQuery: normalizeSearchInput(options.cashierQuery),
     cashierId: normalizeText(options.cashierId),
+    cashierProfileIds: Array.isArray(options.cashierProfileIds)
+      ? options.cashierProfileIds.map((cashierId) => normalizeText(cashierId)).sort()
+      : [],
     dateFrom: String(options.dateFrom || '').trim(),
     dateTo: String(options.dateTo || '').trim(),
     paymentMethod: normalizePaymentMethod(options.paymentMethod),
@@ -282,14 +292,32 @@ function matchesTransactionQuery(sale, transactionQuery) {
   return getSaleReference(sale).toLowerCase().includes(normalizedQuery)
 }
 
-function matchesCashierQuery(sale, cashierQuery) {
+function matchesCashierQuery(sale, cashierQuery, cashierProfileIds = []) {
   const normalizedQuery = normalizeSearchInput(cashierQuery).toLowerCase()
+  const normalizedCashierId = normalizeText(sale.cashier_id)
+  const normalizedProfileIds = Array.isArray(cashierProfileIds)
+    ? cashierProfileIds.map((cashierId) => normalizeText(cashierId)).filter(Boolean)
+    : []
 
   if (!normalizedQuery) {
     return true
   }
 
-  return normalizeText(sale.cashier_name).toLowerCase().includes(normalizedQuery)
+  if (
+    normalizedCashierId &&
+    normalizedProfileIds.some((cashierId) => cashierId === normalizedCashierId)
+  ) {
+    return true
+  }
+
+  return [
+    sale.cashier_name,
+    sale.cashierName,
+    sale.cashier_id,
+    sale.cashierId,
+  ]
+    .map((value) => normalizeText(value).toLowerCase())
+    .some((value) => value.includes(normalizedQuery))
 }
 
 function matchesCashierId(sale, cashierId) {
@@ -366,6 +394,35 @@ async function getSupabaseSaleItemsBySaleIds(saleIds = []) {
   }, new Map())
 }
 
+async function getSupabaseCashierIdsByQuery(cashierQuery) {
+  const normalizedQuery = normalizePostgrestSearchValue(cashierQuery)
+
+  if (!normalizedQuery) {
+    return []
+  }
+
+  try {
+    const supabase = getSupabaseClient()
+    const profileQuery = `full_name.ilike.*${normalizedQuery}*,username.ilike.*${normalizedQuery}*`
+    const { data, error } = await supabase
+      .from(supabaseTables.profiles)
+      .select('id')
+      .or(profileQuery)
+      .limit(50)
+
+    if (error) {
+      throw error
+    }
+
+    return (data || [])
+      .map((profile) => normalizeText(profile.id))
+      .filter(Boolean)
+  } catch (error) {
+    console.warn('Employee profile lookup for sales filtering failed:', error)
+    return []
+  }
+}
+
 function applySupabaseSalesFilters(query, options = {}, user) {
   let nextQuery = query
 
@@ -412,7 +469,23 @@ function applySupabaseSalesFilters(query, options = {}, user) {
   const normalizedCashierQuery = normalizeSearchInput(options.cashierQuery)
 
   if (isAdminUser(user) && normalizedCashierQuery) {
-    nextQuery = nextQuery.ilike('cashier_name', `%${normalizedCashierQuery}%`)
+    const normalizedPostgrestQuery = normalizePostgrestSearchValue(normalizedCashierQuery)
+    const cashierProfileIds = Array.isArray(options.cashierProfileIds)
+      ? options.cashierProfileIds
+          .map((cashierId) => normalizeText(cashierId))
+          .filter(Boolean)
+      : []
+
+    if (cashierProfileIds.length > 0) {
+      nextQuery = nextQuery.or(
+        [
+          `cashier_name.ilike.*${normalizedPostgrestQuery}*`,
+          `cashier_id.in.(${cashierProfileIds.join(',')})`,
+        ].join(','),
+      )
+    } else {
+      nextQuery = nextQuery.ilike('cashier_name', `%${normalizedCashierQuery}%`)
+    }
   }
 
   const transactionReference = parseTransactionReference(options.transactionQuery)
@@ -430,12 +503,33 @@ function applySupabaseSalesFilters(query, options = {}, user) {
 
 async function loadSupabaseSalesHistory(options = {}, paginationOptions = null) {
   const supabase = getSupabaseClient()
+  const providedCashierProfileIds = Array.isArray(options.cashierProfileIds)
+    ? options.cashierProfileIds
+        .map((cashierId) => normalizeText(cashierId))
+        .filter(Boolean)
+    : []
+  const cashierProfileIds =
+    isAdminUser(options.user) && normalizeSearchInput(options.cashierQuery)
+      ? Array.from(
+          new Set([
+            ...providedCashierProfileIds,
+            ...(await getSupabaseCashierIdsByQuery(options.cashierQuery)),
+          ]),
+        )
+      : providedCashierProfileIds
   const baseQuery = supabase
     .from(supabaseTables.sales)
     .select('*', { count: 'exact' })
     .order('submitted_at', { ascending: false })
 
-  let filteredQuery = applySupabaseSalesFilters(baseQuery, options, options.user)
+  let filteredQuery = applySupabaseSalesFilters(
+    baseQuery,
+    {
+      ...options,
+      cashierProfileIds,
+    },
+    options.user,
+  )
 
   if (filteredQuery == null) {
     const emptyPage = paginationOptions
@@ -725,7 +819,9 @@ export function filterSalesRecords(records = [], options = {}) {
     .filter((sale) => matchesBranchFilter(sale, options.branchId))
     .filter((sale) => matchesPaymentFilter(sale, options.paymentMethod))
     .filter((sale) => matchesTransactionQuery(sale, options.transactionQuery))
-    .filter((sale) => matchesCashierQuery(sale, options.cashierQuery))
+    .filter((sale) =>
+      matchesCashierQuery(sale, options.cashierQuery, options.cashierProfileIds),
+    )
     .sort(sortSalesByNewest)
 }
 

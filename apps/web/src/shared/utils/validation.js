@@ -1,4 +1,8 @@
-import { getCanonicalCategoryLabel } from './categoryUtils.js'
+import {
+  getStandardProductCategoryLabel,
+  isValidBarcodeValue,
+  normalizeBarcodeValue,
+} from './categoryUtils.js'
 
 function collapseWhitespace(value) {
   return String(value || '')
@@ -145,14 +149,20 @@ export function validateCheckout({
 
 export function validateInventoryForm(formData = {}) {
   const productName = collapseWhitespace(formData.product_name || formData.name)
-  const categoryName = getCanonicalCategoryLabel(
+  const categoryName = getStandardProductCategoryLabel(
     collapseWhitespace(formData.category_name || formData.category),
   )
   const stockQuantity = formData.stock_quantity ?? formData.stock
   const unit = collapseWhitespace(formData.unit)
   const expiryDate = String(formData.expiry_date || '').trim()
-  const reorderLevel = formData.reorder_level ?? 0
+  const reorderLevel = formData.reorder_level
+  const barcode = normalizeBarcodeValue(formData.barcode)
+  const hasReorderLevel =
+    reorderLevel !== undefined &&
+    reorderLevel !== null &&
+    String(reorderLevel).trim() !== ''
   const priceValue = formData.price
+  const numericPrice = Number(priceValue)
   const errors = {}
 
   if (!productName) {
@@ -160,7 +170,7 @@ export function validateInventoryForm(formData = {}) {
   }
 
   if (!categoryName) {
-    errors.category = 'Category is required.'
+    errors.category = 'Select a supported product category.'
   }
 
   if (stockQuantity === '' || stockQuantity == null) {
@@ -171,24 +181,23 @@ export function validateInventoryForm(formData = {}) {
     errors.stock = 'Stock cannot be negative.'
   }
 
-  if (!unit) {
-    errors.unit = 'Unit / pack size is required.'
-  }
-
-  if (!expiryDate) {
-    errors.expiryDate = 'Expiry date is required.'
-  }
-
   if (priceValue === undefined || priceValue === null || String(priceValue).trim() === '') {
     errors.price = 'Price is required.'
-  } else if (Number(priceValue) <= 0) {
-    errors.price = 'Price must be greater than zero.'
+  } else if (!Number.isFinite(numericPrice)) {
+    errors.price = 'Price must be a valid number.'
+  } else if (numericPrice < 0) {
+    errors.price = 'Price cannot be negative.'
   }
 
-  if (String(reorderLevel).trim() !== '' && Number(reorderLevel) < 0) {
+  if (hasReorderLevel && Number(reorderLevel) < 0) {
     errors.reorderLevel = 'Reorder level cannot be negative.'
-  } else if (String(reorderLevel).trim() !== '' && !isWholeNumber(reorderLevel)) {
+  } else if (hasReorderLevel && !isWholeNumber(reorderLevel)) {
     errors.reorderLevel = 'Reorder level must be a whole number.'
+  }
+
+  if (!isValidBarcodeValue(barcode)) {
+    errors.barcode =
+      'Barcode can use letters, numbers, hyphens, slashes, dots, or underscores only.'
   }
 
   return {
@@ -198,11 +207,12 @@ export function validateInventoryForm(formData = {}) {
       ...formData,
       product_name: productName,
       category_name: categoryName,
-      price: Number(priceValue),
+      price: numericPrice,
       stock_quantity: Number(stockQuantity),
       unit,
-      expiry_date: expiryDate,
-      reorder_level: Number(reorderLevel ?? 0),
+      expiry_date: expiryDate || null,
+      barcode: barcode || null,
+      ...(hasReorderLevel ? { reorder_level: Number(reorderLevel) } : {}),
     },
   }
 }

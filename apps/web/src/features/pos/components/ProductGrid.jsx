@@ -1,15 +1,35 @@
 import EmptyState from '../../../shared/components/common/EmptyState'
 import { peso } from '../../../shared/utils/formatters'
 
+function normalizeProductValue(value) {
+  const normalizedValue = String(value ?? '').trim()
+  return normalizedValue === '-' ? '' : normalizedValue
+}
+
+function getProductInitials(value) {
+  const words = String(value || '')
+    .trim()
+    .split(/\s+/)
+    .filter(Boolean)
+
+  if (words.length === 0) {
+    return 'PR'
+  }
+
+  return words
+    .slice(0, 2)
+    .map((word) => word[0])
+    .join('')
+    .toUpperCase()
+}
+
 function ProductGrid({ products, cart = [], setCart, onProductAdded }) {
   const cartQuantityByProductId = new Map(
     cart.map((item) => [String(item.id), Number(item.quantity || 0)]),
   )
 
   const addToCart = (product) => {
-    const isPriceNotSet = product.availabilityReason === 'Price not set'
-
-    if (product.isSellable === false && !isPriceNotSet) {
+    if (product.isSellable === false) {
       return
     }
 
@@ -65,8 +85,14 @@ function ProductGrid({ products, cart = [], setCart, onProductAdded }) {
           : null
         const isOutOfStock = remainingStock === 0
         const isPriceNotSet = product.availabilityReason === 'Price not set'
-        const isUnavailable =
-          (product.isSellable === false && !isPriceNotSet) || isOutOfStock
+        const isUnavailable = product.isSellable === false || isOutOfStock
+        const unitValue = normalizeProductValue(product.unit)
+        const categoryValue = normalizeProductValue(product.category) || 'Uncategorized'
+        const qualityFlags = [
+          unitValue ? null : 'Missing unit',
+          isPriceNotSet ? 'Needs price' : null,
+          isOutOfStock ? 'No stock' : null,
+        ].filter(Boolean)
         const stockLabel = product.isSellable === false && !isPriceNotSet
           ? product.availabilityReason || 'Unavailable'
           : isPriceNotSet
@@ -76,19 +102,88 @@ function ProductGrid({ products, cart = [], setCart, onProductAdded }) {
             : remainingStock === 0
               ? 'Out of stock'
               : `${remainingStock} left`
+        const availabilityLabel = isPriceNotSet
+          ? 'Needs price'
+          : isUnavailable
+          ? stockLabel
+          : quantityInCart > 0
+            ? `${quantityInCart} in cart`
+            : 'Ready'
+        const cardClassName = [
+          'product-card',
+          isUnavailable ? 'product-card-disabled' : '',
+          isPriceNotSet ? 'product-card--needs-review' : '',
+          quantityInCart > 0 ? 'product-card--in-cart' : '',
+        ]
+          .filter(Boolean)
+          .join(' ')
 
         return (
           <button
             key={product.id}
             type="button"
-            className={isUnavailable ? 'product-card product-card-disabled' : 'product-card'}
+            className={cardClassName}
             onClick={() => addToCart(product)}
             disabled={isUnavailable}
           >
-            <span className="product-category">{product.category}</span>
-            <strong>{product.name}</strong>
-            <span className="product-price">{peso(product.price)}</span>
-            <span className="product-stock">{stockLabel}</span>
+            <span className="product-card-topline">
+              <span className="product-card-mark" aria-hidden="true">
+                {getProductInitials(product.name)}
+              </span>
+              <span
+                className={
+                  isUnavailable || isPriceNotSet
+                    ? 'product-card-state product-card-state--attention'
+                    : 'product-card-state'
+                }
+              >
+                {availabilityLabel}
+              </span>
+            </span>
+
+            <span className="product-category">{categoryValue}</span>
+            <strong className="product-card-name" title={product.name || undefined}>
+              {product.name}
+            </strong>
+
+            <span className="product-card-metrics">
+              <span
+                className={
+                  isPriceNotSet
+                    ? 'product-card-metric product-card-metric--attention'
+                    : 'product-card-metric'
+                }
+              >
+                <small>Price</small>
+                <strong>{peso(product.price)}</strong>
+              </span>
+              <span
+                className={
+                  isOutOfStock
+                    ? 'product-card-metric product-card-metric--attention'
+                    : 'product-card-metric'
+                }
+              >
+                <small>Stock</small>
+                <strong>{remainingStock == null ? 'Pending' : remainingStock}</strong>
+              </span>
+            </span>
+
+            <span className="product-card-support">
+              <span title={unitValue ? `Unit: ${unitValue}` : 'Unit is not filled yet'}>
+                {unitValue || 'Unit pending'}
+              </span>
+            </span>
+
+            {qualityFlags.length > 0 ? (
+              <span className="product-card-quality-flags">
+                {qualityFlags.map((flag) => (
+                  <span key={flag} className="product-card-quality-flag">
+                    {flag}
+                  </span>
+                ))}
+              </span>
+            ) : null}
           </button>
         )
       })}

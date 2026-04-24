@@ -55,7 +55,7 @@ function buildPaginationItems(currentPage, totalPages) {
 
 function PosPage() {
   const { user } = useAuth()
-  const canUseSalesDesk = isEmployeeUser(user)
+  const canUseSalesDesk = isAdminUser(user) || isEmployeeUser(user)
   const [branchOptions, setBranchOptions] = useState(() => getCachedBranches() || [])
   const [isBranchLoading, setIsBranchLoading] = useState(
     () => (getCachedBranches() || []).length === 0,
@@ -92,6 +92,8 @@ function PosPage() {
   const [catalogError, setCatalogError] = useState('')
   const [isCatalogLoading, setIsCatalogLoading] = useState(() => !initialCatalogProducts)
   const [historyRefreshKey, setHistoryRefreshKey] = useState(0)
+  const [workspaceMessage, setWorkspaceMessage] = useState('')
+  const [workspaceMessageTone, setWorkspaceMessageTone] = useState('info')
   const deferredSearchTerm = useDeferredValue(searchTerm)
 
   useEffect(() => {
@@ -187,6 +189,8 @@ function PosPage() {
     }
 
     if (!activeBranchId) {
+      setCatalogProducts([])
+      setIsCatalogLoading(false)
       return
     }
 
@@ -206,9 +210,16 @@ function PosPage() {
       }
     }
 
-    if (!getCachedProducts({ branchId: activeBranchId })) {
+    const cachedProducts = getCachedProducts({ branchId: activeBranchId })
+
+    if (cachedProducts) {
+      setCatalogProducts(cachedProducts)
+      setCatalogError('')
+    } else {
+      setCatalogProducts([])
       setIsCatalogLoading(true)
     }
+
     loadCatalog()
   }, [activeBranchId, canUseSalesDesk])
 
@@ -244,6 +255,7 @@ function PosPage() {
         normalizedSearch.length === 0 ||
         [
           product.name,
+          product.barcode,
           product.category,
           product.unit,
           product.branchName,
@@ -298,6 +310,48 @@ function PosPage() {
     filteredProducts.length,
   )
   const hasActiveSearch = normalizeSearchInput(searchTerm).length > 0
+  const readyToSellProductCount = useMemo(
+    () =>
+      filteredProducts.filter(
+        (product) =>
+          product.isSellable !== false &&
+          product.hasPriceConfigured !== false &&
+          Number(product.stockQuantity || 0) > 0,
+      ).length,
+    [filteredProducts],
+  )
+  const needsReviewProductCount = useMemo(
+    () =>
+      filteredProducts.filter((product) => {
+        const hasUnit = String(product.unit || '').trim() !== ''
+        const hasStock = Number(product.stockQuantity || 0) > 0
+
+        return (
+          !hasUnit ||
+          !hasStock ||
+          product.hasPriceConfigured === false
+        )
+      }).length,
+    [filteredProducts],
+  )
+
+  const handleBranchChange = (event) => {
+    const nextBranchId = Number(event.target.value)
+
+    if (cartItems.length > 0 && Number(activeBranchId) !== Number(nextBranchId)) {
+      setWorkspaceMessage(
+        'Clear or checkout the current order before switching branches. This keeps cart items and inventory scope aligned.',
+      )
+      setWorkspaceMessageTone('warning')
+      return
+    }
+
+    setWorkspaceMessage('')
+    setWorkspaceMessageTone('info')
+    updatePosViewState({
+      activeBranchId: nextBranchId,
+    })
+  }
 
   const handleOrderComplete = (action, details = {}) => {
     if (action !== 'checkout') {
@@ -379,11 +433,7 @@ function PosPage() {
                 <SelectMenu
                   className="pos-branch-select"
                   value={activeBranchId}
-                  onChange={(event) =>
-                    updatePosViewState({
-                      activeBranchId: Number(event.target.value),
-                    })
-                  }
+                  onChange={handleBranchChange}
                   id="active-pos-branch-select"
                   placeholder="Select active sales branch"
                   options={branchOptions.map((branch) => ({
@@ -454,6 +504,14 @@ function PosPage() {
         </button>
       </div>
 
+      {workspaceMessage ? (
+        <NoticeBanner
+          variant={workspaceMessageTone}
+          title="Sales workspace"
+          message={workspaceMessage}
+        />
+      ) : null}
+
       {activeView === 'history' ? (
         <SalesHistoryPanel
           branchOptions={branchOptions}
@@ -470,6 +528,30 @@ function PosPage() {
                   <h2>Available Items</h2>
                 </div>
                 <span className="panel-count">{filteredProducts.length} items</span>
+              </div>
+
+              <div className="pos-products-overview-grid">
+                <div className="pos-products-overview-card">
+                  <span className="pos-products-overview-label">Matching Items</span>
+                  <strong>{filteredProducts.length}</strong>
+                  <span className="pos-products-overview-meta">
+                    {activeCategory === 'All' ? 'All categories' : activeCategory}
+                  </span>
+                </div>
+                <div className="pos-products-overview-card">
+                  <span className="pos-products-overview-label">Ready to Sell</span>
+                  <strong>{readyToSellProductCount}</strong>
+                  <span className="pos-products-overview-meta">
+                    Priced and in stock
+                  </span>
+                </div>
+                <div className="pos-products-overview-card">
+                  <span className="pos-products-overview-label">Needs Review</span>
+                  <strong>{needsReviewProductCount}</strong>
+                  <span className="pos-products-overview-meta">
+                    Missing product data
+                  </span>
+                </div>
               </div>
 
               {catalogError ? (

@@ -95,7 +95,7 @@ const tests = [
     },
   },
   {
-    name: 'validateInventoryForm canonicalizes allowed inventory category labels',
+    name: 'validateInventoryForm maps legacy category labels to standard product categories',
     run() {
       const result = validateInventoryForm({
         product_name: 'Seaweed Snack',
@@ -108,7 +108,64 @@ const tests = [
       })
 
       assert.equal(result.isValid, true)
-      assert.equal(result.sanitizedData.category_name, 'Seaweed')
+      assert.equal(result.sanitizedData.category_name, 'Snacks')
+    },
+  },
+  {
+    name: 'validateInventoryForm allows optional unit, expiry, barcode, and zero price',
+    run() {
+      const result = validateInventoryForm({
+        product_name: 'Anchor Butter',
+        category_name: 'Dairy',
+        price: '0',
+        stock_quantity: '40',
+        unit: '',
+        expiry_date: '',
+        barcode: '',
+      })
+
+      assert.equal(result.isValid, true)
+      assert.equal(result.sanitizedData.unit, '')
+      assert.equal(result.sanitizedData.expiry_date, null)
+      assert.equal(result.sanitizedData.barcode, null)
+      assert.equal(result.sanitizedData.price, 0)
+    },
+  },
+  {
+    name: 'validateInventoryForm normalizes optional barcode values',
+    run() {
+      const result = validateInventoryForm({
+        product_name: 'Coke Mismo',
+        barcode: ' 480 0012-3456 ',
+        category_name: 'Drinks',
+        price: '25',
+        stock_quantity: '10',
+        unit: '290ml',
+        expiry_date: '2026-05-20',
+      })
+
+      assert.equal(result.isValid, true)
+      assert.equal(result.sanitizedData.barcode, '4800012-3456')
+    },
+  },
+  {
+    name: 'validateInventoryForm rejects unsafe barcode characters',
+    run() {
+      const result = validateInventoryForm({
+        product_name: 'Coke Mismo',
+        barcode: '480 0012 # 3456',
+        category_name: 'Drinks',
+        price: '25',
+        stock_quantity: '10',
+        unit: '290ml',
+        expiry_date: '2026-05-20',
+      })
+
+      assert.equal(result.isValid, false)
+      assert.equal(
+        result.errors.barcode,
+        'Barcode can use letters, numbers, hyphens, slashes, dots, or underscores only.',
+      )
     },
   },
   {
@@ -495,6 +552,38 @@ const tests = [
     },
   },
   {
+    name: 'filterSalesRecords matches cashier filter against employee id',
+    run() {
+      const result = filterSalesRecords(
+        [
+          {
+            id: 18,
+            cashier_id: 'employee-branch-2',
+            cashier_name: 'Dollar Branch Cashier',
+            branch_id: 2,
+            branch_name: 'Dollar',
+            payment_method: 'cash',
+            subtotal: 180,
+            discount: 0,
+            total_amount: 180,
+            submitted_at: '2026-04-21T11:30:00.000Z',
+            items: [{ item_name: 'Set B', quantity: 2, unit_price: 90, line_total: 180 }],
+          },
+        ],
+        {
+          user: {
+            id: 'admin-1',
+            roleKey: 'admin',
+          },
+          cashierQuery: 'branch-2',
+        },
+      )
+
+      assert.equal(result.length, 1)
+      assert.equal(result[0].cashier_id, 'employee-branch-2')
+    },
+  },
+  {
     name: 'buildReceiptPreviewData rolls up service fees and discount labels for history details',
     run() {
       const result = buildReceiptPreviewData({
@@ -707,12 +796,9 @@ const tests = [
     run() {
       assert.equal(getInventoryCategoryLabel(' korean noodles '), 'Korean Noodles')
       assert.equal(getInventoryCategoryLabel('SEAWEED'), 'Seaweed')
-      assert.deepEqual(INVENTORY_ALLOWED_CATEGORIES, [
-        'Korean Noodles',
-        'Samgyup bowl meat',
-        'Samgyup meat',
-        'Seaweed',
-      ])
+      assert.equal(INVENTORY_ALLOWED_CATEGORIES.includes('Noodles'), true)
+      assert.equal(INVENTORY_ALLOWED_CATEGORIES.includes('Korean Noodles'), true)
+      assert.equal(INVENTORY_ALLOWED_CATEGORIES.includes('Seaweed'), true)
     },
   },
   {

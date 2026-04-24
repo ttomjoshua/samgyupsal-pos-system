@@ -32,9 +32,17 @@ export function deriveProductSellability(product = {}) {
     }
   }
 
+  if (!hasPriceConfigured) {
+    return {
+      isSellable: false,
+      availabilityReason: 'Price not set',
+      hasPriceConfigured,
+    }
+  }
+
   return {
     isSellable: true,
-    availabilityReason: hasPriceConfigured ? '' : 'Price not set',
+    availabilityReason: '',
     hasPriceConfigured,
   }
 }

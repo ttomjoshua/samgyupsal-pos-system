@@ -15,7 +15,11 @@ import {
   getCachedResource,
   setCachedResource,
 } from '../../../shared/utils/resourceCache.js'
-import { resolvePreferredCategoryLabel } from '../../../shared/utils/categoryUtils.js'
+import {
+  getStandardProductCategoryLabel,
+  normalizeBarcodeValue,
+  resolvePreferredCategoryLabel,
+} from '../../../shared/utils/categoryUtils.js'
 import {
   getStoredInventoryItems,
   saveStoredInventoryItems,
@@ -126,16 +130,16 @@ function resolveSupabaseProductBranch(values = {}, fallbackItem = {}) {
 }
 
 function buildSupabaseProductPayload(values, fallbackItem = {}) {
-  const branchId = resolveSupabaseBranchId(values, fallbackItem)
-
   return {
-    branch_id: branchId,
+    barcode: normalizeBarcodeValue(values.barcode ?? fallbackItem.barcode) || null,
     branch: resolveSupabaseProductBranch(values, fallbackItem),
     category:
       sanitizeInventoryText(
-        resolvePreferredCategoryLabel(
-          values.category_name ?? values.category,
-          fallbackItem.category_name ?? fallbackItem.category,
+        getStandardProductCategoryLabel(
+          resolvePreferredCategoryLabel(
+            values.category_name ?? values.category,
+            fallbackItem.category_name ?? fallbackItem.category,
+          ),
         ),
       ) || 'Uncategorized',
     product_name: sanitizeInventoryText(
@@ -148,9 +152,6 @@ function buildSupabaseProductPayload(values, fallbackItem = {}) {
     stock_quantity: Number(
       values.stock_quantity ?? values.stock ?? fallbackItem.stock_quantity ?? 0,
     ),
-    reorder_level: Number(
-      values.reorder_level ?? fallbackItem.reorder_level ?? LOW_STOCK_THRESHOLD,
-    ),
     expiration_date:
       sanitizeInventoryText(
         values.expiry_date ??
@@ -158,7 +159,6 @@ function buildSupabaseProductPayload(values, fallbackItem = {}) {
           fallbackItem.expiry_date ??
           fallbackItem.expiration_date,
       ) || null,
-    is_active: fallbackItem.is_active ?? fallbackItem.isActive ?? true,
   }
 }
 
@@ -243,18 +243,40 @@ async function fetchSupabaseProductById(productId) {
 async function findSupabaseProductConflict(values, fallbackItem = {}, excludeProductId = null) {
   const supabase = getSupabaseClient()
   const payload = buildSupabaseProductPayload(values, fallbackItem)
+  let barcodeQuery = payload.barcode
+    ? supabase
+        .from(supabaseTables.products)
+        .select('*')
+        .eq('branch', payload.branch)
+        .eq('barcode', payload.barcode)
+    : null
+
+  if (barcodeQuery && excludeProductId != null) {
+    barcodeQuery = barcodeQuery.neq('id', Number(excludeProductId))
+  }
+
+  if (barcodeQuery) {
+    const { data: barcodeMatch, error: barcodeError } = await barcodeQuery.maybeSingle()
+
+    if (barcodeError) {
+      throw createSupabaseServiceError(
+        barcodeError,
+        'Unable to match the product barcode in Supabase.',
+      )
+    }
+
+    if (barcodeMatch) {
+      return barcodeMatch
+    }
+  }
+
   let query = supabase
     .from(supabaseTables.products)
     .select('*')
+    .eq('branch', payload.branch)
     .eq('category', payload.category)
     .eq('product_name', payload.product_name)
     .eq('net_weight', payload.net_weight)
-
-  if (payload.branch_id != null && String(payload.branch_id).trim() !== '') {
-    query = query.eq('branch_id', payload.branch_id)
-  } else {
-    query = query.eq('branch', payload.branch)
-  }
 
   if (excludeProductId != null) {
     query = query.neq('id', Number(excludeProductId))
@@ -337,14 +359,19 @@ export function normalizeInventoryItem(item) {
     inventory_item_id: item.inventory_item_id ?? item.id,
     product_id: item.product_id ?? item.productId ?? item.id ?? null,
     branch_id: item.branch_id ?? null,
-    branch_name: item.branch_name || 'Unassigned Branch',
+    branch_name: item.branch_name || item.branch || 'Unassigned Branch',
+    branch: item.branch || item.branch_name || 'Unassigned Branch',
+    barcode: item.barcode ?? '',
     category_id: item.category_id ?? null,
     category_name: categoryName,
+    category: categoryName,
     product_name: productName,
     stock_quantity: stockQuantity,
     unit: unitValue,
+    net_weight: unitValue,
     price: Number.isFinite(priceValue) ? priceValue : 0,
     expiry_date: expiryDate,
+    expiration_date: expiryDate,
     reorder_level: reorderLevel,
     days_to_expiry: expiryDate ? getDaysToExpiry(expiryDate) : null,
     legacy_stock_text: item.legacy_stock_text ?? null,
@@ -363,6 +390,7 @@ export function createInventoryItemRecord(values, existingItems = []) {
     product_id: nextId,
     branch_id: values.branch_id ?? null,
     branch_name: values.branch_name || 'Unassigned Branch',
+    barcode: normalizeBarcodeValue(values.barcode),
     category_name: sanitizeInventoryText(
       resolvePreferredCategoryLabel(values.category_name, values.category),
     ),
@@ -450,7 +478,9 @@ export async function updateInventoryItem(itemId, values) {
       )
     }
 
-    const updatedItem = await fetchSupabaseInventoryItemByProductId(productId)
+    const updatedItem =
+      (await fetchSupabaseInventoryItemByProductId(productId)) ||
+      (await fetchSupabaseProductById(productId))
     invalidateInventoryQueryCaches()
     return normalizeInventoryItem(updatedItem)
   }
@@ -517,7 +547,9 @@ export async function updateInventoryStock(itemId, quantityValue, options = {}) 
       )
     }
 
-    const updatedItem = await fetchSupabaseInventoryItemByProductId(productId)
+    const updatedItem =
+      (await fetchSupabaseInventoryItemByProductId(productId)) ||
+      (await fetchSupabaseProductById(productId))
     invalidateInventoryQueryCaches()
     return normalizeInventoryItem(updatedItem)
   }
@@ -621,20 +653,42 @@ export function hasInventoryCatalogConflict(
   const normalizedUnit = normalizeInventoryMatchValue(
     values.unit ?? values.net_weight,
   )
+  const normalizedBarcode = normalizeInventoryMatchValue(values.barcode)
   const normalizedBranchId = values.branch_id ?? values.branchId ?? null
+  const normalizedBranchName = normalizeInventoryMatchValue(
+    values.branch_name ?? values.branch ?? values.branchName,
+  )
 
-  if (!normalizedProductName || !normalizedCategoryName || !normalizedUnit) {
+  if (!normalizedProductName || !normalizedCategoryName) {
     return false
   }
 
-  return existingItems.some((item) => (
-    Number(item.id) !== Number(currentItemId) &&
-    normalizeInventoryMatchValue(item.product_name) === normalizedProductName &&
-    normalizeInventoryMatchValue(item.category_name) === normalizedCategoryName &&
-    normalizeInventoryMatchValue(item.unit) === normalizedUnit &&
-    (normalizedBranchId == null ||
-      Number(item.branch_id ?? normalizedBranchId) === Number(normalizedBranchId))
-  ))
+  return existingItems.some((item) => {
+    const matchesBranch =
+      (normalizedBranchId != null &&
+        item.branch_id != null &&
+        Number(item.branch_id) === Number(normalizedBranchId)) ||
+      (normalizedBranchName &&
+        normalizeInventoryMatchValue(item.branch_name ?? item.branch) === normalizedBranchName) ||
+      (normalizedBranchId == null && !normalizedBranchName)
+
+    if (Number(item.id) === Number(currentItemId) || !matchesBranch) {
+      return false
+    }
+
+    if (
+      normalizedBarcode &&
+      normalizeInventoryMatchValue(item.barcode) === normalizedBarcode
+    ) {
+      return true
+    }
+
+    return (
+      normalizeInventoryMatchValue(item.product_name) === normalizedProductName &&
+      normalizeInventoryMatchValue(item.category_name) === normalizedCategoryName &&
+      normalizeInventoryMatchValue(item.unit) === normalizedUnit
+    )
+  })
 }
 
 export function persistInventoryItems(items = []) {

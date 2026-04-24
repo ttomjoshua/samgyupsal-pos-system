@@ -11,6 +11,7 @@
 
 .modal-panel {
   width: 100%;
+  max-height: calc(100vh - 48px);
   background: #ffffff;
   border: 1px solid rgba(89, 67, 48, 0.12);
   border-radius: 24px;
@@ -46,7 +47,7 @@
 
 .modal-body {
   padding: 20px 24px 24px;
-  max-height: 78vh;
+  max-height: calc(100vh - 180px);
   overflow-y: auto;
 }
 
@@ -81,9 +82,23 @@
 }
 
 @media (max-width: 900px) {
+  .modal-overlay {
+    align-items: flex-start;
+    padding: 14px;
+  }
+
+  .modal-panel {
+    max-height: calc(100vh - 28px);
+    border-radius: 20px;
+  }
+
   .modal-header,
   .modal-body {
     padding-left: 18px;
     padding-right: 18px;
+  }
+
+  .modal-body {
+    max-height: calc(100vh - 166px);
   }
 }

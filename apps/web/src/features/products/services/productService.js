@@ -60,6 +60,7 @@ function normalizeCatalogProduct(product, index) {
       product.productName ||
       product.itemName ||
       `Product ${index + 1}`,
+    barcode: product.barcode || '',
     category: categoryName,
     price: Number(
       product.default_price ??
@@ -104,6 +105,7 @@ function normalizeInventoryProduct(product, index) {
       product.productName ||
       product.itemName ||
       `Product ${index + 1}`,
+    barcode: product.barcode || '',
     category: categoryName,
     price: Number(
       product.price ??
@@ -174,6 +176,7 @@ async function getLocalCatalogSource(options = {}) {
     branch_id: options.branchId ? Number(options.branchId) : 1,
     branch_name: getFallbackBranchName(options.branchId),
     product_name: product.name,
+    barcode: product.barcode || '',
     category_name: product.category,
     price: Number(product.price || 0),
     unit_label: '',

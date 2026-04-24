@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import EmptyState from '../../../shared/components/common/EmptyState'
 import Loader from '../../../shared/components/common/Loader'
 import NoticeBanner from '../../../shared/components/common/NoticeBanner'
@@ -72,15 +72,8 @@ function UsersPage() {
   const [pageMessageTone, setPageMessageTone] = useState('info')
   const [pageError, setPageError] = useState('')
 
-  useEffect(() => {
-    void loadDirectory()
-  }, [])
-
-  const loadDirectory = async () => {
+  const loadDirectory = useCallback(async () => {
     try {
-      setIsLoading((currentValue) => (
-        currentValue || (branchOptions.length === 0 && accounts.length === 0)
-      ))
       const branches = await getBranches()
       setBranchOptions(branches)
 
@@ -101,7 +94,11 @@ function UsersPage() {
     } finally {
       setIsLoading(false)
     }
-  }
+  }, [])
+
+  useEffect(() => {
+    void loadDirectory()
+  }, [loadDirectory])
 
   const adminAccounts = useMemo(
     () => accounts.filter((account) => account.roleKey === ROLE_ADMIN),
@@ -312,11 +309,23 @@ function UsersPage() {
   return (
     <section className="page-shell users-page">
       <div className="page-header">
-        <p className="eyebrow">Access Control</p>
-        <h2>Users and Branch Access</h2>
-        <p className="supporting-text">
-          Manage employees, branches, and account status.
-        </p>
+        <div>
+          <p className="eyebrow">Access Control</p>
+          <h2>Users and Branch Access</h2>
+          <p className="supporting-text">
+            Manage employees, branches, and account status.
+          </p>
+        </div>
+        <div className="page-header-actions">
+          <div className="page-header-stat">
+            <strong>{branchOptions.length}</strong>
+            <span>Branches</span>
+          </div>
+          <div className="page-header-stat">
+            <strong>{activeEmployees.length}</strong>
+            <span>Active Staff</span>
+          </div>
+        </div>
       </div>
 
       {pageError ? (

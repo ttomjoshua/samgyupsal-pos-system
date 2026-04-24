@@ -239,6 +239,7 @@ function validateProductCatalogRows(rows) {
         'branch_name',
         'category_id',
         'category_name',
+        'barcode',
         'product_name',
         'unit_label',
         'default_price',
@@ -269,6 +270,7 @@ function validateInventoryCatalogRows(rows) {
         'product_branch',
         'category_id',
         'category_name',
+        'barcode',
         'product_name',
         'unit_label',
         'price',
@@ -311,6 +313,7 @@ function validateProductRows(rows) {
         'branch_id',
         'branch',
         'category',
+        'barcode',
         'product_name',
         'net_weight',
         'price',
@@ -469,6 +472,10 @@ function validateCrossSourceContracts({
       `inventory_catalog_view row ${index + 1} has category drift from products.`,
     )
     assert(
+      normalizeText(matchingProduct.barcode) === normalizeText(row.barcode),
+      `inventory_catalog_view row ${index + 1} has barcode drift from products.`,
+    )
+    assert(
       normalizeText(matchingProduct.net_weight) === normalizeText(row.unit_label),
       `inventory_catalog_view row ${index + 1} has unit drift from products.`,
     )
@@ -488,6 +495,10 @@ function validateCrossSourceContracts({
     assert(
       normalizeText(matchingProduct.category) === normalizeText(row.category_name),
       `product_catalog_view row ${index + 1} has category drift from products.`,
+    )
+    assert(
+      normalizeText(matchingProduct.barcode) === normalizeText(row.barcode),
+      `product_catalog_view row ${index + 1} has barcode drift from products.`,
     )
   })
 
@@ -622,7 +633,7 @@ async function runAccountContractChecks(testEmail, password) {
         supabase
           .from(contracts.views.productCatalog)
           .select(
-            'product_id,branch,branch_code,branch_name,category_id,category_name,product_name,unit_label,default_price,is_active',
+            'product_id,branch,branch_code,branch_name,category_id,category_name,barcode,product_name,unit_label,default_price,is_active',
           )
           .order('product_name', { ascending: true })
           .limit(10),
@@ -637,7 +648,7 @@ async function runAccountContractChecks(testEmail, password) {
         supabase
           .from(contracts.views.inventoryCatalog)
           .select(
-            'inventory_item_id,branch_id,branch_code,branch_name,product_id,product_branch,category_id,category_name,product_name,unit_label,price,default_price,selling_price,stock_quantity,reorder_level,expiration_date,legacy_stock_text,is_active',
+            'inventory_item_id,branch_id,branch_code,branch_name,product_id,product_branch,category_id,category_name,barcode,product_name,unit_label,price,default_price,selling_price,stock_quantity,reorder_level,expiration_date,legacy_stock_text,is_active',
           )
           .order('product_name', { ascending: true })
           .limit(10),
@@ -653,7 +664,7 @@ async function runAccountContractChecks(testEmail, password) {
           supabase
             .from(contracts.views.inventoryCatalog)
             .select(
-              'inventory_item_id,branch_id,product_id,category_name,product_name,stock_quantity,reorder_level,is_active',
+              'inventory_item_id,branch_id,product_id,category_name,barcode,product_name,stock_quantity,reorder_level,is_active',
             )
             .eq('branch_id', Number(currentBranchId))
             .limit(10),
@@ -671,7 +682,7 @@ async function runAccountContractChecks(testEmail, password) {
         supabase
           .from(contracts.tables.products)
           .select(
-            'id,branch_id,branch,category,product_name,net_weight,price,stock_quantity,reorder_level,is_active,expiration_date',
+            'id,branch_id,branch,category,barcode,product_name,net_weight,price,stock_quantity,reorder_level,is_active,expiration_date',
           )
           .order('id', { ascending: false })
           .limit(10),

@@ -37,16 +37,17 @@ import {
   validateInventoryForm,
   validateInventoryQuantityAction,
 } from '../../../shared/utils/validation'
+import { STANDARD_PRODUCT_CATEGORIES } from '../../../shared/utils/categoryUtils'
 import '../styles/inventory.css'
 
 const INITIAL_PRODUCT_FORM = {
   product_name: '',
+  barcode: '',
   category_name: '',
   price: '',
   stock_quantity: '',
   unit: '',
   expiry_date: '',
-  reorder_level: '10',
 }
 
 const INVENTORY_PAGE_SIZE = 10
@@ -283,9 +284,31 @@ function InventoryPage() {
 
   const totalBranchItems = inventoryFilterResults.branchItems.length
   const filterCategoryOptions = inventoryFilterResults.categoryOptions
-  const branchCategorySuggestions = inventoryFilterResults.categoryOptions
+  const lowStockItemCount = inventoryFilterResults.branchItems.filter(
+    (item) => Number(item.stock_quantity || 0) <= Number(item.reorder_level || 0),
+  ).length
+  const expiringItemCount = inventoryFilterResults.branchItems.filter(
+    (item) => String(item.expiry_date || item.expiration_date || '').trim() !== '',
+  ).length
+  const productCategoryOptions = useMemo(
+    () => STANDARD_PRODUCT_CATEGORIES,
+    [],
+  )
   const selectedBranchId =
     activeBranchId === '' ? null : Number(activeBranchId)
+  const selectedBranchName =
+    activeBranch?.name ||
+    (selectedBranchId === 2 ? 'Dollar' : selectedBranchId === 1 ? 'Sta. Lucia' : '')
+  const activeFilterLabel =
+    activeFilter === INVENTORY_FILTER_LOW_STOCK
+      ? 'Low Stock'
+      : activeFilter === INVENTORY_FILTER_EXPIRY_DATE
+        ? 'Expiry Dates'
+        : 'All Items'
+  const activeCategoryLabel =
+    effectiveActiveCategory === INVENTORY_FILTER_ALL
+      ? 'All Categories'
+      : effectiveActiveCategory
 
   useEffect(() => {
     if (currentPage > totalPages) {
@@ -335,18 +358,18 @@ function InventoryPage() {
     setFeedbackMessage('')
     setSelectedItem(item)
     setFormData({
-      product_name: item.product_name,
-      category_name: item.category_name,
+      product_name: item.product_name || '',
+      barcode: item.barcode || '',
+      category_name: item.category_name || item.category || '',
       price: String(item.price ?? ''),
-      stock_quantity: String(item.stock_quantity),
-      unit: item.unit,
-      expiry_date: item.expiry_date,
-      reorder_level: String(item.reorder_level),
+      stock_quantity: String(item.stock_quantity ?? ''),
+      unit: item.unit || item.net_weight || '',
+      expiry_date: item.expiry_date || item.expiration_date || '',
     })
     setProductDialogMode('edit')
   }
 
-  const handleFieldChange = (event) => {
+  const handleFieldChange = useCallback((event) => {
     const { name, value } = event.target
 
     if (formError) {
@@ -357,7 +380,7 @@ function InventoryPage() {
       ...previousForm,
       [name]: value,
     }))
-  }
+  }, [formError])
 
   const handleSaveProduct = async (event) => {
     event.preventDefault()
@@ -379,13 +402,14 @@ function InventoryPage() {
         {
           ...validation.sanitizedData,
           branch_id: selectedBranchId,
+          branch_name: selectedBranchName,
         },
         inventoryItems,
         productDialogMode === 'edit' ? selectedItem?.id : null,
       )
       ) {
         setFormError(
-        'A product with the same category, name, and pack size already exists in this branch. Use Stock In or Edit the existing record instead.',
+        'A product with the same barcode or catalog details already exists in this branch. Use Stock In or Edit the existing record instead.',
         )
         return
       }
@@ -395,7 +419,7 @@ function InventoryPage() {
         const updatedItem = await updateInventoryItem(selectedItem.id, {
           ...validation.sanitizedData,
           branch_id: selectedBranchId,
-          branch_name: activeBranch?.name || selectedItem.branch_name || '',
+          branch_name: selectedBranchName || selectedItem.branch_name || selectedItem.branch || '',
         })
 
         setInventoryItems((previousItems) =>
@@ -410,7 +434,7 @@ function InventoryPage() {
           {
             ...validation.sanitizedData,
             branch_id: selectedBranchId,
-            branch_name: activeBranch?.name || '',
+            branch_name: selectedBranchName,
           },
           inventoryItems,
         )
@@ -418,7 +442,7 @@ function InventoryPage() {
         setInventoryItems((previousItems) => [createdItem, ...previousItems])
         setFeedbackTone('success')
         setFeedbackMessage(
-          `${createdItem.product_name} was added to ${activeBranch?.name || 'the selected branch'}.`,
+          `${createdItem.product_name} was added to ${selectedBranchName || 'the selected branch'}.`,
         )
       }
     } catch (error) {
@@ -660,23 +684,60 @@ function InventoryPage() {
       ) : null}
 
       <div className="panel inventory-toolbar-panel">
-          <div className="inventory-toolbar-heading">
-            <div>
-              <p className="card-label">Inventory Controls</p>
-              <h2>Current Stock</h2>
-            </div>
+        <div className="inventory-toolbar-heading">
+          <div>
+            <p className="card-label">Inventory Controls</p>
+            <h2>Stock Workspace</h2>
+            <p className="supporting-text inventory-controls-copy">
+              Current branch stock, status, and category scope.
+            </p>
+          </div>
 
-          <p className="inventory-result-copy">
-            {activeBranch ? `Branch: ${activeBranch.name} | ` : ''}
-            Showing <strong>{filteredItems.length}</strong>
-            {totalBranchItems !== filteredItems.length ? ` of ${totalBranchItems}` : ''}
-            {' '}product
-            {filteredItems.length === 1 ? '' : 's'}
-          </p>
+          <div className="inventory-active-scope" aria-label="Active inventory filters">
+            <span>{selectedBranchName || 'Branch pending'}</span>
+            <strong>{activeFilterLabel}</strong>
+            <span>{activeCategoryLabel}</span>
+          </div>
+        </div>
+
+        <div className="inventory-overview-grid">
+          <div className="inventory-overview-card">
+            <span className="inventory-overview-label">Visible Products</span>
+            <strong>{filteredItems.length}</strong>
+            <span className="inventory-overview-meta">
+              {totalBranchItems !== filteredItems.length
+                ? `${totalBranchItems} in branch`
+                : 'Current result'}
+            </span>
+          </div>
+
+          <div className="inventory-overview-card">
+            <span className="inventory-overview-label">Categories</span>
+            <strong>{filterCategoryOptions.length}</strong>
+            <span className="inventory-overview-meta">Available filters</span>
+          </div>
+
+          <div className="inventory-overview-card">
+            <span className="inventory-overview-label">Low Stock</span>
+            <strong>{lowStockItemCount}</strong>
+            <span className="inventory-overview-meta">At reorder level</span>
+          </div>
+
+          <div className="inventory-overview-card">
+            <span className="inventory-overview-label">With Expiry</span>
+            <strong>{expiringItemCount}</strong>
+            <span className="inventory-overview-meta">Date tracked</span>
+          </div>
         </div>
 
         <div className="inventory-toolbar">
-          <div className="inventory-filter-group">
+          <div className="inventory-control-sections">
+            <section className="inventory-control-section">
+              <div className="inventory-control-section-header">
+                <strong>Branch Scope</strong>
+                <span>{user?.branchId ? 'Account branch' : selectedBranchName || 'Select branch'}</span>
+              </div>
+
             {user?.branchId ? (
               <div className="inventory-category-control inventory-category-control--locked">
                 <span>Branch</span>
@@ -701,75 +762,93 @@ function InventoryPage() {
                 />
               </label>
             )}
+            </section>
 
-            <button
-              type="button"
-              className={
-                activeFilter === INVENTORY_FILTER_ALL
-                  ? 'inventory-filter active'
-                  : 'inventory-filter'
-              }
-              onClick={() =>
-                updateInventoryViewState({
-                  activeFilter: INVENTORY_FILTER_ALL,
-                })
-              }
-              disabled={isLoading}
-            >
-              All Items
-            </button>
-            <button
-              type="button"
-              className={
-                activeFilter === INVENTORY_FILTER_LOW_STOCK
-                  ? 'inventory-filter active'
-                  : 'inventory-filter'
-              }
-              onClick={() =>
-                updateInventoryViewState({
-                  activeFilter: INVENTORY_FILTER_LOW_STOCK,
-                })
-              }
-              disabled={isLoading}
-            >
-              Low Stock
-            </button>
-            <button
-              type="button"
-              className={
-                activeFilter === INVENTORY_FILTER_EXPIRY_DATE
-                  ? 'inventory-filter active'
-                  : 'inventory-filter'
-              }
-              onClick={() =>
-                updateInventoryViewState({
-                  activeFilter: INVENTORY_FILTER_EXPIRY_DATE,
-                })
-              }
-              disabled={isLoading}
-            >
-              Expiry Dates
-            </button>
-            <label className="inventory-category-control inventory-category-control--category-filter">
-              <span>Category</span>
-              <SelectMenu
-                name="activeCategory"
-                value={effectiveActiveCategory}
-                onChange={(event) =>
-                  updateInventoryViewState({
-                    activeCategory: event.target.value,
-                  })
-                }
-                disabled={isLoading || filterCategoryOptions.length === 0}
-                options={[
-                  { value: INVENTORY_FILTER_ALL, label: 'All Categories' },
-                  ...filterCategoryOptions.map((category) => ({
-                    value: category,
-                    label: category,
-                  })),
-                ]}
-              />
-            </label>
+            <section className="inventory-control-section inventory-control-section--status">
+              <div className="inventory-control-section-header">
+                <strong>Stock View</strong>
+                <span>{activeFilterLabel}</span>
+              </div>
+
+              <div className="inventory-filter-group" role="group" aria-label="Stock status filters">
+                <button
+                  type="button"
+                  className={
+                    activeFilter === INVENTORY_FILTER_ALL
+                      ? 'inventory-filter active'
+                      : 'inventory-filter'
+                  }
+                  onClick={() =>
+                    updateInventoryViewState({
+                      activeFilter: INVENTORY_FILTER_ALL,
+                    })
+                  }
+                  disabled={isLoading}
+                >
+                  All Items
+                </button>
+                <button
+                  type="button"
+                  className={
+                    activeFilter === INVENTORY_FILTER_LOW_STOCK
+                      ? 'inventory-filter active'
+                      : 'inventory-filter'
+                  }
+                  onClick={() =>
+                    updateInventoryViewState({
+                      activeFilter: INVENTORY_FILTER_LOW_STOCK,
+                    })
+                  }
+                  disabled={isLoading}
+                >
+                  Low Stock
+                </button>
+                <button
+                  type="button"
+                  className={
+                    activeFilter === INVENTORY_FILTER_EXPIRY_DATE
+                      ? 'inventory-filter active'
+                      : 'inventory-filter'
+                  }
+                  onClick={() =>
+                    updateInventoryViewState({
+                      activeFilter: INVENTORY_FILTER_EXPIRY_DATE,
+                    })
+                  }
+                  disabled={isLoading}
+                >
+                  Expiry Dates
+                </button>
+              </div>
+            </section>
+
+            <section className="inventory-control-section">
+              <div className="inventory-control-section-header">
+                <strong>Category Filter</strong>
+                <span>{activeCategoryLabel}</span>
+              </div>
+
+              <label className="inventory-category-control inventory-category-control--category-filter">
+                <span>Category</span>
+                <SelectMenu
+                  name="activeCategory"
+                  value={effectiveActiveCategory}
+                  onChange={(event) =>
+                    updateInventoryViewState({
+                      activeCategory: event.target.value,
+                    })
+                  }
+                  disabled={isLoading || filterCategoryOptions.length === 0}
+                  options={[
+                    { value: INVENTORY_FILTER_ALL, label: 'All Categories' },
+                    ...filterCategoryOptions.map((category) => ({
+                      value: category,
+                      label: category,
+                    })),
+                  ]}
+                />
+              </label>
+            </section>
           </div>
         </div>
       </div>
@@ -835,6 +914,20 @@ function InventoryPage() {
           </label>
 
           <label className="inventory-field">
+            <span>Barcode</span>
+            <input
+              type="text"
+              name="barcode"
+              value={formData.barcode}
+              onChange={handleFieldChange}
+              placeholder="Scan or enter barcode"
+              aria-invalid={Boolean(formError)}
+              inputMode="text"
+              autoComplete="off"
+            />
+          </label>
+
+          <label className="inventory-field">
             <span>Category</span>
             <SelectMenu
               name="category_name"
@@ -844,7 +937,7 @@ function InventoryPage() {
               placeholder="Select a category"
               options={[
                 { value: '', label: 'Select a category' },
-                ...branchCategorySuggestions.map((category) => ({
+                ...productCategoryOptions.map((category) => ({
                   value: category,
                   label: category
                 }))
@@ -898,19 +991,6 @@ function InventoryPage() {
               name="expiry_date"
               value={formData.expiry_date}
               onChange={handleFieldChange}
-              aria-invalid={Boolean(formError)}
-            />
-          </label>
-
-          <label className="inventory-field">
-            <span>Reorder Level</span>
-            <input
-              type="number"
-              min="0"
-              name="reorder_level"
-              value={formData.reorder_level}
-              onChange={handleFieldChange}
-              placeholder="10"
               aria-invalid={Boolean(formError)}
             />
           </label>

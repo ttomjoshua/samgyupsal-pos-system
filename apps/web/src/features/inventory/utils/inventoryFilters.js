@@ -49,9 +49,25 @@ export function filterInventoryItemsByBranch(items = [], branchId = '') {
     return [...items]
   }
 
-  return items.filter(
-    (item) => String(item?.branch_id ?? item?.branchId ?? '').trim() === normalizedBranchId,
-  )
+  const normalizedBranchName =
+    normalizedBranchId === '2'
+      ? 'dollar'
+      : normalizedBranchId === '1'
+        ? 'sta. lucia'
+        : ''
+
+  return items.filter((item) => {
+    const itemBranchId = String(item?.branch_id ?? item?.branchId ?? '').trim()
+
+    if (itemBranchId) {
+      return itemBranchId === normalizedBranchId
+    }
+
+    return (
+      normalizedBranchName &&
+      normalizeFilterText(item?.branch_name ?? item?.branch) === normalizedBranchName
+    )
+  })
 }
 
 export function filterInventoryItemsByStatus(

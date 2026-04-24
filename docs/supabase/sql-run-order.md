@@ -328,6 +328,53 @@ Important:
 - fresh rebuilds pick this up from the updated [`apps/web/supabase/sql/01_core_tables.sql`](../../apps/web/supabase/sql/01_core_tables.sql)
 - older deployed environments should run this script before using the live Supabase contract test or the branch create flow
 
+## 16. Add barcode support and clean product categories
+
+Run when the active `products` table needs barcode readiness and usable category labels:
+
+- [`apps/web/supabase/sql/16_products_barcode_category_quality.sql`](../../apps/web/supabase/sql/16_products_barcode_category_quality.sql)
+
+This catch-up script:
+
+- adds nullable `products.barcode`
+- normalizes blank barcode values to `null`
+- adds a barcode lookup index
+- adds a per-branch partial unique index for nonblank barcodes when no duplicate nonblank barcodes already exist
+- adds future-facing check constraints for barcode format and standard category labels
+- backfills product categories from transparent product-name rules
+- keeps `category` as controlled text instead of introducing a new categories table
+- drops and rebuilds `product_catalog_view` and `inventory_catalog_view` so barcode is available to the frontend and column order is corrected safely
+- restores authenticated `select` grants on the rebuilt compatibility views
+
+Important:
+
+- the owner-provided fixed workbook currently has a barcode column, but all barcode cells are blank, so the new column is intentionally nullable
+- if duplicate nonblank barcodes are found within the same branch, the script skips the unique index and prints a notice instead of failing the whole migration
+- records that do not match any category rule remain `Uncategorized` for manual review
+- the script supports the current flattened `products` table even when `branch_id`, `reorder_level`, and `is_active` are not present; the rebuilt views provide compatible read fields
+
+## 17. Optional demo/test product data completion
+
+Run when you want the imported owner catalog to be test-ready for inventory review, barcode-ready UI, and POS flows:
+
+- [`apps/web/supabase/sql/17_products_demo_data_completion.sql`](../../apps/web/supabase/sql/17_products_demo_data_completion.sql)
+
+This script fills incomplete product records with deterministic demo values:
+
+- blank barcode values become generated test barcodes like `TEST-STL-000215`
+- blank or price-copied unit values become sensible units such as `370ml`, `11g`, `pack`, or `serving`
+- zero or missing prices become sensible product/category demo prices
+- zero stock values become category-specific demo quantities
+- missing expiration dates become category-specific future demo dates
+- weak or blank categories are resolved through the Step 16 category inference function
+
+Important:
+
+- these are inferred demo/testing values, not supplier-certified barcode or expiry data
+- run this after Step 16 so the category inference function and barcode column exist
+- the script preserves meaningful existing values and fills only blank, zero, or clearly weak catalog fields
+- example: `ALASKA CLASSIC` is completed as a Dairy item with unit, stock, expiry date, and generated barcode so it can be tested properly in the inventory UI
+
 ## New backend shape
 
 The frontend is now aligned to this structure:
@@ -353,6 +400,7 @@ The live operational fields are now:
 - `branches.status`
 - `products.branch_id`
 - `products.branch`
+- `products.barcode`
 - `products.category`
 - `products.product_name`
 - `products.net_weight`
@@ -423,6 +471,17 @@ limit 20;
 select *
 from public.products
 where reorder_level < 0;
+
+select branch, barcode, count(*)
+from public.products
+where barcode is not null
+group by branch, barcode
+having count(*) > 1;
+
+select category, count(*)
+from public.products
+group by category
+order by count(*) desc, category;
 ```
 
 Important:
