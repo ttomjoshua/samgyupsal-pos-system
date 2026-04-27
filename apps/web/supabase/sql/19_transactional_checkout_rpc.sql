@@ -50,10 +50,20 @@ declare
   created_sale public.sales%rowtype;
   created_items jsonb := '[]'::jsonb;
   invalid_item_count integer := 0;
+  mismatched_line_total_count integer := 0;
   expected_product_count integer := 0;
   locked_product_count integer := 0;
   product_row record;
   product_branch_id integer;
+  sale_payment_method text;
+  sale_subtotal numeric := 0;
+  sale_discount numeric := 0;
+  sale_total_amount numeric := 0;
+  sale_cash_received numeric := 0;
+  sale_change_amount numeric := 0;
+  calculated_product_subtotal numeric := 0;
+  calculated_line_total numeric := 0;
+  calculated_total_amount numeric := 0;
 begin
   if coalesce(auth.role(), '') <> 'authenticated' or current_user_id is null then
     raise exception 'Only authenticated accounts can complete checkout.'
@@ -121,8 +131,30 @@ begin
       using errcode = '42501';
   end if;
 
+  sale_payment_method := lower(coalesce(nullif(p_sale->>'payment_method', ''), 'cash'));
+  sale_subtotal := coalesce(nullif(p_sale->>'subtotal', '')::numeric, 0);
+  sale_discount := coalesce(nullif(p_sale->>'discount', '')::numeric, 0);
+  sale_total_amount := coalesce(nullif(p_sale->>'total_amount', '')::numeric, 0);
+  sale_cash_received := coalesce(nullif(p_sale->>'cash_received', '')::numeric, 0);
+  sale_change_amount := coalesce(nullif(p_sale->>'change_amount', '')::numeric, 0);
+
+  if sale_payment_method <> 'cash' then
+    raise exception 'Only cash checkout is currently supported.'
+      using errcode = '22023';
+  end if;
+
+  if sale_subtotal < 0
+     or sale_discount < 0
+     or sale_total_amount < 0
+     or sale_cash_received < 0
+     or sale_change_amount < 0 then
+    raise exception 'Checkout amounts cannot be negative.'
+      using errcode = '22023';
+  end if;
+
   with parsed_items as (
     select
+      nullif(item->>'product_id', '')::bigint as product_id,
       nullif(item->>'item_name', '') as item_name,
       coalesce(nullif(item->>'quantity', '')::integer, 0) as quantity,
       coalesce(nullif(item->>'unit_price', '')::numeric, 0) as unit_price,
@@ -139,6 +171,58 @@ begin
 
   if invalid_item_count > 0 then
     raise exception 'Checkout contains invalid line items.'
+      using errcode = '22023';
+  end if;
+
+  with parsed_items as (
+    select
+      nullif(item->>'product_id', '')::bigint as product_id,
+      coalesce(nullif(item->>'quantity', '')::integer, 0) as quantity,
+      coalesce(nullif(item->>'unit_price', '')::numeric, 0) as unit_price,
+      coalesce(nullif(item->>'line_total', '')::numeric, 0) as line_total
+    from jsonb_array_elements(p_items) as source(item)
+  )
+  select
+    coalesce(sum(case when product_id is not null then line_total else 0 end), 0),
+    coalesce(sum(line_total), 0),
+    count(*) filter (
+      where round(line_total, 2) <> round(quantity * unit_price, 2)
+    )
+  into
+    calculated_product_subtotal,
+    calculated_line_total,
+    mismatched_line_total_count
+  from parsed_items;
+
+  calculated_total_amount := greatest(0, calculated_line_total - sale_discount);
+
+  if mismatched_line_total_count > 0 then
+    raise exception 'Checkout line totals must match quantity and unit price.'
+      using errcode = '22023';
+  end if;
+
+  if round(sale_subtotal, 2) <> round(calculated_product_subtotal, 2) then
+    raise exception 'Checkout subtotal does not match product line items.'
+      using errcode = '22023';
+  end if;
+
+  if sale_discount > calculated_product_subtotal then
+    raise exception 'Checkout discount cannot be greater than the product subtotal.'
+      using errcode = '22023';
+  end if;
+
+  if round(sale_total_amount, 2) <> round(calculated_total_amount, 2) then
+    raise exception 'Checkout total does not match line items and discount.'
+      using errcode = '22023';
+  end if;
+
+  if sale_cash_received < sale_total_amount then
+    raise exception 'Cash received must be equal to or greater than total amount.'
+      using errcode = '22023';
+  end if;
+
+  if round(sale_change_amount, 2) <> round(sale_cash_received - sale_total_amount, 2) then
+    raise exception 'Checkout change does not match cash received and total amount.'
       using errcode = '22023';
   end if;
 
@@ -260,12 +344,12 @@ begin
     nullif(p_sale->>'cashier_name', ''),
     sale_branch_id,
     sale_branch_name,
-    coalesce(nullif(p_sale->>'payment_method', ''), 'cash'),
-    coalesce(nullif(p_sale->>'subtotal', '')::numeric, 0),
-    coalesce(nullif(p_sale->>'discount', '')::numeric, 0),
-    coalesce(nullif(p_sale->>'total_amount', '')::numeric, 0),
-    coalesce(nullif(p_sale->>'cash_received', '')::numeric, 0),
-    coalesce(nullif(p_sale->>'change_amount', '')::numeric, 0),
+    sale_payment_method,
+    sale_subtotal,
+    sale_discount,
+    sale_total_amount,
+    sale_cash_received,
+    sale_change_amount,
     coalesce(nullif(p_sale->>'submitted_at', '')::timestamptz, now()),
     nullif(p_sale->>'notes', '')
   )

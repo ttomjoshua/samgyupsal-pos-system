@@ -1,4 +1,8 @@
-import { getRoleLabel, normalizeRoleKey } from '../../../shared/utils/permissions'
+import {
+  getRoleLabel,
+  isKnownRoleKey,
+  normalizeRoleKey,
+} from '../../../shared/utils/permissions'
 import {
   clearCachedResource,
   getCachedResource,
@@ -148,6 +152,10 @@ function validateDirectoryProfilePayload(profileId, payload = {}) {
   const username = normalizeDirectoryUsername(payload.username)
   const status = normalizeDirectoryStatus(payload.status)
   const branchId = roleKey === 'admin' ? null : parseDirectoryBranchId(payload.branchId)
+
+  if (!isKnownRoleKey(roleKey)) {
+    throw new Error('Select a valid role before saving this employee.')
+  }
 
   if (!fullName) {
     throw new Error('Full name is required before saving this employee.')

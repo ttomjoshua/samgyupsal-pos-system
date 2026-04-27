@@ -383,6 +383,7 @@ This script:
 - keeps the `security definer` implementation in the private schema and exposes a public invoker wrapper for Supabase RPC calls
 - locks affected product rows in product-id order, verifies branch scope and stock, inserts the sale header and line items, and deducts stock in one database transaction
 - rejects inactive accounts, cashier-id mismatches, cross-branch employee checkout, inactive products, unavailable products, and oversold quantities before committing
+- verifies that submitted line totals, subtotal, discount, total, cash received, and change match the database-calculated checkout amount before writing
 
 Important:
 

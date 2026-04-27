@@ -8,6 +8,13 @@ import {
   setCachedResource,
 } from '../src/shared/utils/resourceCache.js'
 import {
+  canAccessAppSection,
+  getDefaultAppPath,
+  getRoleLabel,
+  isEmployeeUser,
+  normalizeRoleKey,
+} from '../src/shared/utils/permissions.js'
+import {
   DEFAULT_ADMIN_IDLE_TIMEOUT_MS,
   DEFAULT_EMPLOYEE_IDLE_TIMEOUT_MS,
   getActivityStorageKey,
@@ -243,6 +250,43 @@ const tests = [
 
       assert.equal(result.isValid, true)
       assert.deepEqual(result.errors, {})
+    },
+  },
+  {
+    name: 'validateCheckout rejects invalid cash input even when the sale total is zero',
+    run() {
+      const result = validateCheckout({
+        paymentMethod: 'cash',
+        amountReceived: 'not-a-number',
+        totalAmount: 0,
+        subtotalAmount: 0,
+        cartItems: [
+          {
+            name: 'Promo Samgyup Add-on',
+            quantity: 1,
+            stockQuantity: 5,
+            price: 0,
+          },
+        ],
+      })
+
+      assert.equal(result.isValid, false)
+      assert.equal(result.errors.amountReceived, 'Enter a valid cash amount received.')
+    },
+  },
+  {
+    name: 'unknown roles do not inherit employee app permissions',
+    run() {
+      const unassignedUser = {
+        id: 'user-with-bad-role',
+        roleKey: 'auditor',
+      }
+
+      assert.equal(normalizeRoleKey('auditor'), 'unknown')
+      assert.equal(getRoleLabel('auditor'), 'Unassigned Role')
+      assert.equal(isEmployeeUser(unassignedUser), false)
+      assert.equal(canAccessAppSection(unassignedUser, 'pos'), false)
+      assert.equal(getDefaultAppPath(unassignedUser), '/')
     },
   },
   {

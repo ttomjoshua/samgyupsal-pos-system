@@ -1,9 +1,11 @@
 export const ROLE_ADMIN = 'admin'
 export const ROLE_EMPLOYEE = 'employee'
+export const ROLE_UNKNOWN = 'unknown'
 
 const ROLE_LABELS = {
   [ROLE_ADMIN]: 'Administrator',
   [ROLE_EMPLOYEE]: 'Employee',
+  [ROLE_UNKNOWN]: 'Unassigned Role',
 }
 
 export const APP_NAV_ITEMS = [
@@ -76,11 +78,16 @@ export function normalizeRoleKey(value) {
     return ROLE_EMPLOYEE
   }
 
-  return ROLE_EMPLOYEE
+  return ROLE_UNKNOWN
 }
 
 export function getRoleLabel(role) {
-  return ROLE_LABELS[normalizeRoleKey(role)] || ROLE_LABELS[ROLE_EMPLOYEE]
+  return ROLE_LABELS[normalizeRoleKey(role)] || ROLE_LABELS[ROLE_UNKNOWN]
+}
+
+export function isKnownRoleKey(role) {
+  const roleKey = normalizeRoleKey(role)
+  return roleKey === ROLE_ADMIN || roleKey === ROLE_EMPLOYEE
 }
 
 export function isAdminUser(user) {

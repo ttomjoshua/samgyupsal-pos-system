@@ -15,6 +15,11 @@ import {
   releaseCurrentSessionLock,
   SESSION_CONFLICT_CODE,
 } from './sessionLockService'
+import {
+  ROLE_EMPLOYEE,
+  isKnownRoleKey,
+  normalizeRoleKey,
+} from '../../../shared/utils/permissions'
 
 function createLoginError(message, cause = null) {
   const error = new Error(message)
@@ -66,6 +71,18 @@ function assertActiveAuthenticatedUser(user) {
   if (String(user.status || '').trim().toLowerCase() !== 'active') {
     throw createLoginError(
       'This employee account is inactive. Please contact the administrator.',
+    )
+  }
+
+  if (!isKnownRoleKey(user)) {
+    throw createLoginError(
+      'This account has an invalid role assignment. Please contact the administrator.',
+    )
+  }
+
+  if (normalizeRoleKey(user) === ROLE_EMPLOYEE && !user.branchId) {
+    throw createLoginError(
+      'This employee account is not assigned to a branch. Please contact the administrator.',
     )
   }
 

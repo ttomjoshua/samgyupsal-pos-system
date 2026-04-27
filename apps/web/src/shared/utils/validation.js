@@ -73,9 +73,23 @@ export function validateCheckout({
   const errors = {}
   const normalizedPaymentMethod = String(paymentMethod || '').trim().toLowerCase()
   const numericDiscount = Number(discount || 0)
+  const normalizedTotalAmount = Number(totalAmount)
+  const normalizedSubtotalAmount =
+    subtotalAmount == null ? null : Number(subtotalAmount)
 
   if (!normalizedPaymentMethod) {
     errors.paymentMethod = 'Select a payment method.'
+  }
+
+  if (!Number.isFinite(normalizedTotalAmount) || normalizedTotalAmount < 0) {
+    errors.totalAmount = 'Checkout total must be a valid amount.'
+  }
+
+  if (
+    normalizedSubtotalAmount != null &&
+    (!Number.isFinite(normalizedSubtotalAmount) || normalizedSubtotalAmount < 0)
+  ) {
+    errors.subtotalAmount = 'Checkout subtotal must be a valid amount.'
   }
 
   if (!Array.isArray(cartItems) || cartItems.length === 0) {
@@ -118,21 +132,25 @@ export function validateCheckout({
     }
   }
 
-  if (Number.isNaN(numericDiscount) || numericDiscount < 0) {
+  if (!Number.isFinite(numericDiscount) || numericDiscount < 0) {
     errors.discount = 'Discount cannot be negative.'
   }
 
-  if (subtotalAmount != null && numericDiscount > Number(subtotalAmount || 0)) {
+  if (
+    Number.isFinite(normalizedSubtotalAmount) &&
+    numericDiscount > normalizedSubtotalAmount
+  ) {
     errors.discount = 'Discount cannot be greater than the subtotal.'
   }
 
   if (normalizedPaymentMethod === 'cash') {
-    const normalizedTotalAmount = Number(totalAmount || 0)
     const normalizedAmount =
       amountReceived === '' || amountReceived == null ? NaN : Number(amountReceived)
 
-    if (Number.isNaN(normalizedAmount)) {
-      if (normalizedTotalAmount > 0) {
+    if (!Number.isFinite(normalizedAmount)) {
+      if (String(amountReceived || '').trim()) {
+        errors.amountReceived = 'Enter a valid cash amount received.'
+      } else if (normalizedTotalAmount > 0) {
         errors.amountReceived = 'Amount received is required for cash payments.'
       }
     } else if (normalizedAmount < normalizedTotalAmount) {

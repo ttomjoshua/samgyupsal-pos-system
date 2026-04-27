@@ -90,6 +90,11 @@
   transition: background 0.1s ease, color 0.1s ease;
 }
 
+.select-menu-item--empty {
+  opacity: 0.6;
+  cursor: default;
+}
+
 .select-menu-item:hover,
 .select-menu-item--highlighted {
   background: linear-gradient(135deg, var(--accent) 0%, #d76b33 100%);

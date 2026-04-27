@@ -1,6 +1,28 @@
 import { useEffect, useId, useRef } from 'react'
 import '../../styles/modal.css'
 
+const FOCUSABLE_SELECTOR = [
+  'a[href]',
+  'button:not([disabled])',
+  'textarea:not([disabled])',
+  'input:not([disabled])',
+  'select:not([disabled])',
+  '[tabindex]:not([tabindex="-1"])',
+].join(',')
+
+function getFocusableElements(container) {
+  if (!container) {
+    return []
+  }
+
+  return Array.from(container.querySelectorAll(FOCUSABLE_SELECTOR))
+    .filter((element) => (
+      !element.hasAttribute('disabled') &&
+      element.getAttribute('aria-hidden') !== 'true' &&
+      typeof element.focus === 'function'
+    ))
+}
+
 function Modal({
   isOpen,
   title,
@@ -15,8 +37,10 @@ function Modal({
 }) {
   const titleId = useId()
   const descriptionId = useId()
+  const panelRef = useRef(null)
   const closeButtonRef = useRef(null)
   const onCloseRef = useRef(onClose)
+  const previousFocusRef = useRef(null)
 
   useEffect(() => {
     onCloseRef.current = onClose
@@ -28,17 +52,47 @@ function Modal({
     }
 
     const previousOverflow = document.body.style.overflow
+    previousFocusRef.current = document.activeElement
     document.body.style.overflow = 'hidden'
+
     window.setTimeout(() => {
-      if (document.activeElement === document.body) {
-        closeButtonRef.current?.focus()
-      }
+      const focusableElements = getFocusableElements(panelRef.current)
+      const firstFocusableElement = focusableElements[0] || closeButtonRef.current
+
+      firstFocusableElement?.focus()
     }, 0)
 
     const handleKeyDown = (event) => {
       if (event.key === 'Escape') {
         event.preventDefault()
         onCloseRef.current?.()
+        return
+      }
+
+      if (event.key !== 'Tab') {
+        return
+      }
+
+      const focusableElements = getFocusableElements(panelRef.current)
+
+      if (focusableElements.length === 0) {
+        event.preventDefault()
+        panelRef.current?.focus()
+        return
+      }
+
+      const firstFocusableElement = focusableElements[0]
+      const lastFocusableElement = focusableElements[focusableElements.length - 1]
+
+      if (event.shiftKey && document.activeElement === firstFocusableElement) {
+        event.preventDefault()
+        lastFocusableElement.focus()
+        return
+      }
+
+      if (!event.shiftKey && document.activeElement === lastFocusableElement) {
+        event.preventDefault()
+        firstFocusableElement.focus()
       }
     }
 
@@ -47,6 +101,15 @@ function Modal({
     return () => {
       document.body.style.overflow = previousOverflow
       window.removeEventListener('keydown', handleKeyDown)
+
+      if (
+        previousFocusRef.current &&
+        previousFocusRef.current !== document.body &&
+        typeof previousFocusRef.current.focus === 'function' &&
+        previousFocusRef.current.isConnected
+      ) {
+        previousFocusRef.current.focus()
+      }
     }
   }, [isOpen])
 
@@ -61,9 +124,11 @@ function Modal({
       onClick={onClose}
     >
       <div
+        ref={panelRef}
         className={panelClassName ? `modal-panel ${panelClassName}` : 'modal-panel'}
         style={{ maxWidth: width }}
         role="dialog"
+        tabIndex={-1}
         aria-modal="true"
         aria-labelledby={titleId}
         aria-describedby={description ? descriptionId : undefined}
