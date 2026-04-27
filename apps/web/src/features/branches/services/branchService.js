@@ -1,19 +1,19 @@
 import {
-  getStoredMockBranches,
-  saveStoredMockBranches,
+  getStoredLocalBranches,
+  saveStoredLocalBranches,
 } from '../../../shared/utils/storage'
 import {
   clearCachedResource,
   getCachedResource,
   setCachedResource,
 } from '../../../shared/utils/resourceCache'
-import { createBranch as createLocalBranch, getMockBranches } from '../../users/services/userService'
+import { createBranch as createLocalBranch, getLocalBranches } from '../../users/services/userService'
 import {
   createSupabaseServiceError,
   getSupabaseClient,
   isSupabaseDataEnabled,
   supabaseTables,
-} from '../../../shared/api/supabaseClient'
+} from '../../../shared/supabase/client'
 
 function normalizeBranchText(value) {
   return String(value || '')
@@ -66,7 +66,7 @@ function syncBranchCache(branches) {
     branches.map((branch) => normalizeBranchRecord(branch)),
   )
   setCachedResource(BRANCHES_CACHE_KEY, normalizedBranches)
-  saveStoredMockBranches(normalizedBranches)
+  saveStoredLocalBranches(normalizedBranches)
   return normalizedBranches
 }
 
@@ -75,13 +75,13 @@ export function getCachedBranches() {
 }
 
 function getLocalBranchFallback() {
-  const cachedBranches = getStoredMockBranches()
+  const cachedBranches = getStoredLocalBranches()
 
   if (cachedBranches.length > 0) {
     return syncBranchCache(cachedBranches)
   }
 
-  return syncBranchCache(getMockBranches())
+  return syncBranchCache(getLocalBranches())
 }
 
 function validateBranchPayload(payload, branches) {
@@ -155,37 +155,26 @@ export async function getBranches() {
     return getLocalBranchFallback()
   }
 
-  try {
-    const supabase = getSupabaseClient()
-    const { data, error } = await supabase
-      .from(supabaseTables.branches)
-      .select('*')
-      .order('name', { ascending: true })
+  const supabase = getSupabaseClient()
+  const { data, error } = await supabase
+    .from(supabaseTables.branches)
+    .select('*')
+    .order('name', { ascending: true })
 
-    if (error) {
-      throw error
-    }
-
-    return syncBranchCache(data || [])
-  } catch (error) {
-    console.error('Failed to load branches from Supabase:', error)
-    const fallbackBranches = getLocalBranchFallback()
-
-    if (fallbackBranches.length > 0) {
-      return fallbackBranches
-    }
-
+  if (error) {
     throw createSupabaseServiceError(
       error,
       'Unable to load branches from Supabase.',
     )
   }
+
+  return syncBranchCache(data || [])
 }
 
 export async function createBranch(payload) {
   if (!isSupabaseDataEnabled) {
     const createdBranch = createLocalBranch(payload)
-    syncBranchCache(getMockBranches())
+    syncBranchCache(getLocalBranches())
     return normalizeBranchRecord(createdBranch)
   }
 

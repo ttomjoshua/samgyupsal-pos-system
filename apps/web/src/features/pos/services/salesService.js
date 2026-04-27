@@ -1,11 +1,10 @@
-import api from '../../../shared/api/apiClient.js'
 import {
   createSupabaseServiceError,
   getSupabaseClient,
   isSupabaseDataEnabled,
-  supabaseRuntime,
+  supabaseRpc,
   supabaseTables,
-} from '../../../shared/api/supabaseClient.js'
+} from '../../../shared/supabase/client.js'
 import { isAdminUser } from '../../../shared/utils/permissions.js'
 import {
   getStoredSalesHistory,
@@ -70,6 +69,12 @@ function normalizePostgrestSearchValue(value) {
 function invalidateSalesCaches() {
   clearCachedResourceByPrefix(SALES_CACHE_PREFIX)
   clearCachedResourceByPrefix('reports:')
+}
+
+function invalidateCheckoutCaches() {
+  invalidateSalesCaches()
+  clearCachedResourceByPrefix('inventory:')
+  clearCachedResourceByPrefix('products:')
 }
 
 function buildSalesCacheKey(namespace, options = {}) {
@@ -655,7 +660,7 @@ async function syncSaleToInventory(record) {
 
 async function createSupabaseSale(localRecord, payload) {
   const supabase = getSupabaseClient()
-  const saleInsert = {
+  const salePayload = {
     cashier_id: localRecord.cashier_id,
     cashier_name: localRecord.cashier_name,
     branch_id: localRecord.branch_id,
@@ -669,64 +674,47 @@ async function createSupabaseSale(localRecord, payload) {
     submitted_at: localRecord.submitted_at,
     notes: localRecord.notes || null,
   }
+  const itemPayload = localRecord.items.map((item) => ({
+    product_id: item.product_id,
+    inventory_item_id: item.inventory_item_id,
+    item_name: item.item_name,
+    quantity: item.quantity,
+    unit_price: item.unit_price,
+    line_total: item.line_total,
+  }))
+  const { data, error } = await supabase.rpc(supabaseRpc.createCheckoutSale, {
+    p_sale: salePayload,
+    p_items: itemPayload,
+  })
 
-  const { data: saleRow, error: saleError } = await supabase
-    .from(supabaseTables.sales)
-    .insert(saleInsert)
-    .select()
-    .single()
-
-  if (saleError) {
+  if (error) {
     throw createSupabaseServiceError(
-      saleError,
-      'Unable to record the sale in Supabase.',
+      error,
+      'Unable to complete checkout in Supabase.',
     )
   }
 
-  const normalizedSaleId = saleRow?.id ?? saleRow?.sale_id ?? null
+  const saleRow = data?.sale || null
+  const saleItems = Array.isArray(data?.items) ? data.items : []
+  const savedRecord = normalizeSaleRecord({
+    ...localRecord,
+    ...saleRow,
+    transaction_number: localRecord.transaction_number,
+    discount_type: localRecord.discount_type,
+    items: saleItems.length > 0 ? saleItems : localRecord.items,
+  })
 
-  if (localRecord.items.length > 0 && normalizedSaleId != null) {
-    const saleItemsInsert = localRecord.items.map((item) => ({
-      sale_id: normalizedSaleId,
-      product_id: item.product_id,
-      inventory_item_id: item.inventory_item_id,
-      item_name: item.item_name,
-      quantity: item.quantity,
-      unit_price: item.unit_price,
-      line_total: item.line_total,
-    }))
-
-    const { error: saleItemsError } = await supabase
-      .from(supabaseTables.saleItems)
-      .insert(saleItemsInsert)
-
-    if (saleItemsError) {
-      try {
-        await supabase.from(supabaseTables.sales).delete().eq('id', normalizedSaleId)
-      } catch (cleanupError) {
-        console.error('Failed to clean up partial sale record:', cleanupError)
-      }
-
-      throw createSupabaseServiceError(
-        saleItemsError,
-        'Sale items could not be recorded in Supabase.',
-      )
-    }
-  }
-
-  const inventorySynced = supabaseRuntime.inventoryManagedOnSale
-    ? await syncSaleToInventory(localRecord)
-    : false
+  invalidateCheckoutCaches()
 
   return {
     ok: true,
-    source: 'supabase',
+    source: 'supabase-rpc',
     paymentMethod: payload.payment_method || 'cash',
     total: payload.total_amount,
-    submittedAt: localRecord.submitted_at,
-    localRecord,
+    submittedAt: savedRecord.submitted_at,
+    localRecord: savedRecord,
     sale: saleRow,
-    inventorySynced,
+    inventorySynced: data?.inventory_synced !== false,
   }
 }
 
@@ -882,29 +870,17 @@ export async function createSale(payload, meta = {}) {
     return createSupabaseSale(localRecord, payload)
   }
 
-  try {
-    const response = await api.post('/sales', payload)
-    persistLocalSaleRecord(localRecord)
-    const inventorySynced = await syncSaleToInventory(localRecord)
-    return {
-      ...response.data,
-      localRecord,
-      inventorySynced,
-    }
-  } catch (error) {
-    console.error('Failed to submit checkout to the API service:', error)
-    persistLocalSaleRecord(localRecord)
-    const inventorySynced = await syncSaleToInventory(localRecord)
+  persistLocalSaleRecord(localRecord)
+  const inventorySynced = await syncSaleToInventory(localRecord)
 
-    return {
-      ok: true,
-      source: 'local-fallback',
-      paymentMethod: 'cash',
-      total: payload.total_amount,
-      submittedAt: localRecord.submitted_at,
-      localRecord,
-      inventorySynced,
-    }
+  return {
+    ok: true,
+    source: 'local-fallback',
+    paymentMethod: 'cash',
+    total: payload.total_amount,
+    submittedAt: localRecord.submitted_at,
+    localRecord,
+    inventorySynced,
   }
 }
 

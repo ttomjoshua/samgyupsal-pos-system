@@ -3,9 +3,13 @@ import { createClient } from '@supabase/supabase-js'
 const runtimeEnv = import.meta.env || {}
 
 const supabaseUrl = String(runtimeEnv.VITE_SUPABASE_URL || '').trim()
-const supabaseAnonKey = String(runtimeEnv.VITE_SUPABASE_ANON_KEY || '').trim()
+const supabasePublicKey = String(
+  runtimeEnv.VITE_SUPABASE_PUBLISHABLE_KEY ||
+    runtimeEnv.VITE_SUPABASE_ANON_KEY ||
+    '',
+).trim()
 
-export const isSupabaseConfigured = Boolean(supabaseUrl && supabaseAnonKey)
+export const isSupabaseConfigured = Boolean(supabaseUrl && supabasePublicKey)
 export const isSupabaseAuthEnabled =
   isSupabaseConfigured &&
   String(runtimeEnv.VITE_SUPABASE_AUTH_ENABLED || 'true')
@@ -38,6 +42,8 @@ export const supabaseRpc = {
     runtimeEnv.VITE_SUPABASE_VALIDATE_SESSION_LOCK_RPC || 'validate_session_lock',
   releaseSessionLock:
     runtimeEnv.VITE_SUPABASE_RELEASE_SESSION_LOCK_RPC || 'release_session_lock',
+  createCheckoutSale:
+    runtimeEnv.VITE_SUPABASE_CREATE_CHECKOUT_SALE_RPC || 'create_checkout_sale',
 }
 
 export const supabaseRuntime = {
@@ -49,7 +55,7 @@ export const supabaseRuntime = {
 }
 
 const supabase = isSupabaseConfigured
-  ? createClient(supabaseUrl, supabaseAnonKey, {
+  ? createClient(supabaseUrl, supabasePublicKey, {
       auth: {
         persistSession: true,
         autoRefreshToken: true,
@@ -79,7 +85,7 @@ export function createSupabaseServiceError(error, fallbackMessage) {
 
 export function createSupabaseConfigError(context = 'Supabase service') {
   return createStructuredServiceError(
-    `${context} is not configured. Add VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY to the frontend environment first.`,
+    `${context} is not configured. Add VITE_SUPABASE_URL and VITE_SUPABASE_PUBLISHABLE_KEY to the frontend environment first.`,
   )
 }
 

@@ -74,36 +74,54 @@ alter view public.product_catalog_view set (security_invoker = true);
 alter view public.inventory_catalog_view set (security_invoker = true);
 
 drop policy if exists demo_products_select on public.products;
+drop policy if exists bootstrap_products_select on public.products;
 drop policy if exists demo_products_insert on public.products;
+drop policy if exists bootstrap_products_insert on public.products;
 drop policy if exists demo_products_update on public.products;
+drop policy if exists bootstrap_products_update on public.products;
 drop policy if exists demo_products_delete on public.products;
+drop policy if exists bootstrap_products_delete on public.products;
 
 drop policy if exists demo_branches_select on public.branches;
+drop policy if exists bootstrap_branches_select on public.branches;
 drop policy if exists demo_branches_insert on public.branches;
+drop policy if exists bootstrap_branches_insert on public.branches;
 
 drop policy if exists demo_sales_select on public.sales;
+drop policy if exists bootstrap_sales_select on public.sales;
 drop policy if exists demo_sales_insert on public.sales;
+drop policy if exists bootstrap_sales_insert on public.sales;
 drop policy if exists demo_sales_delete on public.sales;
+drop policy if exists bootstrap_sales_delete on public.sales;
 
 drop policy if exists demo_sale_items_select on public.sale_items;
+drop policy if exists bootstrap_sale_items_select on public.sale_items;
 drop policy if exists demo_sale_items_insert on public.sale_items;
+drop policy if exists bootstrap_sale_items_insert on public.sale_items;
 
 do $$
 begin
   if to_regclass('public.categories') is not null then
     execute 'revoke all on public.categories from anon, authenticated';
     execute 'drop policy if exists demo_categories_select on public.categories';
+    execute 'drop policy if exists bootstrap_categories_select on public.categories';
     execute 'drop policy if exists demo_categories_insert on public.categories';
+    execute 'drop policy if exists bootstrap_categories_insert on public.categories';
     execute 'drop policy if exists demo_categories_update on public.categories';
+    execute 'drop policy if exists bootstrap_categories_update on public.categories';
     execute 'drop policy if exists categories_select_admin on public.categories';
   end if;
 
   if to_regclass('public.inventory_items') is not null then
     execute 'revoke all on public.inventory_items from anon, authenticated';
     execute 'drop policy if exists demo_inventory_items_select on public.inventory_items';
+    execute 'drop policy if exists bootstrap_inventory_items_select on public.inventory_items';
     execute 'drop policy if exists demo_inventory_items_insert on public.inventory_items';
+    execute 'drop policy if exists bootstrap_inventory_items_insert on public.inventory_items';
     execute 'drop policy if exists demo_inventory_items_update on public.inventory_items';
+    execute 'drop policy if exists bootstrap_inventory_items_update on public.inventory_items';
     execute 'drop policy if exists demo_inventory_items_delete on public.inventory_items';
+    execute 'drop policy if exists bootstrap_inventory_items_delete on public.inventory_items';
     execute 'drop policy if exists inventory_items_select_admin on public.inventory_items';
     execute 'drop policy if exists inventory_items_delete_admin on public.inventory_items';
   end if;

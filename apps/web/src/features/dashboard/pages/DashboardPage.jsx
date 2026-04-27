@@ -18,8 +18,8 @@ import {
   getCachedReportSnapshot,
   getReportSnapshot,
 } from '../../reports/services/reportService'
-import { isSupabaseAuthEnabled } from '../../../shared/api/supabaseClient'
-import { getMockUsers } from '../../users/services/userService'
+import { isSupabaseAuthEnabled } from '../../../shared/supabase/client'
+import { getLocalUsers } from '../../users/services/userService'
 import { peso } from '../../../shared/utils/formatters'
 import {
   ROLE_EMPLOYEE,
@@ -56,7 +56,7 @@ function buildInitialDashboardSnapshot(user, isAdmin) {
   const cachedAccounts = isAdmin
     ? isSupabaseAuthEnabled
       ? getCachedProfilesDirectory() || []
-      : getMockUsers()
+      : getLocalUsers()
     : []
   const cachedReport = getCachedReportSnapshot(reportScope)
   const hasCachedSnapshot =
@@ -117,7 +117,7 @@ function DashboardPage() {
           isAdmin
             ? isSupabaseAuthEnabled
               ? getProfilesDirectory()
-              : Promise.resolve(getMockUsers())
+              : Promise.resolve(getLocalUsers())
             : Promise.resolve([]),
           getReportSnapshot(reportScope),
         ])

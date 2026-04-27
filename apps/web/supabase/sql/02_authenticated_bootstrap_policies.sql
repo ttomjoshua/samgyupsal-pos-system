@@ -24,9 +24,9 @@ begin
     select 1 from pg_policies
     where schemaname = 'public'
       and tablename = 'categories'
-      and policyname = 'demo_categories_select'
+      and policyname = 'bootstrap_categories_select'
   ) then
-    create policy demo_categories_select
+    create policy bootstrap_categories_select
       on public.categories
       for select
       to authenticated
@@ -37,9 +37,9 @@ begin
     select 1 from pg_policies
     where schemaname = 'public'
       and tablename = 'categories'
-      and policyname = 'demo_categories_insert'
+      and policyname = 'bootstrap_categories_insert'
   ) then
-    create policy demo_categories_insert
+    create policy bootstrap_categories_insert
       on public.categories
       for insert
       to authenticated
@@ -50,9 +50,9 @@ begin
     select 1 from pg_policies
     where schemaname = 'public'
       and tablename = 'categories'
-      and policyname = 'demo_categories_update'
+      and policyname = 'bootstrap_categories_update'
   ) then
-    create policy demo_categories_update
+    create policy bootstrap_categories_update
       on public.categories
       for update
       to authenticated
@@ -64,9 +64,9 @@ begin
     select 1 from pg_policies
     where schemaname = 'public'
       and tablename = 'products'
-      and policyname = 'demo_products_select'
+      and policyname = 'bootstrap_products_select'
   ) then
-    create policy demo_products_select
+    create policy bootstrap_products_select
       on public.products
       for select
       to authenticated
@@ -77,9 +77,9 @@ begin
     select 1 from pg_policies
     where schemaname = 'public'
       and tablename = 'products'
-      and policyname = 'demo_products_insert'
+      and policyname = 'bootstrap_products_insert'
   ) then
-    create policy demo_products_insert
+    create policy bootstrap_products_insert
       on public.products
       for insert
       to authenticated
@@ -90,9 +90,9 @@ begin
     select 1 from pg_policies
     where schemaname = 'public'
       and tablename = 'products'
-      and policyname = 'demo_products_update'
+      and policyname = 'bootstrap_products_update'
   ) then
-    create policy demo_products_update
+    create policy bootstrap_products_update
       on public.products
       for update
       to authenticated
@@ -104,9 +104,9 @@ begin
     select 1 from pg_policies
     where schemaname = 'public'
       and tablename = 'products'
-      and policyname = 'demo_products_delete'
+      and policyname = 'bootstrap_products_delete'
   ) then
-    create policy demo_products_delete
+    create policy bootstrap_products_delete
       on public.products
       for delete
       to authenticated
@@ -117,9 +117,9 @@ begin
     select 1 from pg_policies
     where schemaname = 'public'
       and tablename = 'inventory_items'
-      and policyname = 'demo_inventory_items_select'
+      and policyname = 'bootstrap_inventory_items_select'
   ) then
-    create policy demo_inventory_items_select
+    create policy bootstrap_inventory_items_select
       on public.inventory_items
       for select
       to authenticated
@@ -130,9 +130,9 @@ begin
     select 1 from pg_policies
     where schemaname = 'public'
       and tablename = 'inventory_items'
-      and policyname = 'demo_inventory_items_insert'
+      and policyname = 'bootstrap_inventory_items_insert'
   ) then
-    create policy demo_inventory_items_insert
+    create policy bootstrap_inventory_items_insert
       on public.inventory_items
       for insert
       to authenticated
@@ -143,9 +143,9 @@ begin
     select 1 from pg_policies
     where schemaname = 'public'
       and tablename = 'inventory_items'
-      and policyname = 'demo_inventory_items_update'
+      and policyname = 'bootstrap_inventory_items_update'
   ) then
-    create policy demo_inventory_items_update
+    create policy bootstrap_inventory_items_update
       on public.inventory_items
       for update
       to authenticated
@@ -157,9 +157,9 @@ begin
     select 1 from pg_policies
     where schemaname = 'public'
       and tablename = 'inventory_items'
-      and policyname = 'demo_inventory_items_delete'
+      and policyname = 'bootstrap_inventory_items_delete'
   ) then
-    create policy demo_inventory_items_delete
+    create policy bootstrap_inventory_items_delete
       on public.inventory_items
       for delete
       to authenticated
@@ -170,9 +170,9 @@ begin
     select 1 from pg_policies
     where schemaname = 'public'
       and tablename = 'branches'
-      and policyname = 'demo_branches_select'
+      and policyname = 'bootstrap_branches_select'
   ) then
-    create policy demo_branches_select
+    create policy bootstrap_branches_select
       on public.branches
       for select
       to authenticated
@@ -183,9 +183,9 @@ begin
     select 1 from pg_policies
     where schemaname = 'public'
       and tablename = 'branches'
-      and policyname = 'demo_branches_insert'
+      and policyname = 'bootstrap_branches_insert'
   ) then
-    create policy demo_branches_insert
+    create policy bootstrap_branches_insert
       on public.branches
       for insert
       to authenticated
@@ -196,9 +196,9 @@ begin
     select 1 from pg_policies
     where schemaname = 'public'
       and tablename = 'sales'
-      and policyname = 'demo_sales_select'
+      and policyname = 'bootstrap_sales_select'
   ) then
-    create policy demo_sales_select
+    create policy bootstrap_sales_select
       on public.sales
       for select
       to authenticated
@@ -209,9 +209,9 @@ begin
     select 1 from pg_policies
     where schemaname = 'public'
       and tablename = 'sales'
-      and policyname = 'demo_sales_insert'
+      and policyname = 'bootstrap_sales_insert'
   ) then
-    create policy demo_sales_insert
+    create policy bootstrap_sales_insert
       on public.sales
       for insert
       to authenticated
@@ -222,9 +222,9 @@ begin
     select 1 from pg_policies
     where schemaname = 'public'
       and tablename = 'sales'
-      and policyname = 'demo_sales_delete'
+      and policyname = 'bootstrap_sales_delete'
   ) then
-    create policy demo_sales_delete
+    create policy bootstrap_sales_delete
       on public.sales
       for delete
       to authenticated
@@ -235,9 +235,9 @@ begin
     select 1 from pg_policies
     where schemaname = 'public'
       and tablename = 'sale_items'
-      and policyname = 'demo_sale_items_select'
+      and policyname = 'bootstrap_sale_items_select'
   ) then
-    create policy demo_sale_items_select
+    create policy bootstrap_sale_items_select
       on public.sale_items
       for select
       to authenticated
@@ -248,9 +248,9 @@ begin
     select 1 from pg_policies
     where schemaname = 'public'
       and tablename = 'sale_items'
-      and policyname = 'demo_sale_items_insert'
+      and policyname = 'bootstrap_sale_items_insert'
   ) then
-    create policy demo_sale_items_insert
+    create policy bootstrap_sale_items_insert
       on public.sale_items
       for insert
       to authenticated

@@ -22,17 +22,17 @@ Use this as a template for the first real admin bootstrap.
 
 Do not commit real passwords or real account lists into this repo.
 
-## Old demo accounts
+## Retiring unwanted bootstrap accounts
 
-If you still have demo Auth users from earlier rehearsals, delete them manually from:
+If you still have obsolete Auth users from earlier rehearsals, delete them manually from:
 
 - `Supabase Dashboard > Authentication > Users`
 
 ## Optional safety step
 
-If you want to block any old seeded demo profiles inside the app before deleting those Auth users, run:
+If you want to block old seeded profiles inside the app before deleting those Auth users, run:
 
-- [`apps/web/supabase/sql/06_retire_old_demo_profiles.sql`](../../apps/web/supabase/sql/06_retire_old_demo_profiles.sql)
+- [`apps/web/supabase/sql/06_retire_obsolete_profiles_template.sql`](../../apps/web/supabase/sql/06_retire_obsolete_profiles_template.sql)
 
-This does not delete Auth users, but it marks the old demo profiles inactive so they cannot pass the frontend profile status checks.
+This does not delete Auth users, but it marks the old seeded profiles inactive so they cannot pass the frontend profile status checks.
 

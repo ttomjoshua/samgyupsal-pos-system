@@ -1,6 +1,6 @@
 import {
   findAccountByUsername,
-  normalizeMockUser,
+  normalizeLocalUser,
   normalizeUsername,
 } from '../../users/services/userService'
 import { getProfileForAuthUser } from '../../users/services/profileService'
@@ -8,7 +8,7 @@ import {
   createSupabaseServiceError,
   getSupabaseClient,
   isSupabaseAuthEnabled,
-} from '../../../shared/api/supabaseClient'
+} from '../../../shared/supabase/client'
 import {
   claimCurrentSessionLock,
   clearCurrentSupabaseSession,
@@ -84,7 +84,7 @@ export async function getAuthenticatedUserFromSession(session) {
     return assertActiveAuthenticatedUser(profileUser)
   }
 
-  return assertActiveAuthenticatedUser(normalizeMockUser(authUser))
+  return assertActiveAuthenticatedUser(normalizeLocalUser(authUser))
 }
 
 export async function loginUser(payload = {}) {
@@ -139,7 +139,7 @@ export async function loginUser(payload = {}) {
   }
 
   return {
-    user: normalizeMockUser(matchedAccount),
+    user: normalizeLocalUser(matchedAccount),
   }
 }
 

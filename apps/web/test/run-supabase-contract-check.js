@@ -20,6 +20,9 @@ const defaultContracts = {
     productCatalog: 'product_catalog_view',
     inventoryCatalog: 'inventory_catalog_view',
   },
+  rpcs: {
+    checkoutSale: 'create_checkout_sale',
+  },
 }
 
 function loadEnvFile(filepath) {
@@ -64,14 +67,81 @@ const runtimeEnv = {
 }
 
 const supabaseUrl = String(runtimeEnv.VITE_SUPABASE_URL || '').trim()
-const supabaseAnonKey = String(runtimeEnv.VITE_SUPABASE_ANON_KEY || '').trim()
-const testEmails = String(
-  runtimeEnv.SUPABASE_TEST_EMAILS || runtimeEnv.SUPABASE_TEST_EMAIL || '',
-)
-  .split(/[\n,]/)
-  .map((value) => String(value || '').trim())
-  .filter(Boolean)
-const testPassword = String(runtimeEnv.SUPABASE_TEST_PASSWORD || '').trim()
+const supabasePublicKey = String(
+  runtimeEnv.VITE_SUPABASE_PUBLISHABLE_KEY ||
+    runtimeEnv.VITE_SUPABASE_ANON_KEY ||
+    '',
+).trim()
+function parseAccountCredentialList(rawValue) {
+  const normalizedValue = String(rawValue || '').trim()
+
+  if (!normalizedValue) {
+    return []
+  }
+
+  if (normalizedValue.startsWith('[') || normalizedValue.startsWith('{')) {
+    const parsedValue = JSON.parse(normalizedValue)
+    const accountList = Array.isArray(parsedValue)
+      ? parsedValue
+      : Object.entries(parsedValue).map(([email, password]) => ({ email, password }))
+
+    return accountList
+      .map((account) => ({
+        email: String(account.email || '').trim(),
+        password: String(account.password || '').trim(),
+      }))
+      .filter((account) => account.email && account.password)
+  }
+
+  return normalizedValue
+    .split(/[\n,]/)
+    .map((value) => {
+      const pair = String(value || '').trim()
+      const separatorIndex =
+        pair.includes('=')
+          ? pair.indexOf('=')
+          : pair.includes(':')
+            ? pair.indexOf(':')
+            : -1
+
+      if (separatorIndex === -1) {
+        return null
+      }
+
+      return {
+        email: pair.slice(0, separatorIndex).trim(),
+        password: pair.slice(separatorIndex + 1).trim(),
+      }
+    })
+    .filter((account) => account?.email && account?.password)
+}
+
+function parseTestAccounts(env) {
+  const accountCredentials = parseAccountCredentialList(env.SUPABASE_TEST_ACCOUNTS)
+
+  if (accountCredentials.length > 0) {
+    return accountCredentials
+  }
+
+  const testEmails = String(
+    env.SUPABASE_TEST_EMAILS || env.SUPABASE_TEST_EMAIL || '',
+  )
+    .split(/[\n,]/)
+    .map((value) => String(value || '').trim())
+    .filter(Boolean)
+  const testPassword = String(env.SUPABASE_TEST_PASSWORD || '').trim()
+
+  if (testEmails.length === 0 || !testPassword) {
+    return []
+  }
+
+  return testEmails.map((email) => ({
+    email,
+    password: testPassword,
+  }))
+}
+
+const testAccounts = parseTestAccounts(runtimeEnv)
 
 const contracts = {
   tables: {
@@ -93,6 +163,12 @@ const contracts = {
     inventoryCatalog:
       String(
         runtimeEnv.VITE_SUPABASE_INVENTORY_VIEW || defaultContracts.views.inventoryCatalog,
+      ).trim(),
+  },
+  rpcs: {
+    checkoutSale:
+      String(
+        runtimeEnv.VITE_SUPABASE_CREATE_CHECKOUT_SALE_RPC || defaultContracts.rpcs.checkoutSale,
       ).trim(),
   },
 }
@@ -568,10 +644,43 @@ function validateRoleScopedContracts({
   })
 }
 
+async function validateCheckoutRpcContract({
+  supabase,
+  scopedLabel,
+  authUserId,
+  branchId,
+}) {
+  const { error } = await supabase.rpc(contracts.rpcs.checkoutSale, {
+    p_sale: {
+      cashier_id: authUserId,
+      branch_id: branchId,
+      payment_method: 'cash',
+    },
+    p_items: [],
+  })
+
+  assert(error, 'Checkout RPC accepted an invalid empty checkout payload.')
+
+  const normalizedMessage = normalizeText(
+    [error.code, error.message, error.details, error.hint]
+      .filter(Boolean)
+      .join(' '),
+  ).toLowerCase()
+
+  assert(
+    !normalizedMessage.includes('could not find the function') &&
+      !normalizedMessage.includes('schema cache') &&
+      !normalizedMessage.includes('pgrst202'),
+    `Checkout RPC ${contracts.rpcs.checkoutSale} is not reachable from Supabase.`,
+  )
+
+  pass(scopedLabel('Checkout RPC contract is reachable and rejects invalid payloads before writing.'))
+}
+
 async function runAccountContractChecks(testEmail, password) {
   const scopedLabel = (label) => `[${testEmail}] ${label}`
 
-  const supabase = createClient(supabaseUrl, supabaseAnonKey, {
+  const supabase = createClient(supabaseUrl, supabasePublicKey, {
     auth: {
       persistSession: false,
       autoRefreshToken: false,
@@ -626,6 +735,13 @@ async function runAccountContractChecks(testEmail, password) {
         validateRows: validateBranchRows,
       },
     )
+
+    await validateCheckoutRpcContract({
+      supabase,
+      scopedLabel,
+      authUserId: authUser.id,
+      branchId: currentBranchId ?? branchRows[0]?.id ?? null,
+    })
 
     const productCatalogRows = await runQueryCheck(
       scopedLabel('Products page catalog view contract'),
@@ -780,22 +896,25 @@ async function runAccountContractChecks(testEmail, password) {
 async function main() {
   try {
     assert(supabaseUrl, 'VITE_SUPABASE_URL is missing from apps/web/.env.')
-    assert(supabaseAnonKey, 'VITE_SUPABASE_ANON_KEY is missing from apps/web/.env.')
-    pass('Supabase URL and anon key are configured.')
+    assert(
+      supabasePublicKey,
+      'VITE_SUPABASE_PUBLISHABLE_KEY is missing from apps/web/.env.',
+    )
+    pass('Supabase URL and publishable key are configured.')
 
-    if (testEmails.length === 0 || !testPassword) {
+    if (testAccounts.length === 0) {
       throw new Error(
-        'SUPABASE_TEST_EMAILS (or SUPABASE_TEST_EMAIL) and SUPABASE_TEST_PASSWORD are required for the live authenticated frontend contract check.',
+        'SUPABASE_TEST_ACCOUNTS or SUPABASE_TEST_EMAILS (or SUPABASE_TEST_EMAIL) and SUPABASE_TEST_PASSWORD are required for the live authenticated frontend contract check.',
       )
     }
 
-    pass(`Preparing authenticated contract checks for ${testEmails.length} account(s).`)
+    pass(`Preparing authenticated contract checks for ${testAccounts.length} account(s).`)
 
-    for (const testEmail of testEmails) {
+    for (const testAccount of testAccounts) {
       try {
-        await runAccountContractChecks(testEmail, testPassword)
+        await runAccountContractChecks(testAccount.email, testAccount.password)
       } catch (error) {
-        fail(`[${testEmail}] Live Supabase frontend contract check failed.`, error)
+        fail(`[${testAccount.email}] Live Supabase frontend contract check failed.`, error)
       }
     }
   } catch (error) {

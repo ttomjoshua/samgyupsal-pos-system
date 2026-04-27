@@ -2,11 +2,10 @@ import { getCanonicalCategoryLabel } from './categoryUtils.js'
 
 const CATEGORY_STORAGE_KEY = 'samyupsal-pos-custom-categories'
 const USER_KEY = 'samyupsal_user'
-const MOCK_BRANCHES_KEY = 'samyupsal_mock_branches'
-const MOCK_ACCOUNTS_KEY = 'samyupsal_mock_accounts'
+const LOCAL_BRANCHES_KEY = 'samyupsal_local_branches'
+const LOCAL_ACCOUNTS_KEY = 'samyupsal_local_accounts'
 const SALES_HISTORY_KEY = 'samyupsal_sales_history'
 const INVENTORY_ITEMS_KEY = 'samyupsal_inventory_items'
-const STEP_8_TO_11_RESET_KEY = 'samyupsal_step_8_to_11_reset_v1'
 
 function canUseStorage() {
   return typeof window !== 'undefined' && Boolean(window.localStorage)
@@ -109,22 +108,22 @@ export function saveStoredCategories(categories) {
   writeStorageValue(CATEGORY_STORAGE_KEY, categories)
 }
 
-export function getStoredMockBranches() {
-  const branches = readStorageValue(MOCK_BRANCHES_KEY, [])
+export function getStoredLocalBranches() {
+  const branches = readStorageValue(LOCAL_BRANCHES_KEY, [])
   return Array.isArray(branches) ? branches : []
 }
 
-export function saveStoredMockBranches(branches) {
-  writeStorageValue(MOCK_BRANCHES_KEY, branches)
+export function saveStoredLocalBranches(branches) {
+  writeStorageValue(LOCAL_BRANCHES_KEY, branches)
 }
 
-export function getStoredMockAccounts() {
-  const accounts = readStorageValue(MOCK_ACCOUNTS_KEY, [])
+export function getStoredLocalAccounts() {
+  const accounts = readStorageValue(LOCAL_ACCOUNTS_KEY, [])
   return Array.isArray(accounts) ? accounts : []
 }
 
-export function saveStoredMockAccounts(accounts) {
-  writeStorageValue(MOCK_ACCOUNTS_KEY, accounts)
+export function saveStoredLocalAccounts(accounts) {
+  writeStorageValue(LOCAL_ACCOUNTS_KEY, accounts)
 }
 
 export function getStoredSalesHistory() {
@@ -143,26 +142,6 @@ export function getStoredInventoryItems() {
 
 export function saveStoredInventoryItems(inventoryItems) {
   writeStorageValue(INVENTORY_ITEMS_KEY, inventoryItems)
-}
-
-export function clearStep8To11DemoState() {
-  removeStorageValue(SALES_HISTORY_KEY)
-  removeStorageValue(INVENTORY_ITEMS_KEY)
-}
-
-export function runStep8To11DemoResetOnce() {
-  const resetState = readStorageValue(STEP_8_TO_11_RESET_KEY, null)
-
-  if (resetState?.completed) {
-    return false
-  }
-
-  clearStep8To11DemoState()
-  writeStorageValue(STEP_8_TO_11_RESET_KEY, {
-    completed: true,
-    clearedAt: new Date().toISOString(),
-  })
-  return true
 }
 
 export function mergeProductAndStoredCategories(products) {

@@ -6,7 +6,7 @@ The current operational contract expects branch scope, stock settings, and produ
 
 Important:
 
-- when `VITE_SUPABASE_AUTH_ENABLED=false`, the stabilized frontend now stays on the local/demo data path instead of using anonymous Supabase table access
+- when `VITE_SUPABASE_AUTH_ENABLED=false`, the frontend stays on local browser state instead of using anonymous Supabase table access
 - once real auth is enabled, apply the role-aware policy script in [`sql-run-order.md`](./sql-run-order.md) so the browser no longer depends on the bootstrap policy set
 
 ## What is already wired
@@ -33,12 +33,17 @@ Important:
 Copy [`apps/web/.env.example`](../../apps/web/.env.example) into `.env` and fill in:
 
 - `VITE_SUPABASE_URL`
-- `VITE_SUPABASE_ANON_KEY`
+- `VITE_SUPABASE_PUBLISHABLE_KEY`
+
+The frontend still accepts `VITE_SUPABASE_ANON_KEY` for older projects, but new environments should use a Supabase publishable key. Never put a `service_role` key or secret key in a `VITE_` variable.
 
 Optional live contract-test env vars:
 
+- `SUPABASE_TEST_ACCOUNTS`
 - `SUPABASE_TEST_EMAILS`
 - `SUPABASE_TEST_PASSWORD`
+
+Set these values only in a private local `.env` when running the live contract test. Do not commit real account credentials.
 
 ## Table and view names currently expected by the frontend
 
@@ -48,6 +53,7 @@ Optional live contract-test env vars:
 - `VITE_SUPABASE_BRANCHES_TABLE`
 - `VITE_SUPABASE_PROFILES_TABLE`
 - `VITE_SUPABASE_ADMIN_CREATE_USER_FUNCTION`
+- `VITE_SUPABASE_CREATE_CHECKOUT_SALE_RPC`
 - `VITE_SUPABASE_PRODUCTS_VIEW`
 - `VITE_SUPABASE_INVENTORY_VIEW`
 - `VITE_SUPABASE_AUTH_ENABLED`
@@ -57,7 +63,8 @@ Optional live contract-test env vars:
 - `VITE_SUPABASE_DEFAULT_BRANCH_ID`
 - `VITE_SUPABASE_SYNC_INVENTORY_ON_SALE`
 
-Use `false` for `VITE_SUPABASE_SYNC_INVENTORY_ON_SALE` only if the backend team plans to deduct stock through SQL triggers, RPC, or an Edge Function.
+Authenticated Supabase checkout now calls the `create_checkout_sale` RPC, which writes the sale, sale items, and stock deductions in one database transaction.
+`VITE_SUPABASE_SYNC_INVENTORY_ON_SALE` is kept only for non-RPC legacy paths and should stay `false` for the authenticated Supabase rollout.
 
 ## Current schema contract expected by the frontend
 
@@ -130,7 +137,7 @@ Use `false` for `VITE_SUPABASE_SYNC_INVENTORY_ON_SALE` only if the backend team 
 Important:
 
 - `sale_items.inventory_item_id` is now a legacy compatibility column
-- the active checkout flow now writes both `product_id` and `inventory_item_id` using the same product-backed identifier emitted by `inventory_catalog_view`
+- the active checkout RPC writes both `product_id` and `inventory_item_id` using the same product-backed identifier emitted by `inventory_catalog_view`
 
 ### `product_catalog_view`
 
@@ -142,6 +149,7 @@ Read model used by the admin Products page:
 - `branch_name`
 - `category_id`
 - `category_name`
+- `barcode`
 - `product_name`
 - `unit_label`
 - `default_price`
@@ -196,6 +204,7 @@ Important:
 5. Deploy the `admin-create-user` Edge Function
 6. Manually create and seed only the first admin user
 7. After that, create employee accounts from the Users page
+8. Run the transaction-backed checkout RPC SQL before enabling live checkout
 
 ## Live contract test
 
@@ -221,6 +230,7 @@ It also checks cross-source invariants such as:
 - product/view field alignment across `products`, `product_catalog_view`, and `inventory_catalog_view`
 - sale-item alignment where product-backed rows keep `inventory_item_id = product_id`
 - branch references staying visible through the `branches` table
+- `create_checkout_sale` is reachable as an authenticated RPC and rejects invalid payloads before writing
 
 ## Important current assumption
 

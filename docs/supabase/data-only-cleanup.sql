@@ -1,5 +1,5 @@
 -- Data-only cleanup for Samgyupsal POS.
--- Purpose: remove operational/demo rows while preserving schema, auth users,
+-- Purpose: remove operational rehearsal rows while preserving schema, auth users,
 -- public profiles, branch reference records, RLS policies, grants, functions,
 -- views, and table/column definitions.
 --

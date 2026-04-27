@@ -7,8 +7,8 @@ import {
   logoutUser,
   subscribeToAuthChanges,
 } from '../../features/auth/services/authService'
-import { isSupabaseAuthEnabled } from '../../shared/api/supabaseClient'
-import { normalizeMockUser } from '../../features/users/services/userService'
+import { isSupabaseAuthEnabled } from '../../shared/supabase/client'
+import { normalizeLocalUser } from '../../features/users/services/userService'
 import { getRoleLabel, isAdminUser, isEmployeeUser, normalizeRoleKey } from '../../shared/utils/permissions'
 import {
   clearSavedUser,
@@ -55,18 +55,7 @@ function normalizeAuthenticatedUser(payload, fallbackIdentifier) {
     }
   }
 
-  return (
-    normalizeMockUser(candidateUser) || {
-      id: null,
-      username: fallbackIdentifier?.trim() || '',
-      name: fallbackIdentifier?.trim() || 'Admin User',
-      roleKey: 'admin',
-      role: 'Administrator',
-      branchId: null,
-      branchName: 'All Branches',
-      status: 'active',
-    }
-  )
+  return normalizeLocalUser(candidateUser)
 }
 
 export function AuthProvider({ children }) {

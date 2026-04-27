@@ -1,13 +1,11 @@
 # Documentation Index
 
-This folder is the canonical home for project-facing documentation that explains architecture, handoff, rollout, and database operations.
+This folder is the canonical home for project-facing documentation that explains architecture, rollout, and database operations.
 
 ## Sections
 
 - `architecture/`
   - `frontend-application.md` - React app structure, runtime behavior, and local setup
-- `handoff/`
-  - `frontend-team-handoff.md` - demo guidance, QA notes, and continuation priorities
 - `supabase/`
   - `frontend-integration.md` - frontend-to-Supabase contract and env expectations
   - `sql-run-order.md` - SQL and Edge Function rollout order

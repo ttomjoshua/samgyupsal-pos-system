@@ -1,6 +1,6 @@
 # Supabase Auth Rollout Checklist
 
-Use this when switching the frontend from local demo login to real Supabase Auth.
+Use this when switching the frontend from local browser-only auth to real Supabase Auth.
 
 ## What is already done in code
 

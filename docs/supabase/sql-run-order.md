@@ -58,7 +58,7 @@ It also:
 
 Run:
 
-- [`apps/web/supabase/sql/02_dev_demo_policies.sql`](../../apps/web/supabase/sql/02_dev_demo_policies.sql)
+- [`apps/web/supabase/sql/02_authenticated_bootstrap_policies.sql`](../../apps/web/supabase/sql/02_authenticated_bootstrap_policies.sql)
 
 This script:
 
@@ -71,9 +71,9 @@ Important:
 
 - This step is still intentionally broad and is only the bootstrap access layer.
 - Do not stop here if Supabase Auth is enabled.
-- Run the role-aware hardening script later in this guide before production-like demos or security review.
+- Run the role-aware hardening script later in this guide before production review.
 
-## 4. Replace the demo catalog with the owner inventory snapshot
+## 4. Replace the bootstrap catalog with the owner inventory snapshot
 
 When you want the database to reflect the owner-provided CSV inventory for:
 
@@ -167,7 +167,7 @@ Run after the auth rollout and admin seeding steps:
 
 This script:
 
-- revokes the bootstrap demo-era grants from `anon`
+- revokes legacy bootstrap grants from `anon`
 - keeps the frontend compatibility views on `security_invoker`
 - narrows access to authenticated users only
 - limits branch reads, sales writes, and employee access by the authenticated profile
@@ -176,8 +176,9 @@ This script:
 Important:
 
 - This is the policy set you should defend with during capstone review.
-- It is materially safer than the bootstrap policy file, but it still inherits one design tradeoff from the current frontend: employees can update product rows within their assigned branch because the browser is still performing stock deductions after checkout.
-- The next recommended security step is moving checkout and stock deduction into a trusted RPC or Edge Function so product writes no longer need to come from the browser at all.
+- It is materially safer than the bootstrap policy file. Step 18 moves live checkout stock deduction into a trusted RPC.
+- Run Step 17 after this policy set so employee product updates are constrained to `stock_quantity` at the database trigger layer.
+- Run Step 18 after Step 17 so checkout no longer depends on browser-managed sale inserts plus separate product updates.
 
 ## 9. Add one-device session locking for authenticated users
 
@@ -211,7 +212,7 @@ This script:
 
 - revokes remaining `anon` and `authenticated` table grants from `products_legacy` and `sale_items_legacy`
 - enables RLS on both legacy tables as a defense-in-depth fallback
-- removes the leftover demo-era legacy policies that would otherwise keep showing up in security review
+- removes leftover legacy bootstrap policies that would otherwise keep showing up in security review
 
 Important:
 
@@ -353,27 +354,41 @@ Important:
 - records that do not match any category rule remain `Uncategorized` for manual review
 - the script supports the current flattened `products` table even when `branch_id`, `reorder_level`, and `is_active` are not present; the rebuilt views provide compatible read fields
 
-## 17. Optional demo/test product data completion
+## 17. Auth and inventory hardening
 
-Run when you want the imported owner catalog to be test-ready for inventory review, barcode-ready UI, and POS flows:
+Run after the auth, role-policy, session-lock, and barcode/category quality scripts:
 
-- [`apps/web/supabase/sql/17_products_demo_data_completion.sql`](../../apps/web/supabase/sql/17_products_demo_data_completion.sql)
+- [`apps/web/supabase/sql/18_auth_inventory_hardening.sql`](../../apps/web/supabase/sql/18_auth_inventory_hardening.sql)
 
-This script fills incomplete product records with deterministic demo values:
+This hardening script:
 
-- blank barcode values become generated test barcodes like `TEST-STL-000215`
-- blank or price-copied unit values become sensible units such as `370ml`, `11g`, `pack`, or `serving`
-- zero or missing prices become sensible product/category demo prices
-- zero stock values become category-specific demo quantities
-- missing expiration dates become category-specific future demo dates
-- weak or blank categories are resolved through the Step 16 category inference function
+- adds a `products` trigger that allows active employee accounts to update only `stock_quantity`, even if they bypass the frontend and call the Data API directly
+- keeps admin product edits unrestricted under the existing admin RLS policy
+- keeps trusted SQL editor/service-role contexts available for maintenance
+- updates the session-lock RPC so a second sign-in can replace a stale lock only after the first device has missed heartbeats for 5 minutes
 
 Important:
 
-- these are inferred demo/testing values, not supplier-certified barcode or expiry data
-- run this after Step 16 so the category inference function and barcode column exist
-- the script preserves meaningful existing values and fills only blank, zero, or clearly weak catalog fields
-- example: `ALASKA CLASSIC` is completed as a Dairy item with unit, stock, expiry date, and generated barcode so it can be tested properly in the inventory UI
+- it preserves the current frontend stock-update path while closing the largest role-bypass gap
+
+## 18. Transaction-backed checkout RPC
+
+Run after auth, role-policy, operational product alignment, legacy table cleanup, and Step 17 hardening:
+
+- [`apps/web/supabase/sql/19_transactional_checkout_rpc.sql`](../../apps/web/supabase/sql/19_transactional_checkout_rpc.sql)
+
+This script:
+
+- creates `create_checkout_sale(p_sale jsonb, p_items jsonb)` for authenticated frontend checkout
+- keeps the `security definer` implementation in the private schema and exposes a public invoker wrapper for Supabase RPC calls
+- locks affected product rows in product-id order, verifies branch scope and stock, inserts the sale header and line items, and deducts stock in one database transaction
+- rejects inactive accounts, cashier-id mismatches, cross-branch employee checkout, inactive products, unavailable products, and oversold quantities before committing
+
+Important:
+
+- after this script is applied, authenticated Supabase checkout should use the RPC instead of browser-managed sale inserts plus separate product updates
+- keep `VITE_SUPABASE_CREATE_CHECKOUT_SALE_RPC=create_checkout_sale` in the frontend environment
+- keep `VITE_SUPABASE_SYNC_INVENTORY_ON_SALE=false` for the authenticated Supabase rollout; the flag only remains for non-RPC legacy paths
 
 ## New backend shape
 

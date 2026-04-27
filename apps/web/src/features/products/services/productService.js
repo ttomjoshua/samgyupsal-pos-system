@@ -4,8 +4,7 @@ import {
   isSupabaseDataEnabled,
   supabaseTables,
   supabaseViews,
-} from '../../../shared/api/supabaseClient'
-import { products as mockProducts } from '../../../shared/mocks/mockData'
+} from '../../../shared/supabase/client'
 import { getInventoryItems } from '../../inventory/services/inventoryService'
 import { deriveProductSellability } from '../../../shared/utils/productAvailability'
 import {
@@ -127,10 +126,6 @@ function normalizeInventoryProduct(product, index) {
   }
 }
 
-function getFallbackBranchName(branchId) {
-  return Number(branchId) === 2 ? 'Dollar' : 'Sta. Lucia'
-}
-
 function getProductsCacheKey(options = {}) {
   const branchId =
     options.branchId != null && String(options.branchId).trim() !== ''
@@ -166,22 +161,10 @@ async function getLocalCatalogSource(options = {}) {
       return inventoryItems
     }
   } catch {
-    // Fall through to the seeded demo catalog.
+    return []
   }
 
-  return mockProducts.map((product) => ({
-    id: product.id,
-    product_id: product.id,
-    inventory_item_id: product.id,
-    branch_id: options.branchId ? Number(options.branchId) : 1,
-    branch_name: getFallbackBranchName(options.branchId),
-    product_name: product.name,
-    barcode: product.barcode || '',
-    category_name: product.category,
-    price: Number(product.price || 0),
-    unit_label: '',
-    stock_quantity: 25,
-  }))
+  return []
 }
 
 export async function getProducts(options = {}) {

@@ -5,7 +5,6 @@ Samgyupsal POS and inventory monitoring system, deployed on Vercel and backed pr
 ## Repository Structure
 
 - `apps/web/` - live React + Vite application and operational Supabase assets
-- `apps/api/` - reserved for a future trusted backend or admin automation layer
 - `docs/` - canonical project documentation, rollout guides, and diagrams
 - `vercel.json` - root deployment config that installs, builds, and serves `apps/web/`
 
@@ -13,10 +12,10 @@ Samgyupsal POS and inventory monitoring system, deployed on Vercel and backed pr
 
 - Web app: React 19, React Router, Vite
 - Data layer: Supabase Auth + Supabase Postgres
-- Fallback mode: small Axios contract plus `localStorage` for demo resilience
+- Local state: `localStorage` is used only for unsynced browser state when Supabase auth is disabled
 - Hosting: Vercel
 
-Important: there is no implemented custom API server in `apps/api/` yet. The browser currently talks directly to Supabase for the active data flow.
+Important: there is no custom API server in this repository. The browser talks directly to Supabase for the active data flow and uses the trusted Supabase Edge Function for admin user creation.
 
 ## Local Setup
 
@@ -54,7 +53,6 @@ Run the SQL files in the order documented in `docs/supabase/sql-run-order.md`.
 - App architecture: `docs/architecture/frontend-application.md`
 - Supabase integration: `docs/supabase/frontend-integration.md`
 - SQL rollout order: `docs/supabase/sql-run-order.md`
-- Frontend handoff: `docs/handoff/frontend-team-handoff.md`
 
 ## Deployment
 

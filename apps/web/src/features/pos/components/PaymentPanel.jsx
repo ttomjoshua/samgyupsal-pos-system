@@ -270,8 +270,12 @@ function PaymentPanel({
       setCart([])
       resetPanel()
       setLastReceipt(receiptSnapshot)
-      setMessage('Sale recorded successfully. Reports and inventory have been updated.')
-      setMessageTone('success')
+      setMessage(
+        result.inventorySynced === false
+          ? 'Sale recorded successfully. Reports were updated, but inventory was not adjusted automatically.'
+          : 'Sale recorded successfully. Reports and inventory have been updated.',
+      )
+      setMessageTone(result.inventorySynced === false ? 'warning' : 'success')
       onOrderComplete?.('checkout', {
         inventorySynced: result.inventorySynced,
         soldItems: cart.map((item) => ({

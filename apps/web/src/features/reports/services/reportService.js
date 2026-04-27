@@ -1,12 +1,7 @@
-import {
-  cashierSales,
-  topSellingItems,
-} from '../../../shared/mocks/mockData'
 import { getInventoryItems, isLowStock } from '../../inventory/services/inventoryService'
 import { isServiceFeeLineItem } from '../../pos/utils/serviceFees'
 import { getSalesRecords } from '../../pos/services/salesService'
 import { getDefaultReportDateRange } from '../../../shared/utils/reporting.js'
-import { isSupabaseDataEnabled } from '../../../shared/api/supabaseClient'
 import { peso } from '../../../shared/utils/formatters'
 import {
   getCachedResource,
@@ -15,10 +10,6 @@ import {
 
 const REPORTS_CACHE_PREFIX = 'reports:'
 const REPORTS_CACHE_TTL_MS = 60 * 1000
-
-function parseCurrencyValue(value) {
-  return Number(String(value || '').replace(/[^\d.-]/g, '')) || 0
-}
 
 export { getDefaultReportDateRange }
 
@@ -53,35 +44,25 @@ function summarizeSales(sales) {
   )
 }
 
-function buildTopItems(baseItems, sales) {
-  const itemMap = new Map(
-    baseItems.map((item) => [
-      String(item.item || '').toLowerCase(),
-      {
-        id: item.id,
-        item: item.item,
-        sold: Number(item.sold || 0),
-        revenue: parseCurrencyValue(item.revenue),
-      },
-    ]),
-  )
+function buildTopItems(sales) {
+  const itemMap = new Map()
 
   sales.forEach((sale) => {
     ;(sale.items || [])
       .filter((item) => !isServiceFeeLineItem(item))
       .forEach((item) => {
-      const itemName = String(item.item_name || 'Unknown Item').trim() || 'Unknown Item'
-      const itemKey = itemName.toLowerCase()
-      const existingItem = itemMap.get(itemKey) || {
-        id: `local-${itemKey}`,
-        item: itemName,
-        sold: 0,
-        revenue: 0,
-      }
+        const itemName = String(item.item_name || 'Unknown Item').trim() || 'Unknown Item'
+        const itemKey = itemName.toLowerCase()
+        const existingItem = itemMap.get(itemKey) || {
+          id: `local-${itemKey}`,
+          item: itemName,
+          sold: 0,
+          revenue: 0,
+        }
 
-      existingItem.sold += Number(item.quantity || 0)
-      existingItem.revenue += Number(item.line_total || 0)
-      itemMap.set(itemKey, existingItem)
+        existingItem.sold += Number(item.quantity || 0)
+        existingItem.revenue += Number(item.line_total || 0)
+        itemMap.set(itemKey, existingItem)
       })
   })
 
@@ -94,18 +75,8 @@ function buildTopItems(baseItems, sales) {
     }))
 }
 
-function buildCashierPerformance(baseCashiers, sales) {
-  const cashierMap = new Map(
-    baseCashiers.map((cashier) => [
-      String(cashier.cashier || '').toLowerCase(),
-      {
-        id: cashier.id,
-        cashier: cashier.cashier,
-        sales: parseCurrencyValue(cashier.sales),
-        transactions: Number(cashier.transactions || 0),
-      },
-    ]),
-  )
+function buildCashierPerformance(sales) {
+  const cashierMap = new Map()
 
   sales.forEach((sale) => {
     const cashierName =
@@ -169,47 +140,18 @@ export async function getReportSnapshot(options = {}) {
   })
   const inventorySnapshot = inventoryResponse.items || inventoryResponse
   const lowStockRows = buildLowStockRows(inventorySnapshot)
-  const hasDateRange = Boolean(options.dateFrom || options.dateTo)
-
-  if (isSupabaseDataEnabled) {
-    const salesHistory = await getSalesRecords(options)
-    const saleSummary = summarizeSales(salesHistory)
-
-    return setCachedResource(getReportCacheKey(options), {
-      summary: {
-        total_sales: saleSummary.totalSales,
-        transaction_count: saleSummary.transactionCount,
-        items_sold: saleSummary.itemsSold,
-        low_stock_count: lowStockRows.length,
-      },
-      topItems: buildTopItems([], salesHistory),
-      lowStock: lowStockRows,
-      cashierPerformance: buildCashierPerformance([], salesHistory),
-    })
-  }
-
   const salesHistory = await getSalesRecords(options)
   const saleSummary = summarizeSales(salesHistory)
-  const useSeededFallback = !hasDateRange
-  const fallbackTotalSales = useSeededFallback ? 312440 : 0
-  const fallbackTransactionCount = useSeededFallback ? 29 : 0
-  const fallbackItemsSold = useSeededFallback ? 165 : 0
 
   return setCachedResource(getReportCacheKey(options), {
     summary: {
-      total_sales: fallbackTotalSales + saleSummary.totalSales,
-      transaction_count: fallbackTransactionCount + saleSummary.transactionCount,
-      items_sold: fallbackItemsSold + saleSummary.itemsSold,
+      total_sales: saleSummary.totalSales,
+      transaction_count: saleSummary.transactionCount,
+      items_sold: saleSummary.itemsSold,
       low_stock_count: lowStockRows.length,
     },
-    topItems: buildTopItems(
-      useSeededFallback ? topSellingItems : [],
-      salesHistory,
-    ),
+    topItems: buildTopItems(salesHistory),
     lowStock: lowStockRows,
-    cashierPerformance: buildCashierPerformance(
-      useSeededFallback ? cashierSales : [],
-      salesHistory,
-    ),
+    cashierPerformance: buildCashierPerformance(salesHistory),
   })
 }

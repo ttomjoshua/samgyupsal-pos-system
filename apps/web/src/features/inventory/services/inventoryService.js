@@ -1,4 +1,3 @@
-import api from '../../../shared/api/apiClient.js'
 import { resolveInventoryRecordIds } from '../../../shared/utils/inventoryRecords.js'
 import {
   createSupabaseServiceError,
@@ -7,8 +6,7 @@ import {
   supabaseRuntime,
   supabaseTables,
   supabaseViews,
-} from '../../../shared/api/supabaseClient.js'
-import { inventoryItems } from '../../../shared/mocks/mockData.js'
+} from '../../../shared/supabase/client.js'
 import { shortDate } from '../../../shared/utils/formatters.js'
 import {
   clearCachedResourceByPrefix,
@@ -29,10 +27,6 @@ const LOW_STOCK_THRESHOLD = 10
 const NEAR_EXPIRY_DAYS = 30
 const INVENTORY_CACHE_PREFIX = 'inventory:'
 const INVENTORY_CACHE_TTL_MS = 60 * 1000
-
-function cloneInventoryValue(value) {
-  return JSON.parse(JSON.stringify(value))
-}
 
 function getInventoryCacheKey(options = {}) {
   const branchId =
@@ -59,23 +53,7 @@ export function getCachedInventoryItems(options = {}) {
 function ensureLocalInventoryItems() {
   const storedInventoryItems = getStoredInventoryItems()
 
-  if (storedInventoryItems.length > 0) {
-    return storedInventoryItems
-  }
-
-  const seededInventoryItems = cloneInventoryValue(inventoryItems)
-  saveStoredInventoryItems(seededInventoryItems)
-  return seededInventoryItems
-}
-
-async function fetchLegacyInventoryItems() {
-  try {
-    const response = await api.get('/inventory')
-    const rows = response.data?.items || response.data
-    return Array.isArray(rows) ? rows : []
-  } catch {
-    return []
-  }
+  return storedInventoryItems
 }
 
 function sanitizeInventoryText(value) {
@@ -321,14 +299,6 @@ export async function getInventoryItems(options = {}) {
       items: (await fetchSupabaseInventoryItems(options)).map((item) =>
         normalizeInventoryItem(item),
       ),
-    })
-  }
-
-  const legacyInventoryItems = await fetchLegacyInventoryItems()
-
-  if (legacyInventoryItems.length > 0) {
-    return setCachedResource(getInventoryCacheKey(options), {
-      items: legacyInventoryItems.map((item) => normalizeInventoryItem(item)),
     })
   }
 
@@ -762,6 +732,16 @@ export async function applySaleToInventory(soldItems = [], options = {}) {
 
         if (Number(productBranchId) !== Number(branchId)) {
           return
+        }
+
+        if (Number(soldItem.quantity || 0) > Number(currentProduct.stock_quantity || 0)) {
+          throw new Error(
+            `${soldItem.item_name || soldItem.name || 'This item'} only has ${
+              Number(currentProduct.stock_quantity || 0)
+            } item${
+              Number(currentProduct.stock_quantity || 0) === 1 ? '' : 's'
+            } in stock.`,
+          )
         }
 
         const nextStockQuantity = Math.max(

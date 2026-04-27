@@ -23,35 +23,6 @@
   color: var(--text-soft);
 }
 
-.login-demo {
-  margin: 0 0 1.5rem;
-  padding: 1rem;
-  border: 1px solid rgba(166, 63, 20, 0.14);
-  border-radius: 16px;
-  background: rgba(255, 248, 241, 0.72);
-}
-
-.login-demo-title {
-  margin: 0 0 0.45rem;
-  font-weight: 700;
-  color: var(--accent-dark);
-}
-
-.login-demo p {
-  margin: 0.2rem 0;
-  color: #5f422d;
-}
-
-.login-demo-branch {
-  color: var(--text-soft);
-}
-
-.login-demo-footnote {
-  margin-top: 0.75rem;
-  font-size: 0.92rem;
-  color: var(--text-soft);
-}
-
 .login-form {
   display: grid;
   gap: 1rem;

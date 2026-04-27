@@ -5,7 +5,7 @@ import NoticeBanner from '../../../shared/components/common/NoticeBanner'
 import PaginationControls from '../../../shared/components/common/PaginationControls'
 import Modal from '../../../shared/components/ui/Modal'
 import useSessionStorageState from '../../../shared/hooks/useSessionStorageState'
-import { isSupabaseDataEnabled } from '../../../shared/api/supabaseClient'
+import { isSupabaseDataEnabled } from '../../../shared/supabase/client'
 import {
   getCachedProductCatalog,
   getProductCatalog,

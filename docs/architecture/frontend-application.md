@@ -8,13 +8,12 @@ This folder contains the live React frontend for the Samgyupsal POS and Inventor
 - React Router
 - Vite
 - Supabase JS client
-- Axios fallback client for older demo endpoints
 
 ## Main Runtime Areas
 
 - `src/app/` - app bootstrap, router, top-level layout, and auth provider
 - `src/features/` - domain-owned pages, services, components, and styles
-- `src/shared/` - reusable UI, API adapters, utilities, storage helpers, and mock data
+- `src/shared/` - reusable UI, Supabase client setup, utilities, and storage helpers
 - `supabase/sql/` - SQL files used to initialize and migrate the Supabase schema
 
 ## Environment Variables
@@ -24,9 +23,10 @@ See [`apps/web/.env.example`](../../apps/web/.env.example).
 Key values:
 
 - `VITE_SUPABASE_URL`
-- `VITE_SUPABASE_ANON_KEY`
+- `VITE_SUPABASE_PUBLISHABLE_KEY`
 - `VITE_SUPABASE_AUTH_ENABLED`
 - `VITE_SUPABASE_DEFAULT_BRANCH_ID`
+- `VITE_SUPABASE_CREATE_CHECKOUT_SALE_RPC`
 - `VITE_SUPABASE_SYNC_INVENTORY_ON_SALE`
 
 ## Scripts
@@ -40,11 +40,11 @@ npm run preview
 
 ## Data Modes
 
-The app prefers Supabase when it is configured. If Supabase is unavailable, some screens can still fall back to:
+The app uses Supabase when auth/data mode is enabled. If Supabase mode is disabled for local development, screens read and write only browser `localStorage` state:
 
-- the legacy Axios contract
-- browser `localStorage`
-- seeded mock data
+- branch and employee state created locally in the browser
+- sales history saved locally after checkout
+- inventory records created locally from the Inventory page
 
-That fallback behavior exists to keep demos resilient, but Supabase is the intended primary data source.
+Supabase mode should fail visibly instead of silently replacing live data with local records. That keeps production usage aligned to the real database source of truth.
 

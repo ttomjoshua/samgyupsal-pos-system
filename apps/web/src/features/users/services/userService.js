@@ -1,8 +1,8 @@
 import {
-  getStoredMockAccounts,
-  getStoredMockBranches,
-  saveStoredMockAccounts,
-  saveStoredMockBranches,
+  getStoredLocalAccounts,
+  getStoredLocalBranches,
+  saveStoredLocalAccounts,
+  saveStoredLocalBranches,
 } from '../../../shared/utils/storage'
 import {
   ROLE_ADMIN,
@@ -33,36 +33,6 @@ const DEFAULT_BRANCHES = [
     address: '',
     openingDate: '',
     notes: 'Owner-provided branch inventory mapping.',
-  },
-]
-
-const DEFAULT_ACCOUNTS = [
-  {
-    id: 1,
-    username: 'admin',
-    password: 'admin123',
-    name: 'Admin User',
-    roleKey: ROLE_ADMIN,
-    status: 'active',
-    branchId: null,
-  },
-  {
-    id: 2,
-    username: 'cashier.main',
-    password: 'cashier123',
-    name: 'Sta. Lucia Branch Cashier',
-    roleKey: ROLE_EMPLOYEE,
-    status: 'active',
-    branchId: 1,
-  },
-  {
-    id: 3,
-    username: 'cashier.north',
-    password: 'cashier123',
-    name: 'Dollar Branch Cashier',
-    roleKey: ROLE_EMPLOYEE,
-    status: 'active',
-    branchId: 2,
   },
 ]
 
@@ -179,35 +149,29 @@ function normalizeBranch(branch) {
   }
 }
 
-function ensureMockBranches() {
-  const storedBranches = getStoredMockBranches()
+function ensureLocalBranches() {
+  const storedBranches = getStoredLocalBranches()
 
   if (storedBranches.length > 0) {
     const normalizedBranches = storedBranches.map((branch) => normalizeBranch(branch))
-    saveStoredMockBranches(normalizedBranches)
+    saveStoredLocalBranches(normalizedBranches)
     return normalizedBranches
   }
 
   const seededBranches = cloneValue(DEFAULT_BRANCHES).map((branch) =>
     normalizeBranch(branch),
   )
-  saveStoredMockBranches(seededBranches)
+  saveStoredLocalBranches(seededBranches)
   return seededBranches
 }
 
-function ensureMockAccounts() {
-  const storedAccounts = getStoredMockAccounts()
+function ensureLocalAccounts() {
+  const storedAccounts = getStoredLocalAccounts()
 
-  if (storedAccounts.length > 0) {
-    return storedAccounts.map((account) => ({
-      ...account,
-      branchId: normalizeBranchId(account.branchId, ensureMockBranches()),
-    }))
-  }
-
-  const seededAccounts = cloneValue(DEFAULT_ACCOUNTS)
-  saveStoredMockAccounts(seededAccounts)
-  return seededAccounts
+  return storedAccounts.map((account) => ({
+    ...account,
+    branchId: normalizeBranchId(account.branchId, ensureLocalBranches()),
+  }))
 }
 
 export function normalizeUsername(value) {
@@ -230,12 +194,12 @@ function getBranchName(branchId, branches) {
   return matchedBranch?.name || 'Unassigned Branch'
 }
 
-export function normalizeMockUser(user) {
+export function normalizeLocalUser(user) {
   if (!user || typeof user !== 'object') {
     return null
   }
 
-  const branches = ensureMockBranches()
+  const branches = ensureLocalBranches()
   const roleKey = normalizeRoleKey(user.roleKey || user.role)
   const branchId = roleKey === ROLE_ADMIN
     ? null
@@ -254,12 +218,12 @@ export function normalizeMockUser(user) {
   }
 }
 
-export function getMockBranches() {
-  return ensureMockBranches().map((branch) => ({ ...branch }))
+export function getLocalBranches() {
+  return ensureLocalBranches().map((branch) => ({ ...branch }))
 }
 
-export function getMockUsers() {
-  return ensureMockAccounts().map((account) => normalizeMockUser(account))
+export function getLocalUsers() {
+  return ensureLocalAccounts().map((account) => normalizeLocalUser(account))
 }
 
 function getNextAccountId(accounts) {
@@ -364,8 +328,8 @@ function validateEmployeePayload(payload, branches, accounts, currentAccountId =
 }
 
 export function createEmployeeAccount(payload) {
-  const branches = ensureMockBranches()
-  const accounts = ensureMockAccounts()
+  const branches = ensureLocalBranches()
+  const accounts = ensureLocalAccounts()
   const validatedPayload = validateEmployeePayload(payload, branches, accounts)
 
   const nextAccount = {
@@ -379,13 +343,13 @@ export function createEmployeeAccount(payload) {
   }
 
   const nextAccounts = [...accounts, nextAccount]
-  saveStoredMockAccounts(nextAccounts)
+  saveStoredLocalAccounts(nextAccounts)
 
-  return normalizeMockUser(nextAccount)
+  return normalizeLocalUser(nextAccount)
 }
 
 export function createBranch(payload) {
-  const branches = ensureMockBranches()
+  const branches = ensureLocalBranches()
   const validatedPayload = validateBranchPayload(payload, branches)
 
   const nextBranch = {
@@ -401,14 +365,14 @@ export function createBranch(payload) {
   }
 
   const nextBranches = [...branches, nextBranch]
-  saveStoredMockBranches(nextBranches)
+  saveStoredLocalBranches(nextBranches)
 
   return normalizeBranch(nextBranch)
 }
 
 export function updateEmployeeAccount(accountId, payload) {
-  const branches = ensureMockBranches()
-  const accounts = ensureMockAccounts()
+  const branches = ensureLocalBranches()
+  const accounts = ensureLocalAccounts()
   const accountToUpdate = accounts.find(
     (account) => Number(account.id) === Number(accountId),
   )
@@ -441,18 +405,18 @@ export function updateEmployeeAccount(accountId, payload) {
     }
   })
 
-  saveStoredMockAccounts(nextAccounts)
+  saveStoredLocalAccounts(nextAccounts)
 
   const updatedAccount = nextAccounts.find(
     (account) => Number(account.id) === Number(accountId),
   )
 
-  return normalizeMockUser(updatedAccount)
+  return normalizeLocalUser(updatedAccount)
 }
 
 export function setEmployeeAccountStatus(accountId, status) {
   const nextStatus = status === 'inactive' ? 'inactive' : 'active'
-  const accounts = ensureMockAccounts()
+  const accounts = ensureLocalAccounts()
 
   const nextAccounts = accounts.map((account) => {
     if (
@@ -468,28 +432,17 @@ export function setEmployeeAccountStatus(accountId, status) {
     }
   })
 
-  saveStoredMockAccounts(nextAccounts)
+  saveStoredLocalAccounts(nextAccounts)
 
   const updatedAccount = nextAccounts.find(
     (account) => Number(account.id) === Number(accountId),
   )
 
-  return normalizeMockUser(updatedAccount)
+  return normalizeLocalUser(updatedAccount)
 }
 
 export function findAccountByUsername(username) {
-  return ensureMockAccounts().find(
+  return ensureLocalAccounts().find(
     (account) => normalizeUsername(account.username) === normalizeUsername(username),
   )
-}
-
-export function getDemoLoginAccounts() {
-  const branches = ensureMockBranches()
-
-  return DEFAULT_ACCOUNTS.map((account) => ({
-    username: account.username,
-    password: account.password,
-    role: getRoleLabel(account.roleKey),
-    branchName: getBranchName(account.branchId, branches),
-  }))
 }

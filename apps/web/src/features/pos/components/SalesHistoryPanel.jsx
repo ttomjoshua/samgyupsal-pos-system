@@ -6,14 +6,14 @@ import PaginationControls from '../../../shared/components/common/PaginationCont
 import StatusBadge from '../../../shared/components/common/StatusBadge'
 import SelectMenu from '../../../shared/components/ui/SelectMenu'
 import useSessionStorageState from '../../../shared/hooks/useSessionStorageState'
-import { isSupabaseAuthEnabled } from '../../../shared/api/supabaseClient'
+import { isSupabaseAuthEnabled } from '../../../shared/supabase/client'
 import { peso, shortDateTime } from '../../../shared/utils/formatters'
 import { isAdminUser } from '../../../shared/utils/permissions'
 import {
   getCachedProfilesDirectory,
   getProfilesDirectory,
 } from '../../users/services/profileService'
-import { getMockUsers } from '../../users/services/userService'
+import { getLocalUsers } from '../../users/services/userService'
 import SalesHistoryDetailsModal from './SalesHistoryDetailsModal'
 import {
   DEFAULT_SALES_HISTORY_PAGE_SIZE,
@@ -103,7 +103,7 @@ function SalesHistoryPanel({
     isAdmin
       ? isSupabaseAuthEnabled
         ? getCachedProfilesDirectory() || []
-        : getMockUsers()
+        : getLocalUsers()
       : [],
   )
   const [isCashierSuggestionsOpen, setIsCashierSuggestionsOpen] = useState(false)
@@ -134,7 +134,7 @@ function SalesHistoryPanel({
       try {
         const directory = isSupabaseAuthEnabled
           ? await getProfilesDirectory()
-          : getMockUsers()
+          : getLocalUsers()
 
         if (isMounted) {
           setEmployeeDirectory(directory)

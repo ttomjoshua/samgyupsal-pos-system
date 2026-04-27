@@ -16,10 +16,10 @@ import {
   getProfilesDirectory,
   updateProfileDirectoryEntry,
 } from '../services/profileService'
-import { isSupabaseAuthEnabled } from '../../../shared/api/supabaseClient'
+import { isSupabaseAuthEnabled } from '../../../shared/supabase/client'
 import {
   createEmployeeAccount,
-  getMockUsers,
+  getLocalUsers,
   setEmployeeAccountStatus,
   updateEmployeeAccount,
 } from '../services/userService'
@@ -49,13 +49,13 @@ const INITIAL_BRANCH_FORM = {
 function UsersPage() {
   const [branchOptions, setBranchOptions] = useState(() => getCachedBranches() || [])
   const [accounts, setAccounts] = useState(() => (
-    isSupabaseAuthEnabled ? getCachedProfilesDirectory() || [] : getMockUsers()
+    isSupabaseAuthEnabled ? getCachedProfilesDirectory() || [] : getLocalUsers()
   ))
   const [isLoading, setIsLoading] = useState(() => {
     const cachedBranches = getCachedBranches() || []
     const cachedAccounts = isSupabaseAuthEnabled
       ? getCachedProfilesDirectory() || []
-      : getMockUsers()
+      : getLocalUsers()
 
     return cachedBranches.length === 0 && cachedAccounts.length === 0
   })
@@ -80,7 +80,7 @@ function UsersPage() {
       if (isSupabaseAuthEnabled) {
         setAccounts(await getProfilesDirectory())
       } else {
-        setAccounts(getMockUsers())
+        setAccounts(getLocalUsers())
       }
 
       setPageError('')
@@ -283,7 +283,7 @@ function UsersPage() {
         await loadDirectory()
       } else {
         updatedEmployee = setEmployeeAccountStatus(employee.id, nextStatus)
-        setAccounts(getMockUsers())
+        setAccounts(getLocalUsers())
       }
 
       setPageMessage(`${updatedEmployee.name} is now ${updatedEmployee.status}.`)
@@ -561,7 +561,7 @@ function UsersPage() {
                 name="password"
                 value={formData.password}
                 onChange={handleFieldChange}
-                placeholder={editingEmployee ? 'Leave blank to keep current password' : 'cashier123'}
+                placeholder={editingEmployee ? 'Leave blank to keep current password' : 'Temporary password'}
                 disabled={isDirectorySaving}
               />
             </label>

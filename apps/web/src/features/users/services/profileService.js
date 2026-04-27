@@ -11,7 +11,7 @@ import {
   isSupabaseAuthEnabled,
   supabaseEdgeFunctions,
   supabaseTables,
-} from '../../../shared/api/supabaseClient'
+} from '../../../shared/supabase/client'
 
 function buildProfileSelectQuery() {
   return [

@@ -34,7 +34,7 @@ export function deriveProductSellability(product = {}) {
 
   if (!hasPriceConfigured) {
     return {
-      isSellable: false,
+      isSellable: true,
       availabilityReason: 'Price not set',
       hasPriceConfigured,
     }

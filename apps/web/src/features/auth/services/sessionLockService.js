@@ -3,7 +3,7 @@ import {
   getSupabaseClient,
   isSupabaseAuthEnabled,
   supabaseRpc,
-} from '../../../shared/api/supabaseClient.js'
+} from '../../../shared/supabase/client.js'
 
 export const SESSION_CONFLICT_CODE = 'SESSION_LOCK_CONFLICT'
 export const SESSION_CONFLICT_MESSAGE =

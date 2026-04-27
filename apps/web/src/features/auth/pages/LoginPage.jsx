@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import useAuth from '../hooks/useAuth'
 
-import { isSupabaseAuthEnabled } from '../../../shared/api/supabaseClient'
+import { isSupabaseAuthEnabled } from '../../../shared/supabase/client'
 import NoticeBanner from '../../../shared/components/common/NoticeBanner'
 import Modal from '../../../shared/components/ui/Modal'
 import { getDefaultAppPath } from '../../../shared/utils/permissions'
