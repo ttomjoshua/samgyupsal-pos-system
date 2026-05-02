@@ -22,6 +22,16 @@ function SummaryCards({ summary }) {
       value: summary?.low_stock_count || 0,
       note: 'Catalog items currently sitting at or below risk level.',
     },
+    {
+      label: 'Stockout Alerts',
+      value: summary?.predictive_stockout_count || 0,
+      note: 'Items projected to run out soon based on recent sales velocity.',
+    },
+    {
+      label: 'Near Expiry',
+      value: summary?.near_expiry_count || 0,
+      note: 'Available batches inside the expiry warning window.',
+    },
   ]
 
   return (

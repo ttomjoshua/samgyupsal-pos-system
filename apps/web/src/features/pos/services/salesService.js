@@ -696,6 +696,7 @@ async function createSupabaseSale(localRecord, payload) {
 
   const saleRow = data?.sale || null
   const saleItems = Array.isArray(data?.items) ? data.items : []
+  const batchAllocations = Array.isArray(data?.allocations) ? data.allocations : []
   const savedRecord = normalizeSaleRecord({
     ...localRecord,
     ...saleRow,
@@ -714,6 +715,7 @@ async function createSupabaseSale(localRecord, payload) {
     submittedAt: savedRecord.submitted_at,
     localRecord: savedRecord,
     sale: saleRow,
+    batchAllocations,
     inventorySynced: data?.inventory_synced !== false,
   }
 }

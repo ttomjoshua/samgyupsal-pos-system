@@ -90,6 +90,7 @@ function InventoryPage() {
   const [loadError, setLoadError] = useState('')
   const [quantityDialog, setQuantityDialog] = useState(null)
   const [quantityValue, setQuantityValue] = useState('')
+  const [quantityExpiryDate, setQuantityExpiryDate] = useState('')
   const [quantityError, setQuantityError] = useState('')
   const [removeDialogItem, setRemoveDialogItem] = useState(null)
   const [removeError, setRemoveError] = useState('')
@@ -468,6 +469,7 @@ function InventoryPage() {
     setQuantityError('')
     setSelectedItem(item)
     setQuantityValue('')
+    setQuantityExpiryDate(item.expiry_date || item.expiration_date || '')
     setQuantityDialog(type)
   }
 
@@ -475,6 +477,7 @@ function InventoryPage() {
     setQuantityDialog(null)
     setSelectedItem(null)
     setQuantityValue('')
+    setQuantityExpiryDate('')
     setQuantityError('')
   }
 
@@ -515,10 +518,20 @@ function InventoryPage() {
     }
 
     const parsedAmount = validation.sanitizedAmount
+    const requiresBatchExpiry =
+      quantityDialog === 'stock-in' ||
+      (quantityDialog === 'adjust-stock' &&
+        parsedAmount > Number(selectedItem?.stock_quantity || 0))
+
+    if (requiresBatchExpiry && !quantityExpiryDate) {
+      setQuantityError('Select an expiration date for the FEFO batch.')
+      return
+    }
 
     try {
       const updatedItem = await updateInventoryStock(selectedItem.id, parsedAmount, {
         mode: quantityDialog,
+        expirationDate: quantityExpiryDate,
       })
 
       setInventoryItems((previousItems) =>
@@ -1049,6 +1062,27 @@ function InventoryPage() {
                 setQuantityValue(event.target.value)
               }}
               placeholder={quantityDialog === 'stock-in' ? '5' : '12'}
+              aria-invalid={Boolean(quantityError)}
+            />
+          </label>
+
+          <label className="inventory-field">
+            <span>
+              {quantityDialog === 'stock-in'
+                ? 'Batch Expiry Date'
+                : 'Expiry Date for Added Stock'}
+            </span>
+            <input
+              type="date"
+              name="quantityExpiryDate"
+              value={quantityExpiryDate}
+              onChange={(event) => {
+                if (quantityError) {
+                  setQuantityError('')
+                }
+
+                setQuantityExpiryDate(event.target.value)
+              }}
               aria-invalid={Boolean(quantityError)}
             />
           </label>

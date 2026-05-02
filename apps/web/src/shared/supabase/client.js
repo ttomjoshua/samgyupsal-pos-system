@@ -11,7 +11,6 @@ const supabasePublicKey = String(
 
 export const isSupabaseConfigured = Boolean(supabaseUrl && supabasePublicKey)
 export const isSupabaseAuthEnabled =
-  isSupabaseConfigured &&
   String(runtimeEnv.VITE_SUPABASE_AUTH_ENABLED || 'true')
     .trim()
     .toLowerCase() === 'true'
@@ -19,8 +18,15 @@ export const isSupabaseDataEnabled = isSupabaseAuthEnabled
 
 export const supabaseTables = {
   products: runtimeEnv.VITE_SUPABASE_PRODUCTS_TABLE || 'products',
+  inventoryBatches:
+    runtimeEnv.VITE_SUPABASE_INVENTORY_BATCHES_TABLE || 'inventory_batches',
+  inventoryMovements:
+    runtimeEnv.VITE_SUPABASE_INVENTORY_MOVEMENTS_TABLE || 'inventory_movements',
   sales: runtimeEnv.VITE_SUPABASE_SALES_TABLE || 'sales',
   saleItems: runtimeEnv.VITE_SUPABASE_SALE_ITEMS_TABLE || 'sale_items',
+  saleItemBatchAllocations:
+    runtimeEnv.VITE_SUPABASE_SALE_ITEM_BATCH_ALLOCATIONS_TABLE ||
+    'sale_item_batch_allocations',
   branches: runtimeEnv.VITE_SUPABASE_BRANCHES_TABLE || 'branches',
   profiles: runtimeEnv.VITE_SUPABASE_PROFILES_TABLE || 'profiles',
 }
@@ -44,6 +50,12 @@ export const supabaseRpc = {
     runtimeEnv.VITE_SUPABASE_RELEASE_SESSION_LOCK_RPC || 'release_session_lock',
   createCheckoutSale:
     runtimeEnv.VITE_SUPABASE_CREATE_CHECKOUT_SALE_RPC || 'create_checkout_sale',
+  stockInInventoryBatch:
+    runtimeEnv.VITE_SUPABASE_STOCK_IN_INVENTORY_BATCH_RPC ||
+    'stock_in_inventory_batch',
+  adjustInventoryStockCount:
+    runtimeEnv.VITE_SUPABASE_ADJUST_INVENTORY_STOCK_RPC ||
+    'adjust_inventory_stock_count',
 }
 
 export const supabaseRuntime = {

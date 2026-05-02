@@ -391,18 +391,44 @@ Important:
 - keep `VITE_SUPABASE_CREATE_CHECKOUT_SALE_RPC=create_checkout_sale` in the frontend environment
 - keep `VITE_SUPABASE_SYNC_INVENTORY_ON_SALE=false` for the authenticated Supabase rollout; the flag only remains for non-RPC legacy paths
 
+## 19. FEFO batch inventory and predictive alert readiness
+
+Run after Step 18:
+
+- [`apps/web/supabase/sql/20_fefo_batch_inventory.sql`](../../apps/web/supabase/sql/20_fefo_batch_inventory.sql)
+
+This script:
+
+- creates `inventory_batches`, `inventory_movements`, and `sale_item_batch_allocations`
+- migrates existing `products.stock_quantity` into opening-balance batches so existing inventory can be deducted by FEFO immediately
+- adds `stock_in_inventory_batch(...)` so stock-in creates a dated inventory batch instead of only changing `products.stock_quantity`
+- adds `adjust_inventory_stock_count(...)` so manual count adjustments write movement history and keep batch totals aligned
+- replaces `create_checkout_sale(...)` so checkout deducts from earliest-expiring available batches first, can allocate across multiple batches, and records every sale-item-to-batch allocation
+- keeps `products.stock_quantity` synchronized as the aggregate of remaining batch stock for compatibility with the current frontend views
+
+Important:
+
+- after this script is applied, stock quantity in `products` is compatibility state, not the physical inventory source of truth
+- keep `VITE_SUPABASE_CREATE_CHECKOUT_SALE_RPC=create_checkout_sale`
+- keep `VITE_SUPABASE_STOCK_IN_INVENTORY_BATCH_RPC=stock_in_inventory_batch`
+- keep `VITE_SUPABASE_ADJUST_INVENTORY_STOCK_RPC=adjust_inventory_stock_count`
+- the reports and dashboard compute predictive stockout alerts in the frontend from `sales`, `sale_items`, and current inventory batches; no alert rows are persisted yet
+
 ## New backend shape
 
 The frontend is now aligned to this structure:
 
 - `branches`
 - `products`
+- `inventory_batches`
+- `inventory_movements`
 - `sales`
 - `sale_items`
+- `sale_item_batch_allocations`
 - `product_catalog_view`
 - `inventory_catalog_view`
 
-`products` is now the raw branch stock table again, and the two views act as compatibility read models for the current frontend.
+`products` now stores product identity plus compatibility stock totals. Physical stock is separated into `inventory_batches`, and the two views still act as compatibility read models for the current frontend.
 
 The live operational fields are now:
 
@@ -425,11 +451,25 @@ The live operational fields are now:
 - `products.reorder_level`
 - `products.is_active`
 - `products.expiration_date`
+- `inventory_batches.product_id`
+- `inventory_batches.branch_id`
+- `inventory_batches.quantity_received`
+- `inventory_batches.quantity_on_hand`
+- `inventory_batches.expiration_date`
+- `inventory_batches.stock_in_date`
+- `inventory_movements.product_id`
+- `inventory_movements.batch_id`
+- `inventory_movements.movement_type`
+- `inventory_movements.quantity_delta`
+- `sale_item_batch_allocations.sale_item_id`
+- `sale_item_batch_allocations.batch_id`
+- `sale_item_batch_allocations.quantity`
 
 Compatibility notes:
 
 - `inventory_catalog_view.inventory_item_id` is still emitted for the UI, but in the flattened model it mirrors `products.id`
 - `product_catalog_view.category_id` and `inventory_catalog_view.category_id` remain compatibility placeholders, not live normalized category foreign keys
+- `products.stock_quantity` is recalculated from batch quantities after Step 19, so new inventory work should use `inventory_batches`
 - before step 14, `inventory_items` and `categories` may still remain as migration leftovers
 - after step 14, those legacy tables should be gone from the live project
 

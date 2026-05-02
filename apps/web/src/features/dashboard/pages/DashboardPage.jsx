@@ -169,13 +169,41 @@ function DashboardPage() {
   )
 
   const lowStockRows = snapshot.report?.lowStock || []
+  const predictiveStockoutRows = snapshot.report?.predictiveStockout || []
+  const nearExpiryRows = snapshot.report?.nearExpiry || []
   const lowStockPreview = lowStockRows.slice(0, 5)
+  const inventoryRiskCount = predictiveStockoutRows.length + nearExpiryRows.length
+  const inventoryRiskPreview = [
+    ...predictiveStockoutRows.slice(0, 3).map((item) => ({
+      id: `stockout-${item.id}`,
+      item: item.item,
+      status: `Stockout ${item.status}`,
+      value: item.estimatedDaysBeforeStockout,
+      note: `Est. ${item.estimatedStockoutDate}`,
+    })),
+    ...nearExpiryRows.slice(0, 3).map((item) => ({
+      id: `expiry-${item.id}`,
+      item: item.item,
+      status: item.status,
+      value: item.daysToExpiry,
+      note: item.batch,
+    })),
+    ...lowStockPreview.map((item) => ({
+      id: `low-${item.id}`,
+      item: item.item,
+      status: item.status,
+      value: item.stock,
+      note: `Reorder at ${item.reorderLevel}`,
+    })),
+  ].slice(0, 5)
   const topItemsPreview = (snapshot.report?.topItems || []).slice(0, 5)
   const summary = snapshot.report?.summary || {
     total_sales: 0,
     transaction_count: 0,
     items_sold: 0,
     low_stock_count: lowStockRows.length,
+    predictive_stockout_count: predictiveStockoutRows.length,
+    near_expiry_count: nearExpiryRows.length,
   }
   const todayLabel = new Intl.DateTimeFormat('en-PH', {
     weekday: 'short',
@@ -186,7 +214,9 @@ function DashboardPage() {
   const assignedBranchName =
     user?.branchName || snapshot.branches[0]?.name || 'Assigned branch'
   const lowStockMessage =
-    lowStockRows.length === 0
+    inventoryRiskCount > 0
+      ? `${inventoryRiskCount} predictive or expiry alert${inventoryRiskCount === 1 ? '' : 's'} need review`
+      : lowStockRows.length === 0
       ? 'No urgent stock alerts'
       : `${lowStockRows.length} item${lowStockRows.length === 1 ? '' : 's'} need restock attention`
   const transactionStatusLabel =
@@ -216,6 +246,12 @@ function DashboardPage() {
             variant="warning"
             title="Partial data loaded"
             message="Some dashboard data could not be loaded. You can still navigate to other screens."
+          />
+        ) : inventoryRiskCount > 0 ? (
+          <NoticeBanner
+            variant="warning"
+            title="Inventory risk attention"
+            message={`${predictiveStockoutRows.length} stockout alert${predictiveStockoutRows.length === 1 ? '' : 's'} and ${nearExpiryRows.length} near-expiry alert${nearExpiryRows.length === 1 ? '' : 's'} are active.`}
           />
         ) : lowStockRows.length > 0 ? (
           <NoticeBanner
@@ -259,6 +295,18 @@ function DashboardPage() {
             <strong>{summary.low_stock_count}</strong>
             <p className="supporting-text">Need attention</p>
           </article>
+
+          <article className="info-card">
+            <p className="card-label">Stockout Alerts</p>
+            <strong>{summary.predictive_stockout_count}</strong>
+            <p className="supporting-text">Projected by sales velocity</p>
+          </article>
+
+          <article className="info-card">
+            <p className="card-label">Near Expiry</p>
+            <strong>{summary.near_expiry_count}</strong>
+            <p className="supporting-text">Batch expiry window</p>
+          </article>
         </div>
 
         <div className="card-grid">
@@ -284,24 +332,24 @@ function DashboardPage() {
         <div className="dashboard-secondary-grid">
           <div className="panel">
             <p className="card-label">Immediate Attention</p>
-            <h3 className="dashboard-panel-title">Restock Watchlist</h3>
+            <h3 className="dashboard-panel-title">Inventory Risk Watchlist</h3>
 
-            {lowStockPreview.length === 0 ? (
+            {inventoryRiskPreview.length === 0 ? (
               <EmptyState
                 title="No urgent stock alerts"
                 description="Current inventory is above reorder levels for the items loaded into this workspace."
               />
             ) : (
               <ul className="dashboard-list">
-                {lowStockPreview.map((item) => (
+                {inventoryRiskPreview.map((item) => (
                   <li key={item.id} className="dashboard-list-item">
                     <div className="dashboard-list-copy">
                       <strong>{item.item}</strong>
                       <span>{item.status}</span>
                     </div>
                     <div className="dashboard-list-meta">
-                      <strong>{item.stock}</strong>
-                      <span>Reorder at {item.reorderLevel}</span>
+                      <strong>{item.value}</strong>
+                      <span>{item.note}</span>
                     </div>
                   </li>
                 ))}
@@ -358,6 +406,12 @@ function DashboardPage() {
           title="Partial data loaded"
           message="Some dashboard details could not be restored. Your sales workspace is still available."
         />
+      ) : inventoryRiskCount > 0 ? (
+        <NoticeBanner
+          variant="warning"
+          title="Assigned branch needs attention"
+          message={`${inventoryRiskCount} predictive or near-expiry alert${inventoryRiskCount === 1 ? '' : 's'} in ${assignedBranchName} need review.`}
+        />
       ) : lowStockRows.length > 0 ? (
         <NoticeBanner
           variant="warning"
@@ -403,6 +457,18 @@ function DashboardPage() {
           <p className="supporting-text">
             {snapshot.inventoryItems.length} stock record{snapshot.inventoryItems.length === 1 ? '' : 's'} in scope.
           </p>
+        </article>
+
+        <article className="info-card">
+          <p className="card-label">Stockout Alerts</p>
+          <strong>{summary.predictive_stockout_count}</strong>
+          <p className="supporting-text">Projected by recent selling pace.</p>
+        </article>
+
+        <article className="info-card">
+          <p className="card-label">Near Expiry</p>
+          <strong>{summary.near_expiry_count}</strong>
+          <p className="supporting-text">Batches inside the warning window.</p>
         </article>
       </div>
 
@@ -479,22 +545,22 @@ function DashboardPage() {
         <p className="card-label">Restock Watchlist</p>
         <h3 className="dashboard-panel-title">Assigned Branch Alerts</h3>
 
-        {lowStockPreview.length === 0 ? (
+        {inventoryRiskPreview.length === 0 ? (
           <EmptyState
             title="No urgent stock alerts"
             description="Your assigned branch inventory is currently above reorder levels."
           />
         ) : (
           <ul className="dashboard-list">
-            {lowStockPreview.map((item) => (
+            {inventoryRiskPreview.map((item) => (
               <li key={item.id} className="dashboard-list-item">
                 <div className="dashboard-list-copy">
                   <strong>{item.item}</strong>
                   <span>{item.status}</span>
                 </div>
                 <div className="dashboard-list-meta">
-                  <strong>{item.stock}</strong>
-                  <span>Reorder at {item.reorderLevel}</span>
+                  <strong>{item.value}</strong>
+                  <span>{item.note}</span>
                 </div>
               </li>
             ))}

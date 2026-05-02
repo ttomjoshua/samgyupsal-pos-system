@@ -140,7 +140,6 @@ function buildSupabaseBranchPayload(branch) {
     contact_number: branch.contactNumber,
     address: branch.address,
     opening_date: branch.openingDate,
-    notes: branch.notes,
   }
 }
 

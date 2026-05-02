@@ -6,3 +6,5 @@
 **/.vercel/
 skills-lock.json
 apps/web/.env
+
+.vercel

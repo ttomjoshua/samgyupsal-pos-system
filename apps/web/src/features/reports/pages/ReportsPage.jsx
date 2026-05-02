@@ -33,6 +33,8 @@ function ReportsPage() {
       summary: {},
       topItems: [],
       lowStock: [],
+      predictiveStockout: [],
+      nearExpiry: [],
       cashierPerformance: [],
     }
   const [reportData, setReportData] = useState(cachedInitialReport)
@@ -88,6 +90,8 @@ function ReportsPage() {
         summary: {},
         topItems: [],
         lowStock: [],
+        predictiveStockout: [],
+        nearExpiry: [],
         cashierPerformance: [],
       })
       setLoadError(
@@ -135,6 +139,40 @@ function ReportsPage() {
     { key: 'cashier', label: 'Cashier' },
     { key: 'sales', label: 'Sales Total' },
     { key: 'transactions', label: 'Transactions' },
+  ]
+  const predictiveStockoutColumns = [
+    { key: 'item', label: 'Item' },
+    { key: 'stock', label: 'Stock' },
+    { key: 'averageDailySales', label: 'Avg Daily Sales' },
+    { key: 'estimatedDaysBeforeStockout', label: 'Days Left' },
+    { key: 'estimatedStockoutDate', label: 'Stockout Date' },
+    {
+      key: 'status',
+      label: 'Status',
+      render: (row) => (
+        <StatusBadge
+          text={row.status}
+          variant={row.status === 'Critical' || row.status === 'Out of Stock' ? 'critical' : 'warning'}
+        />
+      ),
+    },
+  ]
+  const nearExpiryColumns = [
+    { key: 'item', label: 'Item' },
+    { key: 'batch', label: 'Batch' },
+    { key: 'expiryDate', label: 'Expiry' },
+    { key: 'daysToExpiry', label: 'Days Left' },
+    { key: 'stock', label: 'Stock' },
+    {
+      key: 'status',
+      label: 'Status',
+      render: (row) => (
+        <StatusBadge
+          text={row.status}
+          variant={row.status === 'Expired' || row.status === 'Critical' ? 'critical' : 'attention'}
+        />
+      ),
+    },
   ]
 
   return (
@@ -278,6 +316,26 @@ function ReportsPage() {
               title="Restock watchlist"
               pageSize={6}
               summaryLabel="watchlist items"
+            />
+          </div>
+
+          <div className="reports-table-grid">
+            <TopItemsTable
+              columns={predictiveStockoutColumns}
+              rows={reportData.predictiveStockout || []}
+              eyebrow="Predictive Stockout"
+              title="Sales velocity alerts"
+              pageSize={6}
+              summaryLabel="stockout alerts"
+            />
+
+            <TopItemsTable
+              columns={nearExpiryColumns}
+              rows={reportData.nearExpiry || []}
+              eyebrow="Near-Expiry Batches"
+              title="FEFO expiry watchlist"
+              pageSize={6}
+              summaryLabel="expiry alerts"
             />
           </div>
 

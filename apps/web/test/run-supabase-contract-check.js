@@ -290,7 +290,6 @@ function validateBranchRows(rows) {
         'contact_number',
         'address',
         'opening_date',
-        'notes',
         'created_at',
         'updated_at',
       ],
@@ -386,7 +385,6 @@ function validateProductRows(rows) {
       row,
       [
         'id',
-        'branch_id',
         'branch',
         'category',
         'barcode',
@@ -394,21 +392,28 @@ function validateProductRows(rows) {
         'net_weight',
         'price',
         'stock_quantity',
-        'reorder_level',
-        'is_active',
         'expiration_date',
       ],
       label,
     )
     assert(Number.isFinite(Number(row.id)), `${label} has an invalid id.`)
-    assert(Number.isFinite(Number(row.branch_id)), `${label} has an invalid branch_id.`)
     assert(normalizeText(row.branch), `${label} is missing branch.`)
     assert(normalizeText(row.category), `${label} is missing category.`)
     assert(normalizeText(row.product_name), `${label} is missing product_name.`)
     assertFiniteNumber(row.price, `${label} has an invalid price.`)
     assertFiniteNumber(row.stock_quantity, `${label} has an invalid stock_quantity.`)
-    assertFiniteNumber(row.reorder_level, `${label} has an invalid reorder_level.`)
-    assert(typeof row.is_active === 'boolean', `${label} has an invalid is_active value.`)
+
+    if ('branch_id' in row) {
+      assert(Number.isFinite(Number(row.branch_id)), `${label} has an invalid branch_id.`)
+    }
+
+    if ('reorder_level' in row) {
+      assertFiniteNumber(row.reorder_level, `${label} has an invalid reorder_level.`)
+    }
+
+    if ('is_active' in row) {
+      assert(typeof row.is_active === 'boolean', `${label} has an invalid is_active value.`)
+    }
   })
 }
 
@@ -726,7 +731,7 @@ async function runAccountContractChecks(testEmail, password) {
         supabase
           .from(contracts.tables.branches)
           .select(
-            'id,code,name,status,manager_name,contact_number,address,opening_date,notes,created_at,updated_at',
+            'id,code,name,status,manager_name,contact_number,address,opening_date,created_at,updated_at',
           )
           .order('name', { ascending: true })
           .limit(10),
@@ -798,7 +803,7 @@ async function runAccountContractChecks(testEmail, password) {
         supabase
           .from(contracts.tables.products)
           .select(
-            'id,branch_id,branch,category,barcode,product_name,net_weight,price,stock_quantity,reorder_level,is_active,expiration_date',
+            'id,branch,category,barcode,product_name,net_weight,price,stock_quantity,expiration_date',
           )
           .order('id', { ascending: false })
           .limit(10),

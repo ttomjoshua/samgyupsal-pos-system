@@ -3,6 +3,7 @@ import {
   createSupabaseServiceError,
   getSupabaseClient,
   isSupabaseDataEnabled,
+  supabaseRpc,
   supabaseRuntime,
   supabaseTables,
   supabaseViews,
@@ -41,6 +42,23 @@ function invalidateInventoryQueryCaches() {
   clearCachedResourceByPrefix(INVENTORY_CACHE_PREFIX)
   clearCachedResourceByPrefix('products:')
   clearCachedResourceByPrefix('reports:')
+}
+
+function isMissingSupabaseResourceError(error) {
+  const normalizedMessage = String(
+    [error?.code, error?.message, error?.details, error?.hint]
+      .filter(Boolean)
+      .join(' '),
+  ).toLowerCase()
+
+  return (
+    normalizedMessage.includes('42p01') ||
+    normalizedMessage.includes('42883') ||
+    normalizedMessage.includes('pgrst202') ||
+    normalizedMessage.includes('could not find the table') ||
+    normalizedMessage.includes('could not find the function') ||
+    normalizedMessage.includes('schema cache')
+  )
 }
 
 export function getCachedInventoryItems(options = {}) {
@@ -140,6 +158,172 @@ function buildSupabaseProductPayload(values, fallbackItem = {}) {
   }
 }
 
+function getDateSortValue(value, fallbackValue = Number.MAX_SAFE_INTEGER) {
+  const normalizedValue = String(value || '').trim()
+
+  if (!normalizedValue) {
+    return fallbackValue
+  }
+
+  const parsedDate = new Date(`${normalizedValue}T00:00:00`)
+  return Number.isNaN(parsedDate.getTime())
+    ? fallbackValue
+    : parsedDate.getTime()
+}
+
+function normalizeInventoryBatch(batch = {}) {
+  const expirationDate = batch.expiration_date || batch.expiry_date || ''
+  const quantityOnHand = Number(batch.quantity_on_hand ?? batch.stock_quantity ?? 0)
+
+  return {
+    ...batch,
+    id: batch.id,
+    product_id: batch.product_id ?? null,
+    branch_id: batch.branch_id ?? null,
+    batch_code: batch.batch_code || '',
+    quantity_received: Number(batch.quantity_received ?? 0),
+    quantity_on_hand: Number.isFinite(quantityOnHand) ? quantityOnHand : 0,
+    expiration_date: expirationDate,
+    expiry_date: expirationDate,
+    stock_in_date: batch.stock_in_date || batch.created_at || '',
+    source: batch.source || 'stock-in',
+    days_to_expiry: expirationDate ? getDaysToExpiry(expirationDate) : null,
+  }
+}
+
+function sortInventoryBatchesByFefo(left, right) {
+  const leftExpiry = getDateSortValue(left.expiration_date)
+  const rightExpiry = getDateSortValue(right.expiration_date)
+
+  if (leftExpiry !== rightExpiry) {
+    return leftExpiry - rightExpiry
+  }
+
+  const leftStockInDate = getDateSortValue(left.stock_in_date)
+  const rightStockInDate = getDateSortValue(right.stock_in_date)
+
+  if (leftStockInDate !== rightStockInDate) {
+    return leftStockInDate - rightStockInDate
+  }
+
+  return Number(left.id || 0) - Number(right.id || 0)
+}
+
+function resolveSupabaseExpirationDate(values = {}, fallbackItem = {}) {
+  return (
+    sanitizeInventoryText(
+      values.expirationDate ??
+        values.expiration_date ??
+        values.expiry_date ??
+        values.expiryDate ??
+        fallbackItem.expiration_date ??
+        fallbackItem.expiry_date ??
+        fallbackItem.expiryDate,
+    ) || null
+  )
+}
+
+function getTodayDateInputValue() {
+  return new Date().toISOString().slice(0, 10)
+}
+
+async function fetchSupabaseInventoryBatchesForRows(rows = [], options = {}) {
+  const productIds = Array.from(
+    new Set(
+      rows
+        .map((item) => item.product_id ?? item.productId ?? item.id)
+        .filter((productId) => productId != null)
+        .map((productId) => Number(productId))
+        .filter((productId) => Number.isFinite(productId)),
+    ),
+  )
+
+  if (productIds.length === 0) {
+    return new Map()
+  }
+
+  const supabase = getSupabaseClient()
+  let query = supabase
+    .from(supabaseTables.inventoryBatches)
+    .select(
+      'id, product_id, branch_id, batch_code, quantity_received, quantity_on_hand, expiration_date, stock_in_date, source, notes, created_at, updated_at',
+    )
+    .in('product_id', productIds)
+
+  if (options.branchId != null && String(options.branchId).trim() !== '') {
+    query = query.eq('branch_id', Number(options.branchId))
+  }
+
+  const { data, error } = await query
+
+  if (error) {
+    if (isMissingSupabaseResourceError(error)) {
+      return new Map()
+    }
+
+    throw createSupabaseServiceError(
+      error,
+      'Inventory batch records could not be loaded from Supabase.',
+    )
+  }
+
+  return (data || []).reduce((batchMap, batch) => {
+    const normalizedBatch = normalizeInventoryBatch(batch)
+    const productKey = String(normalizedBatch.product_id)
+    const existingBatches = batchMap.get(productKey) || []
+    existingBatches.push(normalizedBatch)
+    existingBatches.sort(sortInventoryBatchesByFefo)
+    batchMap.set(productKey, existingBatches)
+    return batchMap
+  }, new Map())
+}
+
+async function attachSupabaseBatchSummaries(rows = [], options = {}) {
+  if (!Array.isArray(rows) || rows.length === 0) {
+    return []
+  }
+
+  const batchesByProductId = await fetchSupabaseInventoryBatchesForRows(
+    rows,
+    options,
+  )
+
+  return rows.map((item) => {
+    const productId = item.product_id ?? item.productId ?? item.id
+    const batches = batchesByProductId.get(String(productId)) || []
+    const availableBatches = batches.filter(
+      (batch) => Number(batch.quantity_on_hand || 0) > 0,
+    )
+    const batchStockQuantity = batches.reduce(
+      (total, batch) => total + Number(batch.quantity_on_hand || 0),
+      0,
+    )
+    const earliestExpiringBatch = availableBatches.find(
+      (batch) => String(batch.expiration_date || '').trim() !== '',
+    )
+    const nearExpiryBatchCount = availableBatches.filter(
+      (batch) =>
+        batch.days_to_expiry != null &&
+        Number(batch.days_to_expiry) <= NEAR_EXPIRY_DAYS,
+    ).length
+
+    return {
+      ...item,
+      batches,
+      batch_count: batches.length,
+      available_batch_count: availableBatches.length,
+      batch_stock_quantity:
+        batches.length > 0 ? batchStockQuantity : item.batch_stock_quantity,
+      earliest_expiration_date:
+        earliestExpiringBatch?.expiration_date ||
+        item.earliest_expiration_date ||
+        item.expiration_date ||
+        '',
+      near_expiry_batch_count: nearExpiryBatchCount,
+    }
+  })
+}
+
 async function fetchSupabaseInventoryItems(options = {}) {
   const supabase = getSupabaseClient()
   let query = supabase
@@ -161,7 +345,7 @@ async function fetchSupabaseInventoryItems(options = {}) {
     )
   }
 
-  return Array.isArray(data) ? data : []
+  return attachSupabaseBatchSummaries(Array.isArray(data) ? data : [], options)
 }
 
 async function fetchSupabaseInventoryItemById(itemId) {
@@ -179,7 +363,9 @@ async function fetchSupabaseInventoryItemById(itemId) {
     )
   }
 
-  return data || null
+  const rows = await attachSupabaseBatchSummaries(data ? [data] : [])
+
+  return rows[0] || null
 }
 
 async function fetchSupabaseInventoryItemByProductId(productId) {
@@ -197,7 +383,9 @@ async function fetchSupabaseInventoryItemByProductId(productId) {
     )
   }
 
-  return data || null
+  const rows = await attachSupabaseBatchSummaries(data ? [data] : [])
+
+  return rows[0] || null
 }
 
 async function fetchSupabaseProductById(productId) {
@@ -287,6 +475,122 @@ async function getSupabaseInventoryContext(itemId) {
   }
 }
 
+async function stockInSupabaseInventoryBatch(
+  productId,
+  branchId,
+  quantity,
+  values = {},
+) {
+  const expirationDate = resolveSupabaseExpirationDate(values)
+
+  if (!expirationDate) {
+    throw new Error('Select an expiration date before adding FEFO stock.')
+  }
+
+  const supabase = getSupabaseClient()
+  const { data, error } = await supabase.rpc(
+    supabaseRpc.stockInInventoryBatch,
+    {
+      p_product_id: Number(productId),
+      p_branch_id: Number(branchId),
+      p_quantity: Number(quantity),
+      p_expiration_date: expirationDate,
+      p_stock_in_date:
+        sanitizeInventoryText(values.stockInDate ?? values.stock_in_date) ||
+        getTodayDateInputValue(),
+      p_notes:
+        sanitizeInventoryText(values.notes) || 'Stock-in recorded from inventory screen.',
+    },
+  )
+
+  if (error) {
+    if (isMissingSupabaseResourceError(error)) {
+      const currentProduct = await fetchSupabaseProductById(productId)
+      const nextStockQuantity = Math.max(
+        0,
+        Number(currentProduct?.stock_quantity || 0) + Number(quantity || 0),
+      )
+      const { error: updateError } = await supabase
+        .from(supabaseTables.products)
+        .update({
+          stock_quantity: nextStockQuantity,
+          expiration_date: expirationDate,
+        })
+        .eq('id', Number(productId))
+
+      if (updateError) {
+        throw createSupabaseServiceError(
+          updateError,
+          'Unable to update product stock in Supabase.',
+        )
+      }
+
+      return { stock_quantity: nextStockQuantity }
+    }
+
+    throw createSupabaseServiceError(
+      error,
+      'Unable to create the inventory batch in Supabase.',
+    )
+  }
+
+  return data
+}
+
+async function adjustSupabaseInventoryStockCount(
+  productId,
+  branchId,
+  targetQuantity,
+  values = {},
+) {
+  const supabase = getSupabaseClient()
+  const { data, error } = await supabase.rpc(
+    supabaseRpc.adjustInventoryStockCount,
+    {
+      p_product_id: Number(productId),
+      p_branch_id: Number(branchId),
+      p_target_quantity: Number(targetQuantity),
+      p_expiration_date: resolveSupabaseExpirationDate(values),
+      p_notes:
+        sanitizeInventoryText(values.notes) || 'Stock adjustment recorded from inventory screen.',
+    },
+  )
+
+  if (error) {
+    if (isMissingSupabaseResourceError(error)) {
+      const updatePayload = {
+        stock_quantity: Math.max(0, Number(targetQuantity || 0)),
+      }
+      const expirationDate = resolveSupabaseExpirationDate(values)
+
+      if (expirationDate) {
+        updatePayload.expiration_date = expirationDate
+      }
+
+      const { error: updateError } = await supabase
+        .from(supabaseTables.products)
+        .update(updatePayload)
+        .eq('id', Number(productId))
+
+      if (updateError) {
+        throw createSupabaseServiceError(
+          updateError,
+          'Unable to update product stock in Supabase.',
+        )
+      }
+
+      return updatePayload
+    }
+
+    throw createSupabaseServiceError(
+      error,
+      'Unable to adjust inventory batches in Supabase.',
+    )
+  }
+
+  return data
+}
+
 export async function getInventoryItems(options = {}) {
   const cachedInventoryResponse = getCachedInventoryItems(options)
 
@@ -315,10 +619,16 @@ export function normalizeInventoryItem(item) {
     item.legacy_category_name,
     item.legacy_category,
   )
-  const stockQuantity = Number(item.stock_quantity ?? item.stock ?? 0)
+  const stockQuantity = Number(
+    item.batch_stock_quantity ?? item.stock_quantity ?? item.stock ?? 0,
+  )
   const reorderLevel = Number(item.reorder_level ?? LOW_STOCK_THRESHOLD)
   const expiryDate =
-    item.expiry_date || item.expiration_date || item.expiry || ''
+    item.earliest_expiration_date ||
+    item.expiry_date ||
+    item.expiration_date ||
+    item.expiry ||
+    ''
   const unitValue = item.unit || item.unit_label || item.net_weight || ''
   const priceValue = Number(
     item.price ?? item.selling_price ?? item.default_price ?? item.selling_price ?? 0,
@@ -344,6 +654,12 @@ export function normalizeInventoryItem(item) {
     expiration_date: expiryDate,
     reorder_level: reorderLevel,
     days_to_expiry: expiryDate ? getDaysToExpiry(expiryDate) : null,
+    batches: Array.isArray(item.batches)
+      ? item.batches.map((batch) => normalizeInventoryBatch(batch))
+      : [],
+    batch_count: Number(item.batch_count ?? 0),
+    available_batch_count: Number(item.available_batch_count ?? 0),
+    near_expiry_batch_count: Number(item.near_expiry_batch_count ?? 0),
     legacy_stock_text: item.legacy_stock_text ?? null,
   }
 }
@@ -385,9 +701,21 @@ export async function createInventoryItem(values, existingItems = []) {
 
     const supabase = getSupabaseClient()
     const payload = buildSupabaseProductPayload(values)
+    const initialStockQuantity = Math.max(0, Number(payload.stock_quantity || 0))
+    const branchId = resolveSupabaseBranchId(values, payload)
+
+    if (initialStockQuantity > 0 && !payload.expiration_date) {
+      throw new Error(
+        'Enter an expiration date before saving initial stock as a FEFO batch.',
+      )
+    }
+
     const { data, error } = await supabase
       .from(supabaseTables.products)
-      .insert(payload)
+      .insert({
+        ...payload,
+        stock_quantity: 0,
+      })
       .select()
       .single()
 
@@ -396,6 +724,13 @@ export async function createInventoryItem(values, existingItems = []) {
         error,
         'Unable to create the product in Supabase.',
       )
+    }
+
+    if (initialStockQuantity > 0) {
+      await stockInSupabaseInventoryBatch(data.id, branchId, initialStockQuantity, {
+        expirationDate: payload.expiration_date,
+        notes: 'Initial product stock recorded as an opening FEFO batch.',
+      })
     }
 
     const createdItem = await fetchSupabaseInventoryItemByProductId(data.id)
@@ -436,15 +771,38 @@ export async function updateInventoryItem(itemId, values) {
 
     const supabase = getSupabaseClient()
     const payload = buildSupabaseProductPayload(values, currentItem)
+    const targetStockQuantity = Math.max(0, Number(payload.stock_quantity || 0))
+    const currentStockQuantity = Math.max(
+      0,
+      Number(currentItem.batch_stock_quantity ?? currentItem.stock_quantity ?? 0),
+    )
+    const productBranchId = resolveSupabaseBranchId(values, currentItem)
+    const productPayload = {
+      ...payload,
+    }
+    delete productPayload.stock_quantity
+
     const { error } = await supabase
       .from(supabaseTables.products)
-      .update(payload)
+      .update(productPayload)
       .eq('id', productId)
 
     if (error) {
       throw createSupabaseServiceError(
         error,
         'Unable to update this inventory item in Supabase.',
+      )
+    }
+
+    if (targetStockQuantity !== currentStockQuantity) {
+      await adjustSupabaseInventoryStockCount(
+        productId,
+        productBranchId,
+        targetStockQuantity,
+        {
+          expirationDate: payload.expiration_date,
+          notes: 'Product edit stock count adjustment.',
+        },
       )
     }
 
@@ -493,27 +851,33 @@ export async function updateInventoryStock(itemId, quantityValue, options = {}) 
     const inventoryContext = await getSupabaseInventoryContext(itemId)
     const productId = inventoryContext?.productId
     const currentInventoryItem = inventoryContext?.currentItem
-    const supabase = getSupabaseClient()
-    const currentProduct = await fetchSupabaseProductById(productId)
 
-    if (!currentProduct || productId == null || !currentInventoryItem) {
+    if (productId == null || !currentInventoryItem) {
       throw new Error('The selected inventory item could not be found.')
     }
 
-    const nextStockQuantity =
-      mode === 'adjust-stock'
-        ? Math.max(0, numericQuantity)
-        : Math.max(0, Number(currentProduct.stock_quantity || 0) + numericQuantity)
+    const currentProduct = await fetchSupabaseProductById(productId)
 
-    const { error } = await supabase
-      .from(supabaseTables.products)
-      .update({ stock_quantity: nextStockQuantity })
-      .eq('id', productId)
+    if (!currentProduct) {
+      throw new Error('The selected inventory item could not be found.')
+    }
 
-    if (error) {
-      throw createSupabaseServiceError(
-        error,
-        'Unable to update stock quantity in Supabase.',
+    const branchId = resolveSupabaseBranchId(options, currentInventoryItem)
+
+    if (mode === 'stock-in') {
+      await stockInSupabaseInventoryBatch(productId, branchId, numericQuantity, {
+        expirationDate: resolveSupabaseExpirationDate(options, currentInventoryItem),
+        notes: 'Stock-in recorded from inventory action.',
+      })
+    } else {
+      await adjustSupabaseInventoryStockCount(
+        productId,
+        branchId,
+        Math.max(0, numericQuantity),
+        {
+          expirationDate: resolveSupabaseExpirationDate(options, currentInventoryItem),
+          notes: 'Manual stock count adjustment.',
+        },
       )
     }
 
